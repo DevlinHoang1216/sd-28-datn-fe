@@ -1,85 +1,128 @@
 <template>
-  <footer class="bg-white text-gray-700 py-12 shadow-md">
-    <div class="container mx-auto px-6 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-12">
-      <div class="flex flex-col items-center md:items-start">
-        <div class="mb-4">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            version="1.0"
-            width="60"
-            height="60"
-            viewBox="0 0 2000.000000 2000.000000"
-            preserveAspectRatio="xMidYMid meet"
-            class="text-gray-800" >
-            <g
-              transform="translate(0.000000,2000.000000) scale(0.100000,-0.100000)"
-              fill="currentColor"
-              stroke="none"
-            >
-              <path
-                d="M1932 15207 l-62 -63 0 -6405 0 -6405 63 -62 63 -62 6435 0 6435 0 62 63 62 63 0 6405 0 6405 -63 62 -63 62 -6435 0 -6435 0 -62 -63z m12558 -6467 l0 -6030 -6060 0 -6060 0 0 6030 0 6030 6060 0 6060 0 0 -6030z"
-              />
-              <path
-                d="M8079 6543 l-797 -3 -7 -406 c-4 -223 -5 -407 -2 -410 2 -3 440 2 972 11 532 9 970 14 972 11 2 -2 -437 -430 -976 -950 l-981 -947 0 -359 0 -360 1599 0 1599 0 6 198 c3 108 9 281 12 385 6 178 5 187 -12 187 -139 0 -1999 41 -2001 44 -3 2 443 435 989 963 l993 959 3 342 2 342 -787 -2 c-434 -2 -1146 -4 -1584 -5z"
-              />
-              <path
-                d="M4308 6515 c-5 -11 -345 -767 -757 -1680 -412 -913 -748 -1661 -747 -1662 7 -8 791 -52 797 -46 4 5 75 158 159 341 l153 332 887 0 887 0 153 -332 c84 -183 155 -336 159 -341 6 -6 790 38 797 46 1 1 -339 758 -756 1682 l-758 1680 -482 0 c-474 0 -483 0 -492 -20z m764 -1378 c147 -320 270 -590 274 -599 6 -17 -24 -18 -546 -18 -522 0 -552 1 -546 18 16 44 542 1182 546 1182 3 0 125 -262 272 -583z"
-              />
-            </g>
-          </svg>
-        </div>
-        <p class="text-gray-600 text-center md:text-left text-sm mt-4">Nền tảng quản lý bán hàng hiệu quả được phát triển bởi PhoStep Team. Tối ưu hóa quy trình kinh doanh của bạn một cách dễ dàng.</p>
-      </div>
-
-      <div class="md:col-span-2 lg:col-span-1">
-        <h3 class="text-gray-800 text-xl font-semibold mb-4 text-center md:text-left">Liên kết nhanh</h3>
-        <ul class="flex flex-col items-center md:items-start text-center md:text-left space-y-2">
-          <li><a href="#" class="hover:text-primary-600 transition-colors duration-300">Trang chủ</a></li>
-          <li><a href="#" class="hover:text-primary-600 transition-colors duration-300">Về chúng tôi</a></li>
-          <li><a href="#" class="hover:text-primary-600 transition-colors duration-300">Dịch vụ</a></li>
-          <li><a href="#" class="hover:text-primary-600 transition-colors duration-300">Liên hệ</a></li>
-        </ul>
-      </div>
-
-      <div class="lg:col-span-1">
-        <h3 class="text-gray-800 text-xl font-semibold mb-4 text-center md:text-left">Thông tin liên hệ</h3>
-        <div class="flex flex-col items-center md:items-start space-y-2 text-center md:text-left">
-          <p class="flex items-center">
-            <iconify-icon icon="solar:map-linear" class="mr-2 text-xl text-primary-500"></iconify-icon>
-            <span class="text-sm">268 Lý Thường Kiệt, Q.10, TP.HCM</span>
+  <footer class="modern-footer">
+    <div class="footer-content">
+      <div class="footer-main">
+        <!-- Logo và mô tả -->
+        <div class="footer-brand">
+          <div class="logo-container">
+            <img src="/src/assets/images/Pho-Step_logo.png" alt="PhoStep Logo" class="footer-logo">
+          </div>
+          <p class="brand-description">
+            Nền tảng quản lý bán hàng hiệu quả được phát triển bởi PhoStep Team. 
+            Tối ưu hóa quy trình kinh doanh của bạn một cách dễ dàng và chuyên nghiệp.
           </p>
-          <p class="flex items-center">
-            <iconify-icon icon="solar:phone-linear" class="mr-2 text-xl text-primary-500"></iconify-icon>
-            <span class="text-sm">+84 123 456 789</span>
-          </p>
-          <p class="flex items-center">
-            <iconify-icon icon="solar:letter-linear" class="mr-2 text-xl text-primary-500"></iconify-icon>
-            <span class="text-sm">contact@phostep.com</span>
-          </p>
+          <div class="social-links">
+            <a href="#" class="social-link">
+              <iconify-icon icon="ri:facebook-fill"></iconify-icon>
+            </a>
+            <a href="#" class="social-link">
+              <iconify-icon icon="ri:instagram-line"></iconify-icon>
+            </a>
+            <a href="#" class="social-link">
+              <iconify-icon icon="ri:twitter-x-line"></iconify-icon>
+            </a>
+            <a href="#" class="social-link">
+              <iconify-icon icon="ri:linkedin-fill"></iconify-icon>
+            </a>
+          </div>
+        </div>
+
+        <!-- Liên kết nhanh -->
+        <div class="footer-section">
+          <h3 class="section-title">Liên kết nhanh</h3>
+          <div class="section-line"></div>
+          <ul class="footer-links">
+            <li><router-link to="/dashboard" class="footer-link">
+              <iconify-icon icon="solar:home-smile-outline"></iconify-icon>
+              Thống kê
+            </router-link></li>
+            <li><router-link to="/ban-tai-quay" class="footer-link">
+              <iconify-icon icon="solar:shop-outline"></iconify-icon>
+              Bán Tại Quầy
+            </router-link></li>
+            <li><router-link to="/quan-ly-san-pham" class="footer-link">
+              <iconify-icon icon="solar:box-minimalistic-outline"></iconify-icon>
+              Quản Lý Sản Phẩm
+            </router-link></li>
+            <li><router-link to="/hoa-don" class="footer-link">
+              <iconify-icon icon="solar:document-outline"></iconify-icon>
+              Hóa Đơn
+            </router-link></li>
+          </ul>
+        </div>
+
+        <!-- Quản lý -->
+        <div class="footer-section">
+          <h3 class="section-title">Quản lý</h3>
+          <div class="section-line"></div>
+          <ul class="footer-links">
+            <li><router-link to="/nhan-vien" class="footer-link">
+              <iconify-icon icon="solar:users-group-rounded-outline"></iconify-icon>
+              Nhân Viên
+            </router-link></li>
+            <li><router-link to="/khach-hang" class="footer-link">
+              <iconify-icon icon="solar:user-outline"></iconify-icon>
+              Khách Hàng
+            </router-link></li>
+            <li><router-link to="/phieu-giam-gia" class="footer-link">
+              <iconify-icon icon="solar:tag-horizontal-outline"></iconify-icon>
+              Phiếu Giảm Giá
+            </router-link></li>
+            <li><router-link to="/dot-giam-gia" class="footer-link">
+              <iconify-icon icon="solar:sale-outline"></iconify-icon>
+              Đợt Giảm Giá
+            </router-link></li>
+          </ul>
+        </div>
+
+        <!-- Thông tin liên hệ -->
+        <div class="footer-section">
+          <h3 class="section-title">Thông tin liên hệ</h3>
+          <div class="section-line"></div>
+          <div class="contact-info">
+            <div class="contact-item">
+              <div class="contact-icon">
+                <iconify-icon icon="solar:map-linear"></iconify-icon>
+              </div>
+              <div class="contact-details">
+                <span class="contact-label">Địa chỉ</span>
+                <span class="contact-value">268 Lý Thường Kiệt, Q.10, TP.HCM</span>
+              </div>
+            </div>
+            <div class="contact-item">
+              <div class="contact-icon">
+                <iconify-icon icon="solar:phone-linear"></iconify-icon>
+              </div>
+              <div class="contact-details">
+                <span class="contact-label">Điện thoại</span>
+                <span class="contact-value">+84 123 456 789</span>
+              </div>
+            </div>
+            <div class="contact-item">
+              <div class="contact-icon">
+                <iconify-icon icon="solar:letter-linear"></iconify-icon>
+              </div>
+              <div class="contact-details">
+                <span class="contact-label">Email</span>
+                <span class="contact-value">contact@phostep.com</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div class="lg:col-span-1">
-        <h3 class="text-gray-800 text-xl font-semibold mb-4 text-center md:text-left">Theo dõi chúng tôi</h3>
-        <div class="flex justify-center md:justify-start space-x-4">
-          <a href="#" class="text-gray-500 hover:text-primary-600 transition-colors duration-300">
-            <iconify-icon icon="ri:facebook-fill" class="text-3xl"></iconify-icon>
-          </a>
-          <a href="#" class="text-gray-500 hover:text-primary-600 transition-colors duration-300">
-            <iconify-icon icon="ri:instagram-line" class="text-3xl"></iconify-icon>
-          </a>
-          <a href="#" class="text-gray-500 hover:text-primary-600 transition-colors duration-300">
-            <iconify-icon icon="ri:twitter-x-line" class="text-3xl"></iconify-icon>
-          </a>
-          <a href="#" class="text-gray-500 hover:text-primary-600 transition-colors duration-300">
-            <iconify-icon icon="ri:linkedin-fill" class="text-3xl"></iconify-icon>
-          </a>
+      <!-- Footer bottom -->
+      <div class="footer-bottom">
+        <div class="footer-bottom-content">
+          <div class="copyright">
+            <span>&copy; 2024 PhoStep Team. All Rights Reserved.</span>
+          </div>
+          <div class="footer-meta">
+            <span class="version-info">Version 2.0.1</span>
+            <span class="build-info">Build 2025</span>
+          </div>
         </div>
       </div>
-    </div>
-
-    <div class="border-t border-gray-200 mt-12 pt-8 text-center text-gray-500 text-sm">
-      <p>&copy; 2024 PhoStep Team. All Rights Reserved.</p>
     </div>
   </footer>
 </template>
@@ -88,6 +131,371 @@
 // Không cần script setup nào ở đây
 </script>
 
-<style scoped>
-/* Không cần style scoped riêng nếu bạn chỉ dùng Tailwind CSS */
+<style lang="scss" scoped>
+.modern-footer {
+  background: linear-gradient(180deg, 
+    rgba(255, 255, 255, 0.95) 0%, 
+    rgba(248, 250, 252, 0.95) 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 
+    0 -25px 50px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
+
+  .footer-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  .footer-main {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 48px;
+    padding: 48px 0;
+
+    @media (max-width: 1024px) {
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+    }
+
+    @media (max-width: 768px) {
+      grid-template-columns: 1fr;
+      gap: 32px;
+      text-align: center;
+    }
+  }
+
+  .footer-brand {
+    .logo-container {
+      margin-bottom: 20px;
+
+      .footer-logo {
+        width: 160px;
+        height: 80px;
+        object-fit: contain;
+
+        @media (max-width: 768px) {
+          margin: 0 auto;
+        }
+      }
+    }
+
+    .brand-description {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #64748b;
+      margin-bottom: 24px;
+      font-weight: 400;
+    }
+
+    .social-links {
+      display: flex;
+      gap: 12px;
+
+      @media (max-width: 768px) {
+        justify-content: center;
+      }
+
+      .social-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background: rgba(0, 123, 255, 0.1);
+        color: #007bff;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        font-size: 18px;
+
+        &:hover {
+          background: #007bff;
+          color: white;
+          transform: translateY(-2px);
+          box-shadow: 0 8px 25px rgba(0, 123, 255, 0.3);
+        }
+      }
+    }
+  }
+
+  .footer-section {
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #1e293b;
+      margin-bottom: 16px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .section-line {
+      width: 40px;
+      height: 2px;
+      background: linear-gradient(90deg, #007bff 0%, #0056b3 100%);
+      margin-bottom: 20px;
+      border-radius: 1px;
+
+      @media (max-width: 768px) {
+        margin: 0 auto 20px auto;
+      }
+    }
+
+    .footer-links {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+
+      li {
+        margin-bottom: 12px;
+      }
+
+      .footer-link {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: #64748b;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        padding: 8px 0;
+
+        @media (max-width: 768px) {
+          justify-content: center;
+        }
+
+        iconify-icon {
+          font-size: 16px;
+          color: #94a3b8;
+          transition: all 0.3s ease;
+        }
+
+        &:hover {
+          color: #007bff;
+          transform: translateX(4px);
+
+          @media (max-width: 768px) {
+            transform: translateY(-2px);
+          }
+
+          iconify-icon {
+            color: #007bff;
+          }
+        }
+
+        &.router-link-active {
+          color: #007bff;
+          font-weight: 600;
+
+          iconify-icon {
+            color: #007bff;
+          }
+        }
+      }
+    }
+
+    .contact-info {
+      .contact-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 16px;
+
+        @media (max-width: 768px) {
+          justify-content: center;
+          text-align: left;
+        }
+
+        .contact-icon {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 36px;
+          height: 36px;
+          border-radius: 8px;
+          background: rgba(0, 123, 255, 0.1);
+          color: #007bff;
+          font-size: 16px;
+          flex-shrink: 0;
+        }
+
+        .contact-details {
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+
+          .contact-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+
+          .contact-value {
+            font-size: 14px;
+            color: #475569;
+            font-weight: 500;
+          }
+        }
+      }
+    }
+  }
+
+  .footer-bottom {
+    border-top: 1px solid rgba(226, 232, 240, 0.5);
+    background: rgba(248, 250, 252, 0.8);
+    padding: 0rem 1rem;
+
+    .footer-bottom-content {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 0;
+
+      @media (max-width: 768px) {
+        flex-direction: column;
+        gap: 12px;
+        text-align: center;
+      }
+
+      .copyright {
+        span {
+          font-size: 13px;
+          color: #64748b;
+          font-weight: 500;
+        }
+      }
+
+      .footer-meta {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+
+        .version-info {
+          font-size: 12px;
+          font-weight: 600;
+          color: #475569;
+        }
+
+        .build-info {
+          font-size: 10px;
+          color: #94a3b8;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+      }
+    }
+  }
+}
+
+// Dark theme styles
+.dark .modern-footer {
+  background: linear-gradient(180deg, 
+    rgba(15, 23, 42, 0.95) 0%, 
+    rgba(30, 41, 59, 0.95) 100%);
+  border-top: 1px solid rgba(71, 85, 105, 0.5);
+  box-shadow: 
+    0 -25px 50px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.05);
+
+  .footer-brand {
+    .logo-container {
+      .footer-logo {
+        filter: brightness(0) invert(1);
+      }
+    }
+
+    .brand-description {
+      color: #94a3b8;
+    }
+
+    .social-links {
+      .social-link {
+        background: rgba(0, 123, 255, 0.2);
+        color: #66b3ff;
+
+        &:hover {
+          background: #66b3ff;
+          color: #0f172a;
+        }
+      }
+    }
+  }
+
+  .footer-section {
+    .section-title {
+      color: #f1f5f9;
+    }
+
+    .footer-links {
+      .footer-link {
+        color: #94a3b8;
+
+        iconify-icon {
+          color: #64748b;
+        }
+
+        &:hover {
+          color: #66b3ff;
+
+          iconify-icon {
+            color: #66b3ff;
+          }
+        }
+
+        &.router-link-active {
+          color: #66b3ff;
+
+          iconify-icon {
+            color: #66b3ff;
+          }
+        }
+      }
+    }
+
+    .contact-info {
+      .contact-item {
+        .contact-icon {
+          background: rgba(0, 123, 255, 0.2);
+          color: #66b3ff;
+        }
+
+        .contact-details {
+          .contact-label {
+            color: #64748b;
+          }
+
+          .contact-value {
+            color: #cbd5e1;
+          }
+        }
+      }
+    }
+  }
+
+  .footer-bottom {
+    background: rgba(15, 23, 42, 0.8);
+    border-top: 1px solid rgba(71, 85, 105, 0.3);
+
+    .footer-bottom-content {
+      .copyright span {
+        color: #94a3b8;
+      }
+
+      .footer-meta {
+        .version-info {
+          color: #cbd5e1;
+        }
+
+        .build-info {
+          color: #64748b;
+        }
+      }
+    }
+  }
+}
 </style>

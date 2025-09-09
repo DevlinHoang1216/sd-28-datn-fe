@@ -1,608 +1,1068 @@
 <template>
-  <div class="p-6 bg-gray-100 min-h-screen">
-    <CContainer>
-      <CRow>
-        <CCol>
-          <h1 class="text-center text-2xl font-bold text-black mb-4">Quản Lý Kích Cỡ</h1>
-        </CCol>
-      </CRow>
+  <div class="quan-ly-kich-co-container">
+    <!-- Breadcrumb -->
+    <Breadcrumb 
+      :items="breadcrumbItems"
+      :show-page-info="true"
+      page-title="Quản Lý Kích Cỡ"
+      page-description="Hệ thống quản lý kích cỡ sản phẩm cho Shop Giày"
+      page-icon="solar:ruler-bold-duotone"
+      :page-stats="pageStats"
+      :actions="breadcrumbActions"
+    />
 
-      <CRow class="mb-4">
-        <CCol class="flex flex-col gap-2">
-          <CFormInput
-            v-model="search"
-            type="text"
-            placeholder="🔍 Tìm kích cỡ theo tên hoặc mã..."
-            class="mb-2 custom-input"
-            @keyup.enter="searchKichCo"
-          />
-          <div class="flex gap-2">
-            <CButton
-              class="bg-black hover:bg-gray-800 text-white flex items-center gap-2 rounded-md"
-              @click="searchKichCo"
-            >
-              <i class="fas fa-search"></i>
-              Tìm kiếm
-            </CButton>
-            <CButton
-              class="flex items-center gap-2 rounded-md"
-              style="background-color: #8b0000; border-color: #8b0000; color: #ffffff"
-              @click="openAddModal"
-            >
-              <i class="fas fa-plus-circle"></i>
-              Thêm Mới
-            </CButton>
-          </div>
-        </CCol>
-      </CRow>
-
-      <CCard class="shadow">
-        <CCardHeader
-          class="text-black font-semibold uppercase bg-gray-200 border-b border-gray-300 rounded-t-md"
-        >
-          Danh Sách Kích Cỡ
-        </CCardHeader>
-        <CCardBody>
-          <CTable striped hover responsive class="custom-table">
-            <CTableHead class="bg-black text-white">
-              <CTableRow>
-                <CTableHeaderCell scope="col" class="text-center">#</CTableHeaderCell>
-                <CTableHeaderCell
-                  scope="col"
-                  @click="sortData('tenKichCo')"
-                  class="cursor-pointer"
-                >
-                  Tên kích cỡ
-                  <i
-                    v-if="sortColumn === 'tenKichCo'"
-                    :class="['fas', sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down']"
-                  ></i>
-                  <i v-else class="fas fa-sort"></i>
-                </CTableHeaderCell>
-                <CTableHeaderCell
-                  scope="col"
-                  @click="sortData('maKichCo')"
-                  class="cursor-pointer"
-                >
-                  Mã kích cỡ
-                  <i
-                    v-if="sortColumn === 'maKichCo'"
-                    :class="['fas', sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down']"
-                  ></i>
-                  <i v-else class="fas fa-sort"></i>
-                </CTableHeaderCell>
-                <CTableHeaderCell scope="col" @click="sortData('ngayTao')" class="cursor-pointer">
-                  Ngày tạo
-                  <i
-                    v-if="sortColumn === 'ngayTao'"
-                    :class="['fas', sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down']"
-                  ></i>
-                  <i v-else class="fas fa-sort"></i>
-                </CTableHeaderCell>
-                <CTableHeaderCell
-                  scope="col"
-                  @click="sortData('soLuongSanPham')"
-                  class="cursor-pointer"
-                >
-                  Số lượng sản phẩm
-                  <i
-                    v-if="sortColumn === 'soLuongSanPham'"
-                    :class="['fas', sortDirection === 'asc' ? 'fa-sort-up' : 'fa-sort-down']"
-                  ></i>
-                  <i v-else class="fas fa-sort"></i>
-                </CTableHeaderCell>
-                <CTableHeaderCell scope="col" class="text-center">Thao tác</CTableHeaderCell>
-              </CTableRow>
-            </CTableHead>
-            <CTableBody>
-              <CTableRow v-for="(item, index) in paginatedItems" :key="item.id">
-                <CTableDataCell class="font-semibold text-center">{{
-                  (currentPage - 1) * itemsPerPage + index + 1
-                }}</CTableDataCell>
-                <CTableDataCell>{{ item.tenKichCo }}</CTableDataCell>
-                <CTableDataCell>{{ item.maKichCo }}</CTableDataCell>
-                <CTableDataCell class="text-gray-500">{{
-                  formatDate(item.ngayTao)
-                }}</CTableDataCell>
-                <CTableDataCell class="text-gray-500">{{ item.soLuongSanPham }}</CTableDataCell>
-                <CTableDataCell class="flex gap-2 justify-center">
-                  <CButton
-                    class="flex items-center gap-1 rounded-md"
-                    style="background-color: #000000; border-color: #000000; color: #ffffff"
-                    @click="editKichCo(item)"
-                    size="sm"
-                    title="Sửa"
-                  >
-                    <i class="fas fa-edit"></i>
-                  </CButton>
-                  <CButton
-                    class="flex items-center gap-1 rounded-md"
-                    style="background-color: #8b0000; border-color: #8b0000; color: #ffffff"
-                    @click="deleteKichCo(item)"
-                    size="sm"
-                    title="Xóa"
-                  >
-                    <i class="fas fa-trash-alt"></i>
-                  </CButton>
-                  <CButton
-                    class="flex items-center gap-1 rounded-md"
-                    style="background-color: #008000; border-color: #008000; color: #ffffff"
-                    @click="viewProducts(item.id, item.tenKichCo)"
-                    size="sm"
-                    title="Xem sản phẩm"
-                  >
-                    <i class="fas fa-search-plus"></i>
-                  </CButton>
-                </CTableDataCell>
-              </CTableRow>
-              <CTableRow v-if="paginatedItems.length === 0">
-                <CTableDataCell colspan="6" class="text-center text-gray-500 italic">
-                  Không tìm thấy kích cỡ nào.
-                </CTableDataCell>
-              </CTableRow>
-            </CTableBody>
-          </CTable>
-        </CCardBody>
-      </CCard>
-
-      <div class="flex justify-center mt-4">
-        <CPagination align="center" aria-label="Page navigation">
-          <CPaginationItem :disabled="currentPage === 1" @click="goToPage(currentPage - 1)"
-            >Trước</CPaginationItem
-          >
-          <CPaginationItem
-            v-for="page in totalPages"
-            :key="page"
-            :active="page === currentPage"
-            @click="goToPage(page)"
-          >
-            {{ page }}
-          </CPaginationItem>
-          <CPaginationItem :disabled="currentPage === totalPages" @click="goToPage(currentPage + 1)"
-            >Sau</CPaginationItem
-          >
-        </CPagination>
+    <!-- Filter Section -->
+    <div class="filter-section">
+      <div class="filter-header">
+        <h3 class="filter-title">
+          <iconify-icon icon="solar:filter-bold-duotone"></iconify-icon>
+          Bộ Lọc Kích Cỡ
+        </h3>
+        <button class="btn-reset" @click="resetFilters">
+          <iconify-icon icon="solar:refresh-bold-duotone"></iconify-icon>
+          Đặt lại bộ lọc
+        </button>
       </div>
+      <div class="filter-content">
+        <div class="filter-row">
+          <div class="filter-group">
+            <label class="filter-label">Tìm kiếm</label>
+            <input 
+              type="text" 
+              v-model="filters.search" 
+              class="filter-input"
+              placeholder="Tìm theo tên hoặc mã kích cỡ..."
+            />
+          </div>
+          <div class="filter-group">
+            <label class="filter-label">Trạng thái</label>
+            <select v-model="filters.status" class="filter-select">
+              <option value="">Tất cả trạng thái</option>
+              <option value="active">Đang sử dụng</option>
+              <option value="inactive">Ngừng sử dụng</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label class="filter-label">Sắp xếp theo</label>
+            <select v-model="filters.sortBy" class="filter-select">
+              <option value="newest">Mới nhất</option>
+              <option value="oldest">Cũ nhất</option>
+              <option value="name_asc">Tên A-Z</option>
+              <option value="name_desc">Tên Z-A</option>
+              <option value="code_asc">Mã A-Z</option>
+              <option value="code_desc">Mã Z-A</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
 
-      <CModal :visible="showModal" @close="closeModal" class="modal-lg">
-        <CModalHeader class="bg-black text-white border-b border-gray-600 rounded-t-md">
-          <CModalTitle class="text-white">{{
-            isEditing ? 'Chỉnh Sửa Kích Cỡ' : 'Thêm Kích Cỡ Mới'
-          }}</CModalTitle>
-          <CCloseButton @click="closeModal" class="text-gray-400 hover:text-white" />
-        </CModalHeader>
-        <CModalBody class="bg-white text-gray-800">
-          <CForm @submit.prevent="saveKichCo" class="space-y-4">
-            <div>
-              <CFormLabel for="tenKichCo" class="text-gray-700">Tên kích cỡ</CFormLabel>
-              <CFormInput
-                id="tenKichCo"
-                v-model="newKichCo.tenKichCo"
-                required
-                class="custom-input"
-              />
+    <!-- Main Content -->
+    <div class="main-content">
+      <!-- Sizes Table -->
+      <div class="sizes-section">
+        <div class="section-header">
+          <h3 class="section-title">
+            <iconify-icon icon="solar:ruler-bold-duotone"></iconify-icon>
+            Danh Sách Kích Cỡ ({{ filteredSizes.length }})
+          </h3>
+        </div>
+
+        <!-- Data Table -->
+        <DataTable
+          :data="filteredSizes"
+          :columns="tableColumns"
+          item-label="kích cỡ"
+          empty-message="Không tìm thấy kích cỡ nào."
+          key-field="id"
+        >
+          <template #stt="{ rowIndex }">
+            {{ rowIndex }}
+          </template>
+          <template #code="{ item }">
+            <span class="size-code">{{ item.code }}</span>
+          </template>
+          <template #name="{ item }">
+            <div class="table-size-info">
+              <span class="table-size-name">{{ item.name }}</span>
             </div>
-            <div>
-              <CFormLabel for="maKichCo" class="text-gray-700">Mã kích cỡ</CFormLabel>
-              <CFormInput
-                id="maKichCo"
-                v-model="newKichCo.maKichCo"
-                required
-                :readonly="isEditing"
-                class="custom-input"
-              />
+          </template>
+          <template #description="{ item }">
+            <span class="description">{{ item.description }}</span>
+          </template>
+          <template #productCount="{ item }">
+            <span class="product-count">{{ item.productCount }}</span>
+          </template>
+          <template #status="{ item }">
+            <span class="status-badge" :class="'status-' + item.status">
+              {{ getStatusLabel(item.status) }}
+            </span>
+          </template>
+          <template #createdAt="{ item }">
+            <span class="date">{{ formatDate(item.createdAt) }}</span>
+          </template>
+          <template #actions="{ item }">
+            <div class="actions">
+              <button @click="editSize(item)" class="action-btn btn-edit" title="Chỉnh sửa">
+                <iconify-icon icon="solar:pen-bold"></iconify-icon>
+              </button>
+              <button @click="deleteSize(item)" class="action-btn btn-delete" title="Xóa">
+                <iconify-icon icon="solar:trash-bin-trash-bold"></iconify-icon>
+              </button>
             </div>
-          </CForm>
-        </CModalBody>
-        <CModalFooter class="bg-gray-200 border-t border-gray-300 rounded-b-md">
-          <CButton color="secondary" class="rounded-md text-white" @click="closeModal">
-            Hủy
-          </CButton>
-          <CButton color="danger" class="rounded-md text-white" @click="saveKichCo">
-            <i class="fas fa-save mr-1"></i> {{ isEditing ? 'Cập Nhật' : 'Thêm' }}
-          </CButton>
-        </CModalFooter>
-      </CModal>
+          </template>
+        </DataTable>
+      </div>
+    </div>
 
-      <CModal :visible="showConfirmModal" @close="closeConfirmModal">
-        <CModalHeader class="bg-black text-white border-b border-gray-600 rounded-t-md">
-          <CModalTitle class="text-white">Xác nhận xóa</CModalTitle>
-          <CCloseButton @click="closeConfirmModal" class="text-gray-400 hover:text-white" />
-        </CModalHeader>
-        <CModalBody class="bg-white text-gray-800">
-          Bạn có chắc chắn muốn xóa kích cỡ "<span class="font-semibold text-red-700">{{
-            itemToDelete ? itemToDelete.tenKichCo : ''
-          }}</span
-          >" không?
-        </CModalBody>
-        <CModalFooter class="bg-gray-200 border-t border-gray-300 rounded-b-md">
-          <CButton
-            class="bg-gray-500 hover:bg-gray-600 text-white rounded-md"
-            @click="closeConfirmModal"
-            >Hủy</CButton
-          >
-          <CButton class="bg-red-700 hover:bg-red-800 text-white rounded-md" @click="confirmDelete"
-            >Xóa</CButton
-          >
-        </CModalFooter>
-      </CModal>
+    <!-- Add/Edit Size Modal -->
+    <div v-if="showAddSizeModal || showEditSizeModal" class="modal-overlay" @click="closeSizeForm">
+      <div class="modal-container" @click.stop>
+        <div class="modal-header">
+          <h3 class="modal-title">
+            <iconify-icon icon="solar:ruler-bold-duotone"></iconify-icon>
+            {{ showAddSizeModal ? 'Thêm Kích Cỡ Mới' : 'Chỉnh Sửa Kích Cỡ' }}
+          </h3>
+          <button class="modal-close" @click="closeSizeForm">
+            <iconify-icon icon="solar:close-circle-bold"></iconify-icon>
+          </button>
+        </div>
+        <div class="modal-content">
+          <form @submit.prevent="saveSize" class="size-form">
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label required">Tên kích cỡ</label>
+                <input 
+                  type="text" 
+                  v-model="sizeForm.name" 
+                  class="form-input"
+                  placeholder="Nhập tên kích cỡ"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label required">Mã kích cỡ</label>
+                <input 
+                  type="text" 
+                  v-model="sizeForm.code" 
+                  class="form-input"
+                  placeholder="Nhập mã kích cỡ"
+                  required
+                />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Trạng thái</label>
+                <select v-model="sizeForm.status" class="form-input">
+                  <option value="active">Đang sử dụng</option>
+                  <option value="inactive">Ngừng sử dụng</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group full-width">
+              <label class="form-label">Mô tả kích cỡ</label>
+              <textarea 
+                v-model="sizeForm.description" 
+                class="form-textarea"
+                placeholder="Nhập mô tả kích cỡ"
+                rows="4"
+              ></textarea>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn secondary" @click="closeSizeForm">Hủy</button>
+          <button type="button" class="btn primary" @click="saveSize">
+            <iconify-icon icon="solar:check-circle-bold"></iconify-icon>
+            {{ showAddSizeModal ? 'Thêm kích cỡ' : 'Cập nhật' }}
+          </button>
+        </div>
+      </div>
+    </div>
 
-      <CModal :visible="showProductDetailModal" @close="closeProductDetailModal" size="xl">
-        <CModalHeader class="bg-black text-white border-b border-gray-600 rounded-t-md">
-          <CModalTitle class="text-white"
-            >Sản phẩm có kích cỡ: {{ selectedKichCoName }}</CModalTitle
-          >
-          <CCloseButton @click="closeProductDetailModal" class="text-gray-400 hover:text-white" />
-        </CModalHeader>
-        <CModalBody class="bg-white text-gray-800">
-          <div v-if="isLoadingProducts" class="flex justify-center items-center h-40">
-            <CSpinner color="primary" />
-          </div>
-          <div v-else-if="products.length > 0">
-            <CTable striped hover responsive class="custom-table">
-              <CTableHead class="bg-black text-white">
-                <CTableRow>
-                  <CTableHeaderCell scope="col">Mã CTSP</CTableHeaderCell>
-                  <CTableHeaderCell scope="col">Tên Sản phẩm</CTableHeaderCell>
-                  <CTableHeaderCell scope="col">Thương hiệu</CTableHeaderCell>
-                  <CTableHeaderCell scope="col">Màu sắc</CTableHeaderCell>
-                  <CTableHeaderCell scope="col">Chất liệu</CTableHeaderCell>
-                  <CTableHeaderCell scope="col">Danh mục</CTableHeaderCell>
-                  <CTableHeaderCell scope="col">Số lượng tồn kho</CTableHeaderCell>
-                </CTableRow>
-              </CTableHead>
-              <CTableBody>
-                <CTableRow v-for="product in products" :key="product.id">
-                  <CTableDataCell>{{ product.maCtsp }}</CTableDataCell>
-                  <CTableDataCell>{{ product.tenSanPham }}</CTableDataCell>
-                  <CTableDataCell>{{ product.tenThuongHieu }}</CTableDataCell>
-                  <CTableDataCell>{{ product.tenMauSac }}</CTableDataCell>
-                  <CTableDataCell>{{ product.tenChatLieu }}</CTableDataCell>
-                  <CTableDataCell>{{ product.tenDanhMuc }}</CTableDataCell>
-                  <CTableDataCell>{{ product.soLuongTonKho }}</CTableDataCell>
-                </CTableRow>
-              </CTableBody>
-            </CTable>
-          </div>
-          <div v-else>
-            <p class="text-center text-gray-500 italic">
-              Không có sản phẩm nào thuộc kích cỡ này.
-            </p>
-          </div>
-        </CModalBody>
-        <CModalFooter class="bg-gray-200 border-t border-gray-300 rounded-b-md">
-          <CButton color="secondary" class="rounded-md" @click="closeProductDetailModal"
-            >Đóng</CButton
-          >
-        </CModalFooter>
-      </CModal>
-    </CContainer>
+    <!-- Delete Confirmation Modal -->
+    <div v-if="showDeleteModal" class="modal-overlay" @click="showDeleteModal = false">
+      <div class="modal-container small" @click.stop>
+        <div class="modal-header">
+          <h3 class="modal-title">Xác nhận xóa kích cỡ</h3>
+          <button class="modal-close" @click="showDeleteModal = false">
+            <iconify-icon icon="solar:close-circle-bold"></iconify-icon>
+          </button>
+        </div>
+        <div class="modal-content">
+          <p>Bạn có chắc chắn muốn xóa kích cỡ <strong>{{ sizeToDelete?.name }}</strong> không?</p>
+          <p class="warning-text">Hành động này không thể hoàn tác!</p>
+        </div>
+        <div class="modal-footer">
+          <button class="btn secondary" @click="showDeleteModal = false">Hủy bỏ</button>
+          <button class="btn danger" @click="confirmDelete">
+            <iconify-icon icon="solar:trash-bin-trash-bold"></iconify-icon>
+            Xác nhận xóa
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
-import {
-  CContainer,
-  CRow,
-  CCol,
-  CFormInput,
-  CButton,
-  CCard,
-  CCardHeader,
-  CCardBody,
-  CTable,
-  CTableHead,
-  CTableRow,
-  CTableHeaderCell,
-  CTableBody,
-  CTableDataCell,
-  CModal,
-  CModalHeader,
-  CModalTitle,
-  CModalBody,
-  CModalFooter,
-  CCloseButton,
-  CForm,
-  CFormLabel,
-  CSpinner,
-  CPagination,
-  CPaginationItem
-} from '@coreui/vue';
-import axios from 'axios';
+import { ref, computed, watch, onMounted } from 'vue';
 import { useToast } from 'vue-toastification';
+import { useRouter } from 'vue-router';
+import Breadcrumb from '@/components/Breadcrumb.vue';
+import DataTable from '@/components/DataTable.vue';
 
 export default {
   name: 'KichCo',
   components: {
-    CContainer,
-    CRow,
-    CCol,
-    CFormInput,
-    CButton,
-    CCard,
-    CCardHeader,
-    CCardBody,
-    CTable,
-    CTableHead,
-    CTableRow,
-    CTableHeaderCell,
-    CTableBody,
-    CTableDataCell,
-    CModal,
-    CModalHeader,
-    CModalTitle,
-    CModalBody,
-    CModalFooter,
-    CCloseButton,
-    CForm,
-    CFormLabel,
-    CSpinner,
-    CPagination,
-    CPaginationItem
+    Breadcrumb,
+    DataTable
   },
   setup() {
+    const router = useRouter();
     const toast = useToast();
-    return { toast };
-  },
-  data() {
-    return {
-      search: '',
-      showModal: false,
-      isEditing: false,
-      editItem: null,
-      newKichCo: {
-        tenKichCo: '',
-        maKichCo: ''
-      },
-      kichCos: [],
-      showConfirmModal: false,
-      itemToDelete: null,
-      showProductDetailModal: false,
-      selectedKichCoId: null,
-      selectedKichCoName: null,
-      products: [],
-      isLoadingProducts: false,
-      sortColumn: '',
-      sortDirection: 'asc',
-      currentPage: 1,
-      itemsPerPage: 10
-    };
-  },
-  computed: {
-    filteredKichCos() {
-      const keyword = this.search.toLowerCase().trim();
-      if (!keyword) return this.kichCos;
-      return this.kichCos.filter(
-        (kc) =>
-          kc.tenKichCo.toLowerCase().includes(keyword) || kc.maKichCo.toLowerCase().includes(keyword)
-      );
-    },
-    sortedKichCos() {
-      if (!this.sortColumn) {
-        return this.filteredKichCos;
-      }
-      return [...this.filteredKichCos].sort((a, b) => {
-        const aValue = a[this.sortColumn];
-        const bValue = b[this.sortColumn];
 
-        if (aValue < bValue) {
-          return this.sortDirection === 'asc' ? -1 : 1;
-        }
-        if (aValue > bValue) {
-          return this.sortDirection === 'asc' ? 1 : -1;
-        }
-        return 0;
-      });
-    },
-    paginatedItems() {
-      const start = (this.currentPage - 1) * this.itemsPerPage;
-      const end = start + this.itemsPerPage;
-      return this.sortedKichCos.slice(start, end);
-    },
-    totalPages() {
-      return Math.ceil(this.sortedKichCos.length / this.itemsPerPage);
-    }
-  },
-  watch: {
-    sortedKichCos() {
-      this.currentPage = 1;
-    }
-  },
-  created() {
-    this.fetchKichCos();
-  },
-  methods: {
-    formatDate(dateString) {
+    // Modals
+    const showAddSizeModal = ref(false);
+    const showEditSizeModal = ref(false);
+    const showDeleteModal = ref(false);
+    const sizeToDelete = ref(null);
+
+    // Filters
+    const filters = ref({
+      search: '',
+      status: '',
+      sortBy: 'newest'
+    });
+
+    // Form data
+    const sizeForm = ref({
+      name: '',
+      code: '',
+      status: 'active',
+      description: ''
+    });
+
+    // Sample data
+    const sizes = ref([
+      {
+        id: 1,
+        code: 'KC001',
+        name: '35',
+        description: 'Kích cỡ 35 - phù hợp cho chân nhỏ',
+        productCount: 12,
+        status: 'active',
+        createdAt: '2024-01-15T10:30:00'
+      },
+      {
+        id: 2,
+        code: 'KC002',
+        name: '36',
+        description: 'Kích cỡ 36 - kích cỡ phổ biến',
+        productCount: 25,
+        status: 'active',
+        createdAt: '2024-01-14T11:15:00'
+      },
+      {
+        id: 3,
+        code: 'KC003',
+        name: '37',
+        description: 'Kích cỡ 37 - kích cỡ phổ biến',
+        productCount: 28,
+        status: 'active',
+        createdAt: '2024-01-13T09:20:00'
+      },
+      {
+        id: 4,
+        code: 'KC004',
+        name: '38',
+        description: 'Kích cỡ 38 - kích cỡ phổ biến',
+        productCount: 30,
+        status: 'active',
+        createdAt: '2024-01-12T14:45:00'
+      },
+      {
+        id: 5,
+        code: 'KC005',
+        name: '39',
+        description: 'Kích cỡ 39 - kích cỡ phổ biến',
+        productCount: 22,
+        status: 'active',
+        createdAt: '2024-01-11T16:20:00'
+      },
+      {
+        id: 6,
+        code: 'KC006',
+        name: '40',
+        description: 'Kích cỡ 40 - kích cỡ nam phổ biến',
+        productCount: 18,
+        status: 'active',
+        createdAt: '2024-01-10T08:30:00'
+      },
+      {
+        id: 7,
+        code: 'KC007',
+        name: '41',
+        description: 'Kích cỡ 41 - kích cỡ nam phổ biến',
+        productCount: 15,
+        status: 'active',
+        createdAt: '2024-01-09T12:15:00'
+      },
+      {
+        id: 8,
+        code: 'KC008',
+        name: '42',
+        description: 'Kích cỡ 42 - kích cỡ nam lớn',
+        productCount: 10,
+        status: 'inactive',
+        createdAt: '2024-01-08T15:45:00'
+      }
+    ]);
+
+    // Breadcrumb data
+    const breadcrumbItems = ref([
+      { label: 'Quản lý', path: '/quan-ly' },
+      { label: 'Thuộc tính', path: '/attributes' },
+      { label: 'Kích cỡ', path: '/attributes/kich-co' }
+    ]);
+
+    const breadcrumbActions = ref([
+      {
+        label: 'Thêm kích cỡ',
+        icon: 'solar:add-circle-bold-duotone',
+        type: 'primary',
+        handler: () => showAddSizeModal.value = true
+      },
+      {
+        label: 'Xuất Excel',
+        icon: 'solar:file-download-bold-duotone',
+        type: 'default',
+        handler: () => exportToExcel()
+      }
+    ]);
+
+    const pageStats = computed(() => [
+      {
+        value: sizes.value.length.toString(),
+        label: 'Tổng kích cỡ',
+        icon: 'solar:ruler-bold-duotone'
+      },
+      {
+        value: sizes.value.filter(s => s.status === 'active').length.toString(),
+        label: 'Đang sử dụng',
+        icon: 'solar:check-circle-bold-duotone'
+      },
+      {
+        value: sizes.value.filter(s => s.status === 'inactive').length.toString(),
+        label: 'Ngừng sử dụng',
+        icon: 'solar:close-circle-bold-duotone'
+      },
+      {
+        value: Math.round((sizes.value.filter(s => s.status === 'active').length / sizes.value.length) * 100) + '%',
+        label: 'Tỷ lệ sử dụng',
+        icon: 'solar:chart-square-bold-duotone'
+      }
+    ]);
+
+    // Table columns
+    const tableColumns = ref([
+      { key: 'stt', label: 'STT' },
+      { key: 'code', label: 'Mã kích cỡ' },
+      { key: 'name', label: 'Tên kích cỡ' },
+      { key: 'description', label: 'Mô tả' },
+      { key: 'productCount', label: 'Số lượng sản phẩm' },
+      { key: 'status', label: 'Trạng thái' },
+      { key: 'createdAt', label: 'Ngày tạo' },
+      { key: 'actions', label: 'Thao tác' }
+    ]);
+
+    // Computed
+    const filteredSizes = computed(() => {
+      let result = [...sizes.value];
+
+      // Search filter
+      if (filters.value.search.trim()) {
+        const search = filters.value.search.toLowerCase();
+        result = result.filter(size => 
+          size.name.toLowerCase().includes(search) ||
+          size.code.toLowerCase().includes(search) ||
+          size.description.toLowerCase().includes(search)
+        );
+      }
+
+      // Status filter
+      if (filters.value.status) {
+        result = result.filter(size => size.status === filters.value.status);
+      }
+
+      // Sorting
+      switch (filters.value.sortBy) {
+        case 'oldest':
+          result.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+          break;
+        case 'name_asc':
+          result.sort((a, b) => a.name.localeCompare(b.name));
+          break;
+        case 'name_desc':
+          result.sort((a, b) => b.name.localeCompare(a.name));
+          break;
+        case 'code_asc':
+          result.sort((a, b) => a.code.localeCompare(b.code));
+          break;
+        case 'code_desc':
+          result.sort((a, b) => b.code.localeCompare(a.code));
+          break;
+        case 'newest':
+        default:
+          result.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+          break;
+      }
+
+      return result;
+    });
+
+    // Methods
+    const resetFilters = () => {
+      filters.value = {
+        search: '',
+        status: '',
+        sortBy: 'newest'
+      };
+      toast.info('Đã đặt lại bộ lọc');
+    };
+
+    const openAddSizeModal = () => {
+      sizeForm.value = {
+        name: '',
+        code: '',
+        status: 'active',
+        description: ''
+      };
+      showAddSizeModal.value = true;
+    };
+
+    const getStatusLabel = (status) => {
+      switch (status) {
+        case 'active':
+          return 'Đang sử dụng';
+        case 'inactive':
+          return 'Ngừng sử dụng';
+        default:
+          return 'Không xác định';
+      }
+    };
+
+    const formatDate = (dateString) => {
       if (!dateString) return '';
       const date = new Date(dateString);
       return date.toLocaleDateString('vi-VN', {
         year: 'numeric',
         month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
+        day: '2-digit'
       });
-    },
-    async fetchKichCos() {
+    };
+
+    const generateSizeCode = () => {
+      const codes = sizes.value.map(s => {
+        const num = parseInt(s.code.replace('KC', ''));
+        return isNaN(num) ? 0 : num;
+      });
+      const nextId = codes.length > 0 ? Math.max(...codes) + 1 : 1;
+      return `KC${String(nextId).padStart(3, '0')}`;
+    };
+
+    const editSize = (size) => {
+      sizeForm.value = { ...size };
+      showEditSizeModal.value = true;
+    };
+
+    const deleteSize = (size) => {
+      sizeToDelete.value = size;
+      showDeleteModal.value = true;
+    };
+
+    const saveSize = async () => {
       try {
-        const response = await axios.get('/api/kichCos');
-        this.kichCos = response.data;
-        this.toast.success('Tải danh sách kích cỡ thành công!');
-      } catch (error) {
-        if (error.response && error.response.data && error.response.data.message) {
-          this.toast.error(error.response.data.message);
-        } else {
-          this.toast.error('Lỗi khi tải dữ liệu kích cỡ.');
-        }
-        console.error('Error fetching data:', error);
-      }
-    },
-    async fetchProductsByKichCoId(kichCoId) {
-      this.isLoadingProducts = true;
-      try {
-        const response = await axios.get(
-          `http://localhost:8080/api/chi-tiet-san-phams/by-kich-co/${kichCoId}`
-        );
-        this.products = response.data;
-        this.toast.success(`Đã tải danh sách sản phẩm của kích cỡ này.`);
-      } catch (error) {
-        if (error.response && error.response.data && error.response.data.message) {
-          this.toast.error(error.response.data.message);
-        } else {
-          this.toast.error('Lỗi khi lấy dữ liệu sản phẩm.');
-        }
-        console.error('Lỗi khi lấy dữ liệu sản phẩm:', error);
-        this.products = [];
-      } finally {
-        this.isLoadingProducts = false;
-      }
-    },
-    searchKichCo() {
-      this.currentPage = 1;
-      this.toast.info(`Đã tìm kiếm với từ khóa "${this.search}".`);
-    },
-      generateCode() {
-        const nextId =
-          this.kichCos.length > 0
-            ? Math.max(...this.kichCos.map((kc) => parseInt(kc.maKichCo.replace('KC', '')))) + 1
-            : 1;
-        return `KC${String(nextId).padStart(3,'0')}`;
-      },
-    openAddModal() {
-      this.isEditing = false;
-      this.editItem = null;
-      this.newKichCo = {
-        tenKichCo: '',
-        maKichCo: this.generateCode()
-      };
-      this.showModal = true;
-    },
-    async saveKichCo() {
-      try {
-        if (this.isEditing) {
-          const payload = {
-            tenKichCo: this.newKichCo.tenKichCo,
-            maKichCo: this.newKichCo.maKichCo
+        if (showAddSizeModal.value) {
+          // Add new size
+          const newSize = {
+            id: Date.now(),
+            code: sizeForm.value.code || generateSizeCode(),
+            name: sizeForm.value.name,
+            description: sizeForm.value.description,
+            productCount: 0,
+            status: sizeForm.value.status,
+            createdAt: new Date().toISOString()
           };
-          await axios.put(`/api/kichCos/${this.editItem.id}`, payload);
-          this.toast.success('Cập nhật kích cỡ thành công!');
+          sizes.value.unshift(newSize);
+          toast.success('Thêm kích cỡ mới thành công!');
         } else {
-          await axios.post('/api/kichCos', this.newKichCo);
-          this.toast.success('Thêm kích cỡ mới thành công!');
-        }
-        this.closeModal();
-        this.fetchKichCos();
-      } catch (error) {
-        if (error.response && error.response.data && error.response.data.message) {
-          this.toast.error(error.response.data.message);
-        } else {
-          this.toast.error('Lỗi khi lưu kích cỡ. Vui lòng thử lại.');
-        }
-        console.error('Error saving data:', error);
-      }
-    },
-    editKichCo(item) {
-      this.isEditing = true;
-      this.editItem = item;
-      this.newKichCo = { tenKichCo: item.tenKichCo, maKichCo: item.maKichCo };
-      this.showModal = true;
-    },
-    deleteKichCo(item) {
-      this.itemToDelete = item;
-      this.showConfirmModal = true;
-    },
-    async confirmDelete() {
-      if (this.itemToDelete) {
-        try {
-          await axios.delete(`/api/kichCos/${this.itemToDelete.id}`);
-          this.toast.success(`Đã xóa kích cỡ "${this.itemToDelete.tenKichCo}" thành công!`);
-          this.closeConfirmModal();
-          this.fetchKichCos();
-        } catch (error) {
-          if (error.response && error.response.data && error.response.data.message) {
-            this.toast.error(error.response.data.message);
-          } else {
-            this.toast.error('Lỗi khi xóa kích cỡ. Vui lòng thử lại.');
+          // Edit existing size
+          const index = sizes.value.findIndex(s => s.id === sizeForm.value.id);
+          if (index !== -1) {
+            sizes.value[index] = {
+              ...sizes.value[index],
+              name: sizeForm.value.name,
+              description: sizeForm.value.description,
+              status: sizeForm.value.status
+            };
+            toast.success('Cập nhật kích cỡ thành công!');
           }
-          console.error('Error deleting data:', error);
         }
+        closeSizeForm();
+      } catch (error) {
+        toast.error('Lỗi khi lưu kích cỡ. Vui lòng thử lại.');
+        console.error('Error saving size:', error);
       }
-    },
-    closeModal() {
-      this.showModal = false;
-    },
-    closeConfirmModal() {
-      this.showConfirmModal = false;
-      this.itemToDelete = null;
-    },
-    viewProducts(kichCoId, tenKichCo) {
-      this.selectedKichCoId = kichCoId;
-      this.selectedKichCoName = tenKichCo;
-      this.fetchProductsByKichCoId(kichCoId);
-      this.showProductDetailModal = true;
-    },
-    closeProductDetailModal() {
-      this.showProductDetailModal = false;
-      this.selectedKichCoId = null;
-      this.selectedKichCoName = null;
-      this.products = [];
-    },
-    sortData(column) {
-      if (this.sortColumn === column) {
-        this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
-      } else {
-        this.sortColumn = column;
-        this.sortDirection = 'asc';
+    };
+
+    const confirmDelete = () => {
+      if (sizeToDelete.value) {
+        const index = sizes.value.findIndex(s => s.id === sizeToDelete.value.id);
+        if (index !== -1) {
+          sizes.value.splice(index, 1);
+          toast.success(`Đã xóa kích cỡ "${sizeToDelete.value.name}" thành công!`);
+        }
+        showDeleteModal.value = false;
+        sizeToDelete.value = null;
       }
-      this.currentPage = 1;
-    },
-    goToPage(page) {
-      if (page > 0 && page <= this.totalPages) {
-        this.currentPage = page;
-      }
-    }
+    };
+
+    const closeSizeForm = () => {
+      showAddSizeModal.value = false;
+      showEditSizeModal.value = false;
+      sizeForm.value = {
+        name: '',
+        code: '',
+        status: 'active',
+        description: ''
+      };
+    };
+
+    const exportToExcel = () => {
+      toast.info('Tính năng xuất Excel đang được phát triển');
+    };
+
+    return {
+      // Data
+      breadcrumbItems,
+      breadcrumbActions,
+      pageStats,
+      tableColumns,
+      showAddSizeModal,
+      showEditSizeModal,
+      showDeleteModal,
+      sizeToDelete,
+      filters,
+      sizeForm,
+      sizes,
+      
+      // Computed
+      filteredSizes,
+      
+      // Methods
+      resetFilters,
+      openAddSizeModal,
+      getStatusLabel,
+      formatDate,
+      editSize,
+      deleteSize,
+      saveSize,
+      confirmDelete,
+      closeSizeForm,
+      exportToExcel
+    };
   }
 };
 </script>
 
 <style scoped>
-@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css');
-
-.custom-input.form-control:focus {
-  border-color: #ced4da !important;
-  box-shadow: 0 0 0 0.25rem rgba(108, 117, 125, 0.25) !important;
+/* ===== CONTAINER ===== */
+.quan-ly-kich-co-container {
+  padding: 24px;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  min-height: 100vh;
+  font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-.custom-table {
+/* ===== FILTER SECTION ===== */
+.filter-section {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  margin-bottom: 24px;
+  border: 1px solid #e2e8f0;
+}
+
+.filter-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.filter-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1a202c;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.filter-content {
   width: 100%;
-  border-collapse: collapse;
-  background-color: #fff;
 }
 
-.custom-table th,
-.custom-table td {
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid #dee2e6;
-  text-align: left;
+.filter-row {
+  display: grid;
+  grid-template-columns: 2fr 1.5fr 1.5fr auto;
+  gap: 20px;
+  align-items: end;
 }
 
-.custom-table th {
-  background-color: #000000;
-  color: #ffffff;
-  font-weight: bold;
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.custom-table th.text-center,
-.custom-table td.text-center {
-  text-align: center;
+.filter-label {
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.9rem;
 }
 
-.custom-table tr:hover {
-  background-color: #f8f9fa;
+.filter-input,
+.filter-select {
+  padding: 10px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+  background: white;
 }
 
-.cursor-pointer {
+.filter-input:focus,
+.filter-select:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.filter-input::placeholder {
+  color: #9ca3af;
+}
+
+.btn-reset {
+  padding: 10px 16px;
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-weight: 600;
   cursor: pointer;
-  user-select: none;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+}
+
+.btn-reset:hover {
+  background: #e2e8f0;
+  color: #374151;
+}
+
+/* ===== MAIN CONTENT ===== */
+.main-content {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e2e8f0;
+}
+
+.sizes-section {
+  padding: 24px;
+}
+
+.section-header {
+  margin-bottom: 20px;
+}
+
+.section-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #1a202c;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.table-size-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.table-size-name {
+  font-weight: 600;
+  color: #1a202c;
+}
+
+.description {
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.product-count {
+  font-weight: 600;
+  color: #1a202c;
+}
+
+.date {
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.actions {
+  display: flex;
+  gap: 4px;
+}
+
+/* ===== STATUS BADGES ===== */
+.status-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-active {
+  background: #dcfdf4;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+}
+
+.status-inactive {
+  background: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+/* ===== SIZE CODE STYLING ===== */
+.size-code {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  background: #f1f5f9;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
+/* ===== ACTION BUTTONS ===== */
+.action-btn {
+  padding: 6px 10px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 2px;
+}
+
+.btn-edit {
+  background: #dbeafe;
+  color: #1e40af;
+  border: 1px solid #93c5fd;
+}
+
+.btn-edit:hover {
+  background: #bfdbfe;
+  transform: translateY(-1px);
+}
+
+.btn-delete {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fca5a5;
+}
+
+.btn-delete:hover {
+  background: #fecaca;
+  transform: translateY(-1px);
+}
+
+/* ===== MODAL STYLES ===== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal-container {
+  background: white;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  border: 1px solid #e2e8f0;
+  animation: modalSlideIn 0.2s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.modal-container.small {
+  width: 400px;
+}
+
+.modal-container.large {
+  width: 800px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 28px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.modal-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1a202c;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.modal-close {
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 18px;
+}
+
+.modal-close:hover {
+  background: #e2e8f0;
+  color: #374151;
+}
+
+.modal-content {
+  flex: 1;
+  padding: 28px;
+  overflow-y: auto;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 20px 28px;
+  border-top: 1px solid #e2e8f0;
+  background: #f8fafc;
+}
+
+.size-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group.full-width {
+  grid-column: 1 / -1;
+}
+
+.form-label {
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.9rem;
+}
+
+.form-label.required::after {
+  content: ' *';
+  color: #dc2626;
+}
+
+.form-input,
+.form-textarea {
+  padding: 12px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+  background: white;
+  font-family: inherit;
+}
+
+.form-input:focus,
+.form-textarea:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 100px;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  min-width: 120px;
+}
+
+.btn.primary {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  color: white;
+}
+
+.btn.primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+.btn.secondary {
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #d1d5db;
+}
+
+.btn.secondary:hover {
+  background: #e2e8f0;
+  color: #374151;
+}
+
+.btn.danger {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  color: white;
+}
+
+.btn.danger:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+}
+
+.warning-text {
+  color: #dc2626;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-top: 8px;
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
+@media (max-width: 768px) {
+  .quan-ly-kich-co-container {
+    padding: 12px;
+  }
+  
+  .filter-section,
+  .sizes-section {
+    padding: 16px;
+    border-radius: 12px;
+  }
+  
+  .filter-row {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .modal-container.large {
+    width: 95vw;
+    margin: 10px;
+  }
+  
+  .modal-header,
+  .modal-content,
+  .modal-footer {
+    padding-left: 20px;
+    padding-right: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .modal-overlay {
+    padding: 10px;
+  }
+
+  .modal-title {
+    font-size: 1.1rem;
+  }
+
+  .action-btn {
+    padding: 4px 6px;
+    font-size: 0.7rem;
+  }
 }
 </style>

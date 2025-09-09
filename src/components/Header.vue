@@ -2,6 +2,7 @@
 import { useMainStore } from '../stores/MainStore.ts';
 import { inject, ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router'; // Đảm bảo đã import useRouter
+import Loading from './Loading.vue';
 
 const mainStore = useMainStore();
 const { isDeviceMobile } = mainStore;
@@ -17,6 +18,7 @@ const router = useRouter();
 
 // --- Thêm ref để lưu thông tin người dùng và computed để kiểm tra trạng thái đăng nhập ---
 const currentUser = ref(null); // Sẽ chứa { name: '...', email: '...' } hoặc null nếu chưa đăng nhập
+const isRefreshing = ref(false); // Trạng thái loading khi làm mới dữ liệu
 
 const isAuthenticated = computed(() => {
   return currentUser.value !== null;
@@ -28,8 +30,16 @@ const updateDateTime = () => {
 };
 
 const refreshData = () => {
-  alert('Đang làm mới dữ liệu...'); // Thay bằng toast nếu cần
-  setTimeout(() => window.location.reload(), 1500);
+  // Close sidebar if it's open
+  if (props.isSidebarActive) {
+    emit('toggle-sidebar');
+  }
+  
+  isRefreshing.value = true;
+  // Simulate loading time before reload
+  setTimeout(() => {
+    window.location.reload();
+  }, 1500);
 };
 
 const themeIcon = computed(() => {
@@ -242,14 +252,18 @@ onBeforeUnmount(() => {
       </div>
     </div>
   </header>
+  
+  <!-- Loading component for refresh - moved outside header -->
+  <Loading 
+    :show="isRefreshing" 
+    text="Đang làm mới dữ liệu..." 
+    subtext="Trang sẽ được tải lại sau giây lát"
+    :fullscreen="true"
+  />
 </template>
 
 <style lang="scss" scoped>
 .modern-header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
   height: 70px;
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(20px);

@@ -55,6 +55,24 @@ onMounted(() => {
   if (isDarkTheme.value) {
     document.body.classList.add('dark')
   }
+  
+  // Remove any existing chatbot elements
+  const removeChatbot = () => {
+    const chatbotElements = document.querySelectorAll('[id*="tudong"], [class*="tudong"], [id*="chatbox"], [class*="chatbox"], [class*="chat"]')
+    chatbotElements.forEach(el => {
+      if (el.style.position === 'fixed' || el.style.zIndex > 1000) {
+        el.remove()
+      }
+    })
+    
+    const chatbotScripts = document.querySelectorAll('script[src*="tudongchat"], script[src*="chatbox"]')
+    chatbotScripts.forEach(el => el.remove())
+  }
+  
+  // Run cleanup immediately and after a delay
+  removeChatbot()
+  setTimeout(removeChatbot, 1000)
+  setTimeout(removeChatbot, 3000)
 })
 
 // Cart and favorites management
@@ -163,7 +181,6 @@ watch(route, () => {
 .main-content-wrapper {
   flex-grow: 1;
   padding-left: v-bind("showMainLayoutElements && isSidebarActive ? '280px' : '0'");
-  padding-top: v-bind("showMainLayoutElements ? '70px' : '0'");
   width: 100vw;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   min-height: 100vh;
@@ -187,7 +204,6 @@ watch(route, () => {
   .main-content-wrapper {
     padding-left: 0 !important;
     width: 100vw !important;
-    padding-top: v-bind("showMainLayoutElements ? '70px' : '0'") !important;
   }
 }
 </style>

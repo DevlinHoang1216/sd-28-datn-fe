@@ -379,21 +379,6 @@ const changePage = (page) => {
   }
 };
 
-const initChatbot = () => {
-  const script = document.createElement('script');
-  script.src = 'https://app.tudongchat.com/js/chatbox.js';
-  script.async = true;
-  script.onload = () => {
-    if (window.TuDongChat) {
-      const tudong_chatbox = new window.TuDongChat('rKnd8_19n6Lvrg-lDWmTs');
-      tudong_chatbox.initial();
-    } else {
-      console.error('TuDongChat script loaded but TuDongChat is undefined');
-    }
-  };
-  script.onerror = () => console.error('Failed to load TuDongChat script');
-  document.body.appendChild(script);
-};
 
 // Lắng nghe sự kiện invoice-completed để cập nhật tổng doanh thu
 emitter.on('invoice-completed', (invoice) => {
@@ -404,7 +389,6 @@ emitter.on('invoice-completed', (invoice) => {
 
 onMounted(() => {
   fetchAllInvoices();
-  initChatbot();
 });
 
 // Theo dõi thay đổi danh sách hóa đơn để cập nhật tổng doanh thu

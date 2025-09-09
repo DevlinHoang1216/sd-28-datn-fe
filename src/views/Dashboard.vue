@@ -1,1506 +1,1681 @@
 <template>
-  <div class="min-h-screen flex flex-col bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-850 p-6 font-sans antialiased text-gray-800 dark:text-gray-100">
+  <div class="dashboard-container">
+    <!-- Breadcrumb -->
+    <Breadcrumb 
+      :items="breadcrumbItems"
+      :show-page-info="true"
+      page-title="Dashboard Thống kê"
+      page-description="Tổng quan hiệu suất kinh doanh của Shop Giày"
+      page-icon="solar:chart-square-bold-duotone"
+      :page-stats="pageStats"
+      :actions="breadcrumbActions"
+    />
 
-    <div v-if="isLoading" class="flex justify-center items-center h-40">
-      <div class="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-blue-600"></div>
+    <!-- Stats Cards -->
+    <div class="stats-grid">
+      <div class="stat-card revenue-card">
+        <div class="card-icon">
+          <iconify-icon icon="solar:wallet-money-bold-duotone"></iconify-icon>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">{{ formatCurrency(stats.totalRevenue) }}</h3>
+          <p class="card-label">Tổng Doanh Thu</p>
+          <div class="card-trend positive">
+            <iconify-icon icon="solar:arrow-up-bold"></iconify-icon>
+            <span>+12.5%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="stat-card orders-card">
+        <div class="card-icon">
+          <iconify-icon icon="solar:bag-check-bold-duotone"></iconify-icon>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">{{ stats.totalOrders.toLocaleString() }}</h3>
+          <p class="card-label">Đơn Hàng</p>
+          <div class="card-trend positive">
+            <iconify-icon icon="solar:arrow-up-bold"></iconify-icon>
+            <span>+8.3%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="stat-card customers-card">
+        <div class="card-icon">
+          <iconify-icon icon="solar:users-group-two-rounded-bold-duotone"></iconify-icon>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">{{ stats.totalCustomers.toLocaleString() }}</h3>
+          <p class="card-label">Khách Hàng</p>
+          <div class="card-trend positive">
+            <iconify-icon icon="solar:arrow-up-bold"></iconify-icon>
+            <span>+15.2%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="stat-card products-card">
+        <div class="card-icon">
+          <iconify-icon icon="solar:box-bold-duotone"></iconify-icon>
+        </div>
+        <div class="card-content">
+          <h3 class="card-value">{{ stats.totalProducts.toLocaleString() }}</h3>
+          <p class="card-label">Sản Phẩm</p>
+          <div class="card-trend neutral">
+            <iconify-icon icon="solar:arrow-right-bold"></iconify-icon>
+            <span>+2.1%</span>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <div v-if="errorMessage && !isLoading" class="bg-red-100 dark:bg-red-800 p-4 mb-8 rounded-xl shadow-md animate__animated animate__fadeIn">
-      <p class="text-red-700 dark:text-red-200 font-medium text-lg text-center">{{ errorMessage }}</p>
+    <!-- Charts Section -->
+    <div class="charts-section">
+      <!-- Revenue Chart -->
+      <div class="chart-card large-chart">
+        <div class="chart-header">
+          <h3 class="chart-title">
+            <iconify-icon icon="solar:chart-2-bold-duotone"></iconify-icon>
+            Xu Hướng Doanh Thu
+          </h3>
+          <div class="chart-actions">
+            <button class="chart-btn active">Ngày</button>
+            <button class="chart-btn">Tuần</button>
+            <button class="chart-btn">Tháng</button>
+          </div>
+        </div>
+        <div class="chart-container revenue-chart-container">
+          <canvas ref="revenueChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Category Performance -->
+      <div class="chart-card category-chart-card">
+        <div class="chart-header">
+          <h3 class="chart-title">
+            <iconify-icon icon="solar:pie-chart-2-bold-duotone"></iconify-icon>
+            Hiệu Suất Danh Mục
+          </h3>
+        </div>
+        <div class="chart-container category-chart-container">
+          <canvas ref="categoryChart"></canvas>
+        </div>
+      </div>
     </div>
 
-    <div v-else>
-      <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 mb-8 animate__animated animate__fadeIn">
-        <h4 class="text-3xl font-extrabold text-gray-800 dark:text-gray-100 mb-6 flex items-center border-b pb-4 border-gray-200 dark:border-gray-700">
-          <iconify-icon icon="solar:filter-linear" class="text-4xl mr-4 text-blue-600" />
-          Bộ Lọc Dữ Liệu & Báo Cáo
-        </h4>
-        <form @submit.prevent="filterData" class="filter-group grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-end">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Từ ngày</label>
-            <input v-model="filters.fromDate" @change="showFilterReminder" type="date" class="w-full border border-gray-300 rounded-lg p-3 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 transition duration-200 shadow-sm" />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Đến ngày</label>
-            <input v-model="filters.toDate" @change="showFilterReminder" type="date" class="w-full border border-gray-300 rounded-lg p-3 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 transition duration-200 shadow-sm" />
-          </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Danh mục</label>
-            <select v-model="filters.category" @change="showFilterReminder" class="w-full border border-gray-300 rounded-lg p-3 dark:bg-gray-700 dark:text-gray-200 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 transition duration-200 shadow-sm">
-              <option value="all">Tất cả danh mục</option>
-              <option v-for="category in categories" :key="category.id" :value="category.id">{{ category.name }}</option>
-            </select>
-          </div>
-          <div class="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-4">
-            <button type="submit" class="w-full sm:w-auto bg-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition duration-300 ease-in-out transform hover:scale-105">
-              <iconify-icon icon="solar:magnifer-linear" class="inline-block mr-2 text-xl" /> Lọc Dữ Liệu
-            </button>
-            <button type="button" @click="exportExcel" class="w-full sm:w-auto bg-green-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-75 transition duration-300 ease-in-out transform hover:scale-105" :disabled="isLoading || !hasData">
-              <iconify-icon icon="solar:file-check-line-duotone" class="inline-block mr-2 text-xl" /> Xuất Excel
-            </button>
-          </div>
-        </form>
-      </div>
-
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-6 mb-8" v-if="hasData">
-        <div class="bg-gradient-to-br from-blue-600 to-blue-800 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition transform hover:-translate-y-1 animate__animated animate__fadeInUp">
-          <div class="flex items-center justify-between">
-            <div>
-              <h5 class="text-lg font-semibold mb-2 opacity-90">Tổng Doanh Thu</h5>
-              <p class="text-2xl font-bold">{{ formatCurrency(overviewCards[0]?.amount) }}</p>
-            </div>
-            <iconify-icon icon="solar:money-bag-linear" class="text-5xl opacity-70" />
-          </div>
+    <!-- Data Tables Section -->
+    <div class="tables-section">
+      <!-- Top Products -->
+      <div class="table-card">
+        <div class="table-header">
+          <h3 class="table-title">
+            <iconify-icon icon="solar:fire-bold-duotone"></iconify-icon>
+            Sản Phẩm Bán Chạy
+          </h3>
+          <button class="view-all-btn">Xem tất cả</button>
         </div>
-
-        <div class="bg-gradient-to-br from-lime-500 to-green-600 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition transform hover:-translate-y-1 animate__animated animate__fadeInUp" style="animation-delay: 0.1s;">
-          <div class="flex items-center justify-between">
-            <div>
-              <h5 class="text-lg font-semibold mb-2 opacity-90">Doanh Thu Hôm Nay</h5>
-              <p class="text-2xl font-bold">{{ formatCurrency(dailyRevenue) }}</p>
-            </div>
-            <iconify-icon icon="solar:calendar-bold" class="text-5xl opacity-70" />
-          </div>
-        </div>
-
-        <div class="bg-gradient-to-br from-indigo-500 to-purple-600 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition transform hover:-translate-y-1 animate__animated animate__fadeInUp" style="animation-delay: 0.2s;">
-          <div class="flex items-center justify-between">
-            <div>
-              <h5 class="text-lg font-semibold mb-2 opacity-90">Doanh Thu Tuần Này</h5>
-              <p class="text-2xl font-bold">{{ formatCurrency(weeklyRevenue) }}</p>
-            </div>
-            <iconify-icon icon="solar:calendar-add-bold" class="text-5xl opacity-70" />
-          </div>
-        </div>
-
-        <div class="bg-gradient-to-br from-amber-500 to-orange-600 text-white p-6 rounded-xl shadow-lg hover:shadow-xl transition transform hover:-translate-y-1 animate__animated animate__fadeInUp" style="animation-delay: 0.3s;">
-          <div class="flex items-center justify-between">
-            <div>
-              <h5 class="text-lg font-semibold mb-2 opacity-90">Doanh Thu Tháng Này</h5>
-              <p class="text-2xl font-bold">{{ formatCurrency(monthlyRevenue) }}</p>
-            </div>
-            <iconify-icon icon="solar:calendar-check-bold" class="text-5xl opacity-70" />
-          </div>
-        </div>
-
-        <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md hover:shadow-xl transition transform hover:-translate-y-1 animate__animated animate__fadeInUp" style="animation-delay: 0.4s;">
-          <div class="flex items-center justify-between">
-            <div>
-              <h5 class="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-2">Số Đơn Hàng</h5>
-              <p class="text-3xl font-bold text-gray-900 dark:text-gray-100">{{ overviewCards[1]?.amount }}</p>
-            </div>
-            <iconify-icon icon="solar:cart-linear" class="text-5xl text-blue-500 dark:text-blue-300" />
-          </div>
-        </div>
-
-        <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md hover:shadow-xl transition transform hover:-translate-y-1 animate__animated animate__fadeInUp" style="animation-delay: 0.5s;">
-          <div class="flex items-center justify-between">
-            <div>
-              <h5 class="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-2">Khách Hàng Mới</h5>
-              <p class="text-3xl font-bold text-gray-900 dark:text-gray-100">{{ overviewCards[2]?.amount }}</p>
-            </div>
-            <iconify-icon icon="solar:user-plus-linear" class="text-5xl text-blue-500 dark:text-blue-300" />
-          </div>
-        </div>
-      </div>
-      <div v-if="!hasData && !isLoading" class="no-data bg-white dark:bg-gray-800 rounded-xl shadow-md animate__animated animate__fadeInUp p-8 flex flex-col items-center justify-center">
-        <iconify-icon icon="solar:cloud-cross-linear" class="no-data-icon text-gray-400 dark:text-gray-500 text-6xl mb-4" />
-        <p class="text-gray-600 dark:text-gray-300 text-xl font-medium">Không có dữ liệu để hiển thị cho khoảng thời gian đã chọn.</p>
-        <p class="text-gray-500 dark:text-gray-400 mt-2">Vui lòng điều chỉnh bộ lọc và thử lại.</p>
-      </div>
-
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8" v-if="hasData">
-        <div class="bg-white dark:bg-gray-800 lg:col-span-2 rounded-xl shadow-lg animate__animated animate__fadeInUp">
-          <div class="p-8">
-            <div class="flex justify-between items-center mb-6 border-b pb-4 border-gray-200 dark:border-gray-700">
-              <h4 class="text-2xl font-bold text-gray-800 dark:text-gray-100 flex items-center">
-                <iconify-icon icon="solar:graph-up-linear" class="text-3xl mr-3 text-blue-600" />
-                Xu Hướng Doanh Thu
-              </h4>
-              <div class="tooltip relative group">
-                <iconify-icon icon="solar:info-circle-linear" class="text-2xl text-gray-500 dark:text-gray-400 cursor-help" />
-                <span class="tooltip-text absolute bottom-full left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-3 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-300">Doanh thu theo ngày trong khoảng thời gian chọn</span>
-              </div>
-            </div>
-            <div class="chart-container" style="height: 380px">
-              <canvas id="revenueChart"></canvas>
-            </div>
-          </div>
-        </div>
-        <div class="kpi-card bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-xl shadow-lg p-6 animate__animated animate__fadeInUp flex flex-col justify-between">
-          <div>
-            <h4 class="text-2xl font-bold mb-4 flex items-center border-b pb-4 border-blue-400">
-              <iconify-icon icon="solar:medal-star-linear" class="text-3xl mr-3" />
-              Chỉ Số KPI
-            </h4>
-            <ul class="space-y-4 text-lg">
-              <li><span class="font-semibold">Tỷ lệ chuyển đổi:</span> <span class="text-yellow-200">{{ formatPercent(kpiStats.conversionRate) }}</span></li>
-              <li><span class="font-semibold">Tỷ lệ hoàn thành:</span> <span class="text-yellow-200">{{ formatPercent(kpiStats.completionRate) }}</span></li>
-              <li><span class="font-semibold">Doanh thu trung bình/đơn:</span> <span class="text-yellow-200">{{ formatCurrency(kpiStats.avgOrderValue) }}</span></li>
-              <li><span class="font-semibold">Tỷ lệ hủy đơn:</span> <span class="text-yellow-200">{{ formatPercent(kpiStats.cancellationRate) }}</span></li>
-              <li><span class="font-semibold">Giá trị trọn đời KH (CLV):</span> <span class="text-yellow-200">{{ formatCurrency(kpiStats.customerLifetimeValue) }}</span></li>
-            </ul>
-          </div>
-          <div class="mt-6 text-sm text-blue-200">
-            <p>Các chỉ số được cập nhật theo thời gian thực.</p>
-          </div>
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Sản Phẩm</th>
+                <th>Danh Mục</th>
+                <th>Đã Bán</th>
+                <th>Doanh Thu</th>
+                <th>Tăng Trưởng</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="product in topProducts" :key="product.id">
+                <td>
+                  <div class="product-info">
+                    <div class="product-image">
+                      <img :src="product.image" :alt="product.name" />
+                    </div>
+                    <div class="product-details">
+                      <span class="product-name">{{ product.name }}</span>
+                      <span class="product-sku">{{ product.sku }}</span>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <span class="category-badge" :class="getCategoryClass(product.category)">
+                    {{ product.category }}
+                  </span>
+                </td>
+                <td class="sold-count">{{ product.sold.toLocaleString() }}</td>
+                <td class="revenue-amount">{{ formatCurrency(product.revenue) }}</td>
+                <td>
+                  <div class="growth-indicator" :class="product.growth >= 0 ? 'positive' : 'negative'">
+                    <iconify-icon :icon="product.growth >= 0 ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'"></iconify-icon>
+                    <span>{{ Math.abs(product.growth) }}%</span>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8" v-if="hasData">
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg animate__animated animate__fadeInUp">
-          <div class="p-8">
-            <h4 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6 flex items-center border-b pb-4 border-gray-200 dark:border-gray-700">
-              <iconify-icon icon="solar:inbox-in-linear" class="text-3xl mr-3 text-indigo-600" />
-              Thống Kê Tồn Kho
-            </h4>
-            <div v-if="inventoryStats.totalProducts || inventoryStats.totalStock" class="space-y-4 text-gray-700 dark:text-gray-200 text-lg">
-              <div><span class="font-bold">Tổng số sản phẩm:</span> <span class="text-blue-600 dark:text-blue-400">{{ inventoryStats.totalProducts || 'N/A' }}</span></div>
-              <div><span class="font-bold">Tổng số lượng tồn kho:</span> <span class="text-blue-600 dark:text-blue-400">{{ inventoryStats.totalStock || 'N/A' }}</span></div>
-              <div><span class="font-bold">Số sản phẩm hết hàng:</span> <span class="text-blue-600 dark:text-blue-400">{{ kpiStats.outOfStockProducts || 'N/A' }}</span></div>
-            </div>
-            <div v-else class="no-data flex flex-col items-center justify-center h-40">
-              <iconify-icon icon="solar:cloud-cross-linear" class="no-data-icon text-gray-400 dark:text-gray-500 text-5xl mb-2" />
-              <p class="text-gray-600 dark:text-gray-300 mt-2 text-lg">Không có dữ liệu thống kê tồn kho</p>
-            </div>
-          </div>
+      <!-- Recent Orders -->
+      <div class="table-card">
+        <div class="table-header">
+          <h3 class="table-title">
+            <iconify-icon icon="solar:clipboard-list-bold-duotone"></iconify-icon>
+            Đơn Hàng Gần Đây
+          </h3>
+          <button class="view-all-btn">Xem tất cả</button>
         </div>
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg animate__animated animate__fadeInUp">
-          <div class="p-8">
-            <h4 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6 flex items-center border-b pb-4 border-gray-200 dark:border-gray-700">
-              <iconify-icon icon="solar:calendar-line-duotone" class="text-3xl mr-3 text-orange-600" />
-              Doanh Thu Theo Thứ
-            </h4>
-            <div class="chart-container h-64">
-              <canvas id="revenueByWeekDayChart"></canvas>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8" v-if="hasData">
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg animate__animated animate__fadeInUp">
-          <div class="p-8">
-            <h4 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6 flex items-center border-b pb-4 border-gray-200 dark:border-gray-700">
-              <iconify-icon icon="solar:cart-check-linear" class="text-3xl mr-3 text-pink-600" />
-              Trạng Thái Đơn Hàng
-            </h4>
-            <div class="chart-container h-64">
-              <canvas id="orderStatusChart"></canvas>
-            </div>
-          </div>
-        </div>
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg animate__animated animate__fadeInUp">
-          <div class="p-8">
-            <h4 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6 flex items-center border-b pb-4 border-gray-200 dark:border-gray-700">
-              <iconify-icon icon="solar:clock-circle-linear" class="text-3xl mr-3 text-orange-600" />
-              Doanh Thu Theo Giờ
-            </h4>
-            <div class="chart-container h-64">
-              <canvas id="revenueByHourChart"></canvas>
-            </div>
-          </div>
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Mã Đơn</th>
+                <th>Khách Hàng</th>
+                <th>Sản Phẩm</th>
+                <th>Tổng Tiền</th>
+                <th>Trạng Thái</th>
+                <th>Ngày Tạo</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="order in recentOrders" :key="order.id">
+                <td class="order-code">{{ order.code }}</td>
+                <td>
+                  <div class="customer-info">
+                    <div class="customer-avatar">
+                      <img :src="order.customer.avatar" :alt="order.customer.name" />
+                    </div>
+                    <span class="customer-name">{{ order.customer.name }}</span>
+                  </div>
+                </td>
+                <td class="product-count">{{ order.productCount }} sản phẩm</td>
+                <td class="order-total">{{ formatCurrency(order.total) }}</td>
+                <td>
+                  <span class="status-badge" :class="getStatusClass(order.status)">
+                    {{ order.status }}
+                  </span>
+                </td>
+                <td class="order-date">{{ formatDate(order.createdAt) }}</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
+    </div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8" v-if="hasData">
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg animate__animated animate__fadeInUp">
-          <div class="p-8">
-            <h4 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6 flex items-center border-b pb-4 border-gray-200 dark:border-gray-700">
-              <iconify-icon icon="solar:fire-linear" class="text-3xl mr-3 text-yellow-600" />
-              Sản Phẩm Bán Chạy
-            </h4>
-            <div class="overflow-x-auto">
-              <table class="table w-full text-gray-700 dark:text-gray-200">
-                <thead>
-                  <tr class="bg-gray-100 dark:bg-gray-700">
-                    <th class="text-left p-4 rounded-tl-lg">Sản phẩm</th>
-                    <th class="text-center p-4">Số lượng bán</th>
-                    <th class="text-right p-4 rounded-tr-lg">Doanh thu</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="product in topSellingProducts" :key="product.productName" class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                    <td class="p-4">{{ product.productName }}</td>
-                    <td class="p-4 text-center">{{ product.quantity }}</td>
-                    <td class="p-4 text-right">{{ formatCurrency(product.revenue) }}</td>
-                  </tr>
-                  <tr v-if="!topSellingProducts.length">
-                    <td colspan="3" class="text-center text-gray-500 dark:text-gray-400 p-4 py-8">
-                      <iconify-icon icon="solar:cloud-cross-linear" class="no-data-icon text-gray-400 dark:text-gray-500 text-5xl mb-2" />
-                      <p class="text-lg">Không có dữ liệu sản phẩm bán chạy</p>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg animate__animated animate__fadeInUp">
-          <div class="p-8">
-            <h4 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6 flex items-center border-b pb-4 border-gray-200 dark:border-gray-700">
-              <iconify-icon icon="solar:users-group-rounded-linear" class="text-3xl mr-3 text-indigo-600" />
-              Khách hàng thân thiết
-            </h4>
-            <div class="overflow-x-auto">
-              <table class="table w-full text-gray-700 dark:text-gray-200">
-                <thead>
-                  <tr class="bg-gray-100 dark:bg-gray-700">
-                    <th class="text-left p-4 rounded-tl-lg">Tên khách hàng</th>
-                    <th class="text-center p-4">Số lượng đơn</th>
-                    <th class="text-right p-4 rounded-tr-lg">Tổng chi tiêu</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="customer in topCustomers" :key="customer.id" class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                    <td class="p-4">{{ customer.name }}</td>
-                    <td class="p-4 text-center">{{ customer.orderCount }}</td>
-                    <td class="p-4 text-right">{{ formatCurrency(customer.totalSpent) }}</td>
-                  </tr>
-                  <tr v-if="!topCustomers.length">
-                    <td colspan="3" class="text-center text-gray-500 dark:text-gray-400 p-4 py-8">
-                      <iconify-icon icon="solar:cloud-cross-linear" class="no-data-icon text-gray-400 dark:text-gray-500 text-5xl mb-2" />
-                      <p class="text-lg">Không có dữ liệu khách hàng</p>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
+    <!-- Quick Stats -->
+    <div class="quick-stats">
+      <div class="quick-stat-card">
+        <iconify-icon icon="solar:eye-bold-duotone" class="stat-icon"></iconify-icon>
+        <div class="stat-info">
+          <span class="stat-value">{{ stats.pageViews.toLocaleString() }}</span>
+          <span class="stat-label">Lượt xem</span>
         </div>
       </div>
       
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8" v-if="hasData">
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg animate__animated animate__fadeInUp">
-          <div class="p-8">
-            <h4 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6 flex items-center border-b pb-4 border-gray-200 dark:border-gray-700">
-              <iconify-icon icon="solar:pie-chart-3-linear" class="text-3xl mr-3 text-green-600" />
-              Doanh Thu Theo Danh Mục
-            </h4>
-            <div class="chart-container h-64">
-              <canvas id="revenueByCategoryChart"></canvas>
-            </div>
-          </div>
-        </div>
-
-        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg animate__animated animate__fadeInUp">
-          <div class="p-8">
-            <h4 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6 flex items-center border-b pb-4 border-gray-200 dark:border-gray-700">
-              <iconify-icon icon="solar:ranking-linear" class="text-3xl mr-3 text-blue-600" />
-              Phân Loại Doanh Thu
-            </h4>
-            <div class="overflow-x-auto">
-              <table class="table w-full text-gray-700 dark:text-gray-200">
-                <thead>
-                  <tr class="bg-gray-100 dark:bg-gray-700">
-                    <th class="text-left p-4 rounded-tl-lg">Phân loại</th>
-                    <th class="text-right p-4 rounded-tr-lg">Doanh thu</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                    <td class="p-4">Doanh thu trực tuyến</td>
-                    <td class="p-4 text-right">{{ formatCurrency(categoryRevenueData.find(item => item.category === 'Online')?.revenue || 0) }}</td>
-                  </tr>
-                  <tr class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                    <td class="p-4">Doanh thu tại cửa hàng</td>
-                    <td class="p-4 text-right">{{ formatCurrency(categoryRevenueData.find(item => item.category === 'In-store')?.revenue || 0) }}</td>
-                  </tr>
-                  <tr v-if="!categoryRevenueData.length">
-                    <td colspan="2" class="text-center text-gray-500 dark:text-gray-400 p-4 py-8">
-                      <iconify-icon icon="solar:cloud-cross-linear" class="no-data-icon text-gray-400 dark:text-gray-500 text-5xl mb-2" />
-                      <p class="text-lg">Không có dữ liệu phân loại doanh thu</p>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
+      <div class="quick-stat-card">
+        <iconify-icon icon="solar:cart-check-bold-duotone" class="stat-icon"></iconify-icon>
+        <div class="stat-info">
+          <span class="stat-value">{{ stats.conversionRate }}%</span>
+          <span class="stat-label">Tỷ lệ chuyển đổi</span>
         </div>
       </div>
-
-     <div class="bg-white dark:bg-gray-800 mb-8 rounded-xl shadow-lg animate__animated animate__fadeInUp" v-if="hasData">
-  <div class="p-8">
-    <h4 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6 flex items-center border-b pb-4 border-gray-200 dark:border-gray-700">
-      <iconify-icon icon="solar:box-minimalistic-linear" class="text-3xl mr-3 text-red-600" />
-      Sản Phẩm Tồn Kho Thấp
-    </h4>
-    <div class="overflow-x-auto">
-      <table class="table w-full text-gray-700 dark:text-gray-200">
-        <thead>
-          <tr class="bg-gray-100 dark:bg-gray-700">
-            <th class="text-left p-4 rounded-tl-lg">STT</th>
-            <th class="text-left p-4">Sản phẩm</th>
-            <th class="text-center p-4">Tồn kho</th>
-            <th class="text-center p-4">Màu sắc</th>
-            <th class="text-center p-4">Kích cỡ</th>
-            <th class="text-center p-4">Chất liệu</th>
-            <th class="text-center p-4 rounded-tr-lg">Mã CTSP</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="(product, index) in lowStockProducts" :key="product.product" class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-            <td class="p-4 font-medium text-center">{{ index + 1 }}</td>
-            <td class="p-4">{{ product.product }}</td>
-            <td class="p-4 text-center text-red-500 font-semibold">{{ product.stock }}</td>
-            <td class="p-4 text-center">{{ product.color }}</td>
-            <td class="p-4 text-center">{{ product.size }}</td>
-            <td class="p-4 text-center">{{ product.material }}</td>
-            <td class="p-4 text-center">{{ product.ctspCode }}</td>
-          </tr>
-          <tr v-if="!lowStockProducts.length">
-            <td colspan="7" class="text-center text-gray-500 dark:text-gray-400 p-4 py-8">
-              <iconify-icon icon="solar:cloud-cross-linear" class="no-data-icon text-gray-400 dark:text-gray-500 text-5xl mb-2" />
-              <p class="text-lg">Không có dữ liệu sản phẩm tồn kho thấp</p>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
-
-      <div class="bg-white dark:bg-gray-800 mb-8 rounded-xl shadow-lg animate__animated animate__fadeInUp" v-if="hasData">
-        <div class="p-8">
-          <h4 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-6 flex items-center border-b pb-4 border-gray-200 dark:border-gray-700">
-            <iconify-icon icon="solar:clipboard-text-linear" class="text-3xl mr-3 text-blue-600" />
-            Danh Sách Hóa Đơn
-          </h4>
-          <div class="overflow-x-auto">
-            <table class="table w-full text-gray-700 dark:text-gray-200">
-              <thead>
-                <tr class="bg-gray-100 dark:bg-gray-700">
-                  <th class="text-left p-4 rounded-tl-lg">STT</th>
-                  <th class="text-left p-4">Mã Hóa Đơn</th>
-                  <th class="text-left p-4">Khách Hàng</th>
-                  <th class="text-center p-4">Ngày Tạo</th>
-                  <th class="text-right p-4">Tổng Tiền</th>
-                  <th class="text-center p-4">Trạng Thái</th>
-                  <th class="text-center p-4 rounded-tr-lg">Hành Động</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(invoice, index) in paginatedInvoices" :key="invoice.id" class="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                  <td class="p-4 font-medium text-center">{{ (currentPage - 1) * itemsPerPage + index + 1 }}</td>
-                  <td class="p-4 font-mono text-sm">{{ invoice.maHoaDon }}</td>
-                  <td class="p-4 font-medium">{{ invoice.khachHang?.tenKhachHang || 'Khách lẻ' }}</td>
-                  <td class="p-4 text-center text-sm">{{ formatDate(invoice.ngayTao) }}</td>
-                  <td class="p-4 text-right font-semibold text-green-600 dark:text-green-400">{{ formatCurrency(invoice.tongTienThanhToan) }}</td>
-                  <td class="p-4 text-center">
-                    <span :class="getStatusColor(invoice.trangThai?.id)" class="px-3 py-1 rounded-full text-xs font-semibold">
-                      {{ getStatusText(invoice.trangThai?.id) }}
-                    </span>
-                  </td>
-                  <td class="p-4 text-center">
-                    <router-link :to="{ name: 'InvoiceDetail', params: { id: invoice.id } }" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 transition duration-200 font-medium">
-                      <iconify-icon icon="solar:eye-linear" class="text-2xl" />
-                    </router-link>
-                  </td>
-                </tr>
-                <tr v-if="!paginatedInvoices.length">
-                  <td colspan="7" class="text-center text-gray-500 dark:text-gray-400 p-4 py-8">
-                      <iconify-icon icon="solar:cloud-cross-linear" class="no-data-icon text-gray-400 dark:text-gray-500 text-5xl mb-2" />
-                      <p class="text-lg">Không có dữ liệu hóa đơn</p>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <div v-if="totalPages > 1" class="flex justify-center items-center space-x-2 mt-6">
-            <button @click="prevPage" :disabled="currentPage === 1" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-              Trước
-            </button>
-            <button v-for="page in totalPages" :key="page" @click="goToPage(page)" :class="{ 'bg-blue-600 text-white': currentPage === page, 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200': currentPage !== page }" class="px-4 py-2 rounded-lg hover:bg-blue-500 dark:hover:bg-blue-500 transition-colors">
-              {{ page }}
-            </button>
-            <button @click="nextPage" :disabled="currentPage === totalPages" class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-              Sau
-            </button>
-          </div>
+      
+      <div class="quick-stat-card">
+        <iconify-icon icon="solar:clock-circle-bold-duotone" class="stat-icon"></iconify-icon>
+        <div class="stat-info">
+          <span class="stat-value">{{ stats.avgOrderTime }}</span>
+          <span class="stat-label">Thời gian đặt hàng TB</span>
+        </div>
+      </div>
+      
+      <div class="quick-stat-card">
+        <iconify-icon icon="solar:star-bold-duotone" class="stat-icon"></iconify-icon>
+        <div class="stat-info">
+          <span class="stat-value">{{ stats.customerRating }}/5</span>
+          <span class="stat-label">Đánh giá TB</span>
         </div>
       </div>
     </div>
-
-    <footer class="bg-white dark:bg-gray-800 p-6 mt-12 rounded-xl shadow-lg text-center">
-      <p class="text-gray-700 dark:text-gray-300 text-sm font-medium">
-        Shop Giày © {{ new Date().getFullYear() }}. Phát triển bởi <a href="https://teamdatn.vn" target="_blank" class="text-blue-600 dark:text-blue-400 hover:underline">Team DATN</a>.
-      </p>
-      <p class="text-gray-600 dark:text-gray-400 text-sm mt-2">
-        Liên hệ: <a href="mailto:support@shopgiay.vn" class="text-blue-600 dark:text-blue-400 hover:underline">support@shopgiay.vn</a> | Hotline: 0903-123-456
-      </p>
-      <div class="mt-4 flex justify-center space-x-6">
-        <a href="#" class="text-blue-600 dark:text-gray-300 hover:text-blue-400 dark:hover:text-blue-500 transition-colors duration-200">
-          <iconify-icon icon="fab fa-facebook-f" class="text-xl" />
-        </a>
-        <a href="#" class="text-blue-600 dark:text-gray-300 hover:text-blue-400 dark:hover:text-blue-500 transition-colors duration-200">
-          <iconify-icon icon="fab fa-instagram" class="text-xl" />
-        </a>
-        <a href="#" class="text-blue-600 dark:text-gray-300 hover:text-blue-400 dark:hover:text-blue-500 transition-colors duration-200">
-          <iconify-icon icon="fab fa-linkedin-in" class="text-xl" />
-        </a>
-      </div>
-    </footer>
   </div>
 </template>
 
 <script>
-import { ref, onMounted, onUnmounted, watch, computed, nextTick } from 'vue';
-import Chart from 'chart.js/auto';
-import * as XLSX from 'xlsx';
-import { useToast } from 'vue-toastification';
-import { Icon } from '@iconify/vue';
-import axios from 'axios';
-import mitt from 'mitt';
-
-const emitter = mitt();
-
-const api = axios.create({
-  baseURL: '/api',
-  timeout: 30000,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-});
+import { ref, onMounted, nextTick } from 'vue'
+import Chart from 'chart.js/auto'
+import Breadcrumb from '@/components/Breadcrumb.vue'
 
 export default {
-  name: 'Dashboard',
+  name: 'ShoeDashboard',
   components: {
-    'iconify-icon': Icon,
+    Breadcrumb
   },
   setup() {
-    const toast = useToast();
-    const errorMessage = ref('');
-    const isLoading = ref(false);
+    const selectedTimeRange = ref('30')
+    const revenueChart = ref(null)
+    const categoryChart = ref(null)
+    let revenueChartInstance = null
+    let categoryChartInstance = null
 
-    const today = new Date();
-    const thirtyDaysAgo = new Date(today);
-    thirtyDaysAgo.setDate(today.getDate() - 29);
+    // Breadcrumb data
+    const breadcrumbItems = ref([
+      { label: 'Thống kê', path: '/dashboard' }
+    ])
 
-    const filters = ref({
-      fromDate: thirtyDaysAgo.toISOString().slice(0, 10),
-      toDate: today.toISOString().slice(0, 10),
-      category: 'all',
-    });
-
-    const categories = ref([
-      { id: 1, name: 'Giày Chạy bộ' },
-      { id: 2, name: 'Giày Thể thao' },
-      { id: 3, name: 'Giày Sneaker Thời trang' },
-      { id: 4, name: 'Giày Bóng rổ' },
-      { id: 5, name: 'Giày Trượt ván' },
-      { id: 6, name: 'Phiên bản giới hạn' },
-      { id: 7, name: 'Giày Cổ thấp' },
-      { id: 8, name: 'Giày Không dây' },
-    ]);
-
-    const overviewCards = ref([]);
-    const kpiStats = ref({ completionRate: 0, avgOrderValue: 0, cancellationRate: 0, customerLifetimeValue: 0, conversionRate: 0, outOfStockProducts: 0 });
-    const topSellingProducts = ref([]);
-    const lowStockProducts = ref([]);
-    const topCustomers = ref([]); 
-    const revenueData = ref([]);
-    const orderStatusData = ref([]);
-    const inventoryStats = ref({ totalProducts: 0, totalStock: 0 });
-    const revenueByWeekDay = ref([]);
-    const categoryRevenueData = ref([]);
-    const revenueByHourData = ref([]);
-    const invoices = ref([]);
-
-    const dailyRevenue = ref(0);
-    const weeklyRevenue = ref(0);
-    const monthlyRevenue = ref(0);
-
-    const currentPage = ref(1);
-    const itemsPerPage = ref(10);
-
-    const totalPages = computed(() => {
-      return Math.ceil(invoices.value.length / itemsPerPage.value);
-    });
-
-    const paginatedInvoices = computed(() => {
-      const start = (currentPage.value - 1) * itemsPerPage.value;
-      const end = start + itemsPerPage.value;
-      return invoices.value.slice(start, end);
-    });
-
-    const goToPage = (page) => {
-      if (page >= 1 && page <= totalPages.value) {
-        currentPage.value = page;
+    const breadcrumbActions = ref([
+      {
+        label: 'Xuất báo cáo',
+        icon: 'solar:download-bold-duotone',
+        type: 'primary',
+        handler: () => exportReport()
+      },
+      {
+        label: 'Làm mới',
+        icon: 'solar:refresh-bold-duotone',
+        type: 'default',
+        handler: () => updateData()
       }
-    };
+    ])
 
-    const prevPage = () => {
-      if (currentPage.value > 1) {
-        currentPage.value--;
+    const pageStats = ref([
+      {
+        value: '2.85 tỷ VNĐ',
+        label: 'Doanh thu hôm nay',
+        icon: 'solar:wallet-money-bold-duotone'
+      },
+      {
+        value: '156',
+        label: 'Đơn hàng mới',
+        icon: 'solar:bag-check-bold-duotone'
+      },
+      {
+        value: '1,234',
+        label: 'Khách truy cập',
+        icon: 'solar:users-group-two-rounded-bold-duotone'
       }
-    };
+    ])
 
-    const nextPage = () => {
-      if (currentPage.value < totalPages.value) {
-        currentPage.value++;
+    // Fake data
+    const stats = ref({
+      totalRevenue: 2850000000,
+      totalOrders: 15420,
+      totalCustomers: 8934,
+      totalProducts: 256,
+      pageViews: 125480,
+      conversionRate: 3.4,
+      avgOrderTime: '2.3 phút',
+      customerRating: 4.7
+    })
+
+    const topProducts = ref([
+      {
+        id: 1,
+        name: 'Nike Air Max 270',
+        sku: 'NK-AM270-BW',
+        category: 'Sneaker',
+        sold: 1250,
+        revenue: 185000000,
+        growth: 15.2,
+        image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=100&h=100&fit=crop&crop=center'
+      },
+      {
+        id: 2,
+        name: 'Adidas Ultraboost 22',
+        sku: 'AD-UB22-GR',
+        category: 'Chạy bộ',
+        sold: 980,
+        revenue: 147000000,
+        growth: 12.8,
+        image: 'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=100&h=100&fit=crop&crop=center'
+      },
+      {
+        id: 3,
+        name: 'Converse Chuck Taylor',
+        sku: 'CV-CT70-BK',
+        category: 'Canvas',
+        sold: 850,
+        revenue: 95000000,
+        growth: 8.5,
+        image: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=100&h=100&fit=crop&crop=center'
+      },
+      {
+        id: 4,
+        name: 'Vans Old Skool',
+        sku: 'VN-OS-WH',
+        category: 'Skateboard',
+        sold: 720,
+        revenue: 86000000,
+        growth: -2.3,
+        image: 'https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?w=100&h=100&fit=crop&crop=center'
+      },
+      {
+        id: 5,
+        name: 'New Balance 990v5',
+        sku: 'NB-990V5-GY',
+        category: 'Lifestyle',
+        sold: 645,
+        revenue: 129000000,
+        growth: 25.1,
+        image: 'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=100&h=100&fit=crop&crop=center'
       }
-    };
+    ])
 
-    const hasRevenueChartData = computed(() => revenueData.value.length > 0 && revenueData.value.some(item => item.revenue > 0));
-    const hasOrderStatusData = computed(() => orderStatusData.value.length > 0 && orderStatusData.value.some(item => item.count > 0));
-    const hasRevenueByWeekDay = computed(() => revenueByWeekDay.value.length > 0 && revenueByWeekDay.value.some(item => item.revenue > 0));
-    const hasCategoryRevenue = computed(() => categoryRevenueData.value.length > 0 && categoryRevenueData.value.some(item => item.revenue > 0));
-    const hasRevenueByHour = computed(() => revenueByHourData.value.length > 0 && revenueByHourData.value.some(item => item.revenue > 0));
-
-    const hasData = computed(() => {
-      return (
-        overviewCards.value.some(card => card.amount > 0) ||
-        dailyRevenue.value > 0 ||
-        weeklyRevenue.value > 0 ||
-        monthlyRevenue.value > 0 ||
-        topSellingProducts.value.length > 0 ||
-        lowStockProducts.value.length > 0 ||
-        topCustomers.value.length > 0 || 
-        revenueData.value.length > 0 ||
-        orderStatusData.value.length > 0 ||
-        inventoryStats.value.totalProducts > 0 ||
-        inventoryStats.value.totalStock > 0 ||
-        revenueByWeekDay.value.length > 0 ||
-        categoryRevenueData.value.length > 0 ||
-        revenueByHourData.value.length > 0 ||
-        invoices.value.length > 0
-      );
-    });
-
-    const fetchDashboardData = async () => {
-      try {
-        isLoading.value = true;
-        errorMessage.value = 'Đang tải dữ liệu...';
-
-        const params = {
-          fromDate: filters.value.fromDate,
-          toDate: filters.value.toDate,
-        };
-
-        const [dashboardResponse, invoicesResponse] = await Promise.all([
-          api.get('/dashboard', { params: params }),
-          api.get('/dashboard/invoices', { params: { ...params, statusId: 21 } }),
-        ]);
-
-        const dashboardData = dashboardResponse.data || {};
-        const invoicesData = invoicesResponse.data || [];
-
-        console.log("Dữ liệu dashboard nhận được:", dashboardData);
-        console.log("Dữ liệu hóa đơn nhận được:", invoicesData);
-
-        overviewCards.value = [
-          { title: 'Tổng Doanh Thu', amount: dashboardData.totalRevenue || 0, icon: 'solar:wallet-linear' },
-          { title: 'Số Đơn Hàng', amount: dashboardData.orderCount || 0, icon: 'solar:cart-check-linear' },
-          { title: 'Khách Hàng Mới', amount: dashboardData.newCustomers || 0, icon: 'solar:add-user-linear' },
-        ];
-
-        dailyRevenue.value = dashboardData.totalRevenueToday || 0;
-        weeklyRevenue.value = dashboardData.totalRevenueThisWeek || 0;
-        monthlyRevenue.value = dashboardData.totalRevenueThisMonth || 0;
-
-        kpiStats.value = {
-          completionRate: dashboardData.kpiStats?.completionRate || 0,
-          avgOrderValue: dashboardData.kpiStats?.avgOrderValue || 0,
-          cancellationRate: dashboardData.kpiStats?.cancellationRate || 0,
-          customerLifetimeValue: dashboardData.kpiStats?.customerLifetimeValue || 0, 
-          conversionRate: dashboardData.kpiStats?.conversionRate || 0,
-          outOfStockProducts: dashboardData.kpiStats?.outOfStockProducts || 0,
-        };
-
-        topSellingProducts.value = dashboardData.topSellingProducts || [];
-        lowStockProducts.value = dashboardData.lowStockProducts || [];
-        topCustomers.value = dashboardData.topCustomers || [];
-
-        revenueData.value = (dashboardData.revenueData || []).map(item => ({
-          date: item.date,
-          revenue: item.revenue
-        }));
-
-        orderStatusData.value = (dashboardData.orderStatusData || []).map(item => ({
-          status: getStatusText(item.statusId),
-          count: item.count
-        }));
-
-        inventoryStats.value = {
-          totalProducts: dashboardData.inventoryStats?.totalProducts || 0,
-          totalStock: dashboardData.inventoryStats?.totalStock || 0,
-        };
-
-        revenueByWeekDay.value = (dashboardData.revenueByWeekDay || []).map(item => ({
-          day: getDayName(item.day),
-          revenue: item.revenue
-        }));
-
-        categoryRevenueData.value = (dashboardData.categoryRevenue || []).map(item => ({
-          category: item.category,
-          revenue: item.revenue
-        }));
-
-        revenueByHourData.value = (dashboardData.revenueByHour || []).map(item => ({
-          hour: item.hour,
-          revenue: item.revenue
-        }));
-
-        invoices.value = invoicesData;
-        currentPage.value = 1;
-
-        await nextTick();
-        updateCharts();
-
-        toast.success('Dữ liệu dashboard đã được tải thành công!');
-        errorMessage.value = '';
-      } catch (error) {
-        console.error('Lỗi khi lấy dữ liệu dashboard:', error.response ? error.response.data : error.message);
-        errorMessage.value = error.response?.data?.error || 'Không thể tải dữ liệu, vui lòng kiểm tra kết nối hoặc thử lại sau!';
-        toast.error(errorMessage.value);
-        
-        // Reset data to empty state on error
-        overviewCards.value = [];
-        kpiStats.value = { completionRate: 0, avgOrderValue: 0, cancellationRate: 0, customerLifetimeValue: 0, conversionRate: 0, outOfStockProducts: 0 };
-        topSellingProducts.value = [];
-        lowStockProducts.value = [];
-        topCustomers.value = [];
-        revenueData.value = [];
-        orderStatusData.value = [];
-        inventoryStats.value = { totalProducts: 0, totalStock: 0 };
-        revenueByWeekDay.value = [];
-        categoryRevenueData.value = [];
-        revenueByHourData.value = [];
-        invoices.value = [];
-        dailyRevenue.value = 0;
-        weeklyRevenue.value = 0;
-        monthlyRevenue.value = 0;
-
-        await nextTick();
-        updateCharts();
-      } finally {
-        isLoading.value = false;
+    const recentOrders = ref([
+      {
+        id: 1,
+        code: 'HD001234',
+        customer: {
+          name: 'Nguyễn Văn An',
+          avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face'
+        },
+        productCount: 2,
+        total: 2850000,
+        status: 'Đã giao',
+        createdAt: new Date('2024-01-15T10:30:00')
+      },
+      {
+        id: 2,
+        code: 'HD001235',
+        customer: {
+          name: 'Trần Thị Bình',
+          avatar: 'https://images.unsplash.com/photo-1494790108755-2616b332c7c8?w=40&h=40&fit=crop&crop=face'
+        },
+        productCount: 1,
+        total: 1590000,
+        status: 'Đang giao',
+        createdAt: new Date('2024-01-15T11:15:00')
+      },
+      {
+        id: 3,
+        code: 'HD001236',
+        customer: {
+          name: 'Lê Hoài Nam',
+          avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop&crop=face'
+        },
+        productCount: 3,
+        total: 4200000,
+        status: 'Chờ xử lý',
+        createdAt: new Date('2024-01-15T12:00:00')
+      },
+      {
+        id: 4,
+        code: 'HD001237',
+        customer: {
+          name: 'Phạm Thu Hương',
+          avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=40&h=40&fit=crop&crop=face'
+        },
+        productCount: 1,
+        total: 2100000,
+        status: 'Đã hủy',
+        createdAt: new Date('2024-01-15T14:20:00')
+      },
+      {
+        id: 5,
+        code: 'HD001238',
+        customer: {
+          name: 'Võ Minh Tuấn',
+          avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=40&h=40&fit=crop&crop=face'
+        },
+        productCount: 2,
+        total: 3150000,
+        status: 'Đã giao',
+        createdAt: new Date('2024-01-15T15:45:00')
       }
-    };
-
-    const showFilterReminder = () => {
-      toast.info('Nhấn nút "Lọc Dữ Liệu" để cập nhật báo cáo.', {
-        position: "top-right",
-        timeout: 3000,
-        closeOnClick: true,
-        pauseOnHover: true,
-      });
-    };
-
-    const filterData = async () => {
-      await fetchDashboardData();
-    };
-
-    const exportExcel = async () => {
-      if (!hasData.value) {
-        toast.error('Không có dữ liệu để xuất báo cáo!');
-        return;
-      }
-      try {
-        const ws_data = [
-          ['BÁO CÁO DASHBOARD - SHOP GIÀY'],
-          ['Thời gian xuất: ' + new Date().toLocaleString('vi-VN')],
-          [],
-          ['Tổng Quan'],
-          ['Tiêu đề', 'Số tiền'],
-          ...overviewCards.value.map((item) => [item.title, item.amount]),
-          ['Doanh Thu Hôm Nay', dailyRevenue.value],
-          ['Doanh Thu Tuần Này', weeklyRevenue.value],
-          ['Doanh Thu Tháng Này', monthlyRevenue.value],
-          [],
-          ['Thống Kê Tồn Kho'],
-          ['Tổng số sản phẩm', inventoryStats.value.totalProducts || 'N/A'],
-          ['Tổng số lượng tồn kho', inventoryStats.value.totalStock || 'N/A'],
-          ['Số sản phẩm hết hàng', kpiStats.value.outOfStockProducts || 'N/A'],
-          [],
-          ['Sản Phẩm Bán Chạy'],
-          ['Sản phẩm', 'Số lượng', 'Doanh thu'],
-          ...topSellingProducts.value.map((item) => [item.productName, item.quantity, item.revenue]),
-          [],
-          ['Sản Phẩm Tồn Kho Thấp'],
-          ['Sản phẩm', 'Tồn kho', 'Màu sắc', 'Kích cỡ'],
-          ...lowStockProducts.value.map((item) => [item.product, item.stock, item.color, item.size]),
-          [],
-          ['Doanh Thu Theo Danh Mục'],
-          ['Danh mục', 'Doanh thu'],
-          ...categoryRevenueData.value.map((item) => [item.category, item.revenue]),
-          [],
-          ['Doanh Thu Theo Giờ'],
-          ['Giờ', 'Doanh thu'],
-          ...revenueByHourData.value.map((item) => [item.hour + 'h', item.revenue]),
-          [],
-          ['Chỉ Số KPI'],
-          ['Tỷ lệ chuyển đổi', formatPercent(kpiStats.value.conversionRate)],
-          ['Tỷ lệ hoàn thành', formatPercent(kpiStats.value.completionRate)],
-          ['Doanh thu trung bình/đơn', formatCurrency(kpiStats.value.avgOrderValue)],
-          ['Tỷ lệ hủy đơn', formatPercent(kpiStats.value.cancellationRate)],
-          ['Giá trị trọn đời KH (CLV)', formatCurrency(kpiStats.value.customerLifetimeValue)],
-          [],
-          ['Trạng thái Đơn hàng'],
-          ['Trạng thái', 'Số lượng'],
-          ...orderStatusData.value.map((item) => [item.status, item.count]),
-          [],
-          ['Khách hàng thân thiết'],
-          ['Tên khách hàng', 'Số lượng đơn', 'Tổng chi tiêu'],
-          ...topCustomers.value.map((item) => [item.name, item.orderCount, item.totalSpent]),
-          [],
-          ['Danh Sách Hóa Đơn (Đã Hoàn Thành)'],
-          ['Mã Hóa Đơn', 'Khách Hàng', 'Ngày Tạo', 'Tổng Tiền', 'Trạng Thái'],
-          ...invoices.value.map((item) => [
-            item.maHoaDon,
-            item.khachHang?.tenKhachHang || 'Khách lẻ',
-            formatDate(item.ngayTao),
-            item.tongTienThanhToan,
-            getStatusText(item.trangThai?.id),
-          ]),
-        ];
-        const ws = XLSX.utils.aoa_to_sheet(ws_data);
-
-        const colWidths = [
-          { wch: 15 },
-          { wch: 25 },
-          { wch: 20 },
-          { wch: 15 },
-          { wch: 20 }
-        ];
-        ws['!cols'] = colWidths;
-
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Dashboard Report');
-        XLSX.writeFile(wb, `dashboard_report_${new Date().toISOString().slice(0, 10)}.xlsx`);
-        toast.success('Báo cáo đã được xuất thành công!');
-      } catch (error) {
-        console.error('Lỗi khi xuất Excel:', error);
-        errorMessage.value = error.response?.data?.error || 'Xuất báo cáo thất bại, vui lòng kiểm tra lại!';
-        toast.error(errorMessage.value);
-      }
-    };
+    ])
 
     const formatCurrency = (value) => {
-      return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', minimumFractionDigits: 0 }).format(value || 0);
-    };
-
-    const formatPercent = (value) => {
-      return value ? `${value.toFixed(1)}%` : 'N/A';
-    };
+      return new Intl.NumberFormat('vi-VN', {
+        style: 'currency',
+        currency: 'VND',
+        minimumFractionDigits: 0
+      }).format(value)
+    }
 
     const formatDate = (date) => {
-      if (!date) return 'N/A';
-      return new Date(date).toLocaleString('vi-VN', {
+      return new Intl.DateTimeFormat('vi-VN', {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
         hour: '2-digit',
-        minute: '2-digit',
-      });
-    };
+        minute: '2-digit'
+      }).format(date)
+    }
 
-    const getStatusText = (statusId) => {
-      const statusMap = {
-        6: 'Chờ xác nhận',
-        7: 'Chờ xử lý',
-        8: 'Chờ vận chuyển',
-        9: 'Đang vận chuyển',
-        21: 'Đã hoàn thành',
-        22: 'Đã hủy',
-        23: 'Hoàn 1 phần',
-      };
-      return statusMap[statusId] || 'Đã hoàn thành';
-    };
-
-    const getStatusColor = (statusId) => {
-      const colorMap = {
-        6: 'text-red-600 bg-red-100 px-2 py-1 rounded-full text-xs font-semibold',
-        7: 'text-yellow-600 bg-yellow-100 px-2 py-1 rounded-full text-xs font-semibold',
-        8: 'text-yellow-600 bg-yellow-100 px-2 py-1 rounded-full text-xs font-semibold',
-        9: 'text-blue-600 bg-blue-100 px-2 py-1 rounded-full text-xs font-semibold',
-        21: 'text-green-700 bg-green-200 px-2 py-1 rounded-full text-xs font-semibold',
-        22: 'text-red-700 bg-red-200 px-2 py-1 rounded-full text-xs font-semibold',
-        23: 'text-purple-700 bg-purple-200 px-2 py-1 rounded-full text-xs font-semibold',
-      };
-      return colorMap[statusId] || 'text-green-700 bg-green-200 px-2 py-1 rounded-full text-xs font-semibold';
-    };
-
-    const getDayName = (dayNumber) => {
-      const days = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
-      return days[dayNumber - 1] || 'Không xác định';
-    };
-
-    const charts = ref({});
-
-    const renderChart = (canvasId, config, fallbackMessage) => {
-      const ctx = document.getElementById(canvasId);
-      if (!ctx) {
-        console.warn(`Canvas element with ID '${canvasId}' not found.`);
-        return null;
+    const getCategoryClass = (category) => {
+      const classes = {
+        'Sneaker': 'category-sneaker',
+        'Chạy bộ': 'category-running',
+        'Canvas': 'category-canvas',
+        'Skateboard': 'category-skateboard',
+        'Lifestyle': 'category-lifestyle'
       }
+      return classes[category] || 'category-default'
+    }
 
-      const chartInstance = charts.value[canvasId];
-      if (chartInstance) {
-        chartInstance.destroy();
+    const getStatusClass = (status) => {
+      const classes = {
+        'Đã giao': 'status-delivered',
+        'Đang giao': 'status-shipping',
+        'Chờ xử lý': 'status-pending',
+        'Đã hủy': 'status-cancelled'
       }
+      return classes[status] || 'status-default'
+    }
 
-      const hasMeaningfulData = config?.data?.labels?.length > 0 && config.data.datasets.some(dataset => dataset.data.some(val => val !== 0 && val !== null && val !== undefined));
+    const initCharts = async () => {
+      await nextTick()
       
-      const chartContainer = ctx.closest('.chart-container');
-      let noDataElement = null;
-      if (chartContainer) {
-        noDataElement = chartContainer.querySelector('.no-data');
-        if (!noDataElement) {
-          noDataElement = document.createElement('div');
-          noDataElement.className = 'no-data flex flex-col items-center justify-center h-full';
-          noDataElement.innerHTML = `<iconify-icon icon="solar:cloud-cross-linear" class="no-data-icon text-gray-400 dark:text-gray-500 text-5xl mb-2" /><p class="text-gray-600 dark:text-gray-300 mt-2 text-lg"></p>`;
-          chartContainer.appendChild(noDataElement);
+      // Revenue Chart
+      if (revenueChart.value) {
+        const ctx = revenueChart.value.getContext('2d')
+        
+        if (revenueChartInstance) {
+          revenueChartInstance.destroy()
         }
-      }
-
-      if (!hasMeaningfulData) {
-        if (chartContainer) {
-          ctx.style.display = 'none';
-          if (noDataElement) {
-            noDataElement.style.display = 'flex';
-            noDataElement.querySelector('p').textContent = fallbackMessage;
-          }
-        }
-        return null;
-      } else {
-        if (chartContainer) {
-          ctx.style.display = 'block';
-          if (noDataElement) {
-            noDataElement.style.display = 'none';
-          }
-        }
-      }
-
-      charts.value[canvasId] = new Chart(ctx, config);
-      return charts.value[canvasId];
-    };
-
-    const updateCharts = () => {
-      const currencyFormatter = new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', minimumFractionDigits: 0 });
-
-      renderChart('revenueChart', {
-        type: 'line',
-        data: {
-          labels: revenueData.value.map((item) => item.date),
-          datasets: [
-            {
+        
+        revenueChartInstance = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: ['1/1', '2/1', '3/1', '4/1', '5/1', '6/1', '7/1', '8/1', '9/1', '10/1', '11/1', '12/1', '13/1', '14/1', '15/1'],
+            datasets: [{
               label: 'Doanh thu',
-              data: revenueData.value.map((item) => item.revenue),
-              borderColor: '#2563eb',
-              backgroundColor: 'rgba(37, 99, 235, 0.2)',
+              data: [120, 150, 180, 220, 190, 240, 280, 260, 300, 320, 290, 350, 380, 360, 420],
+              borderColor: '#007bff',
+              backgroundColor: 'rgba(0, 123, 255, 0.1)',
               fill: true,
               tension: 0.4,
-              borderWidth: 2,
-              pointBackgroundColor: '#2563eb',
-              pointBorderColor: '#fff',
-              pointHoverBackgroundColor: '#fff',
-              pointHoverBorderColor: '#2563eb',
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: {
-                callback: (value) => currencyFormatter.format(value),
-                color: '#4b5563',
-              },
-              grid: { color: '#e5e7eb' },
-            },
-            x: {
-              ticks: { color: '#4b5563' },
-              grid: { display: false },
-            },
+              pointBackgroundColor: '#007bff',
+              pointBorderColor: '#ffffff',
+              pointBorderWidth: 2,
+              pointRadius: 6,
+              pointHoverRadius: 8
+            }]
           },
-          plugins: {
-            legend: {
-              display: true,
-              labels: {
-                color: '#374151',
-                font: { size: 14 }
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: false
               }
             },
-            tooltip: {
-              callbacks: {
-                label: (context) => `${context.dataset.label}: ${currencyFormatter.format(context.raw)}`,
-              },
-              backgroundColor: 'rgba(0, 0, 0, 0.7)',
-              titleColor: '#fff',
-              bodyColor: '#fff',
-              padding: 10,
-              displayColors: true,
-            },
-          },
-        },
-      }, 'Không có dữ liệu doanh thu theo ngày để hiển thị.');
-
-      renderChart('orderStatusChart', {
-        type: 'doughnut',
-        data: {
-          labels: orderStatusData.value.map((item) => item.status),
-          datasets: [
-            {
-              label: 'Số lượng đơn',
-              data: orderStatusData.value.map((item) => item.count),
-              backgroundColor: ['#34d399', '#f97316', '#a855f7', '#10b981', '#ef4444', '#f59e0b', '#60a5fa'],
-              borderColor: '#ffffff',
-              borderWidth: 2,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: 'right',
-              labels: {
-                color: '#374151',
-                font: { size: 12 },
-                boxWidth: 20
-              },
-            },
-            tooltip: {
-              callbacks: {
-                label: (context) => {
-                  const label = context.label || '';
-                  const value = context.raw || 0;
-                  const total = context.dataset.data.reduce((acc, current) => acc + current, 0);
-                  const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                  return `${label}: ${value} (${percentage}%)`;
+            scales: {
+              y: {
+                beginAtZero: true,
+                grid: {
+                  color: 'rgba(0,0,0,0.1)'
                 },
+                ticks: {
+                  callback: function(value) {
+                    return value + 'M'
+                  }
+                }
               },
-              backgroundColor: 'rgba(0, 0, 0, 0.7)',
-              titleColor: '#fff',
-              bodyColor: '#fff',
-              padding: 10,
-              displayColors: true,
-            },
-          },
-        },
-      }, 'Không có dữ liệu trạng thái đơn hàng để hiển thị.');
-
-      renderChart('revenueByWeekDayChart', {
-        type: 'bar',
-        data: {
-          labels: revenueByWeekDay.value.map((item) => item.day),
-          datasets: [
-            {
-              label: 'Doanh thu',
-              data: revenueByWeekDay.value.map((item) => item.revenue),
-              backgroundColor: '#4ade80',
-              borderColor: '#16a34a',
-              borderWidth: 1,
-              borderRadius: 5,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: {
-                callback: (value) => currencyFormatter.format(value),
-                color: '#4b5563',
-              },
-              grid: { color: '#e5e7eb' },
-            },
-            x: {
-              ticks: { color: '#4b5563' },
-              grid: { display: false },
-            },
-          },
-          plugins: {
-            legend: {
-              display: true,
-              labels: {
-                color: '#374151',
-                font: { size: 14 }
+              x: {
+                grid: {
+                  display: false
+                }
               }
-            },
-            tooltip: {
-              callbacks: {
-                label: (context) => `${context.dataset.label}: ${currencyFormatter.format(context.raw)}`,
-              },
-              backgroundColor: 'rgba(0, 0, 0, 0.7)',
-              titleColor: '#fff',
-              bodyColor: '#fff',
-              padding: 10,
-              displayColors: true,
-            },
-          },
-        },
-      }, 'Không có dữ liệu doanh thu theo thứ để hiển thị.');
+            }
+          }
+        })
+      }
 
-      renderChart('revenueByCategoryChart', {
-        type: 'pie',
-        data: {
-          labels: categoryRevenueData.value.map((item) => item.category),
-          datasets: [
-            {
-              label: 'Doanh thu',
-              data: categoryRevenueData.value.map((item) => item.revenue),
-              backgroundColor: ['#10b981', '#3b82f6', '#f43f5e', '#f97316', '#a855f7', '#ef4444', '#6b7280', '#0ea5e9'],
-              borderColor: '#ffffff',
-              borderWidth: 2,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: 'right',
-              labels: {
-                color: '#374151',
-                font: { size: 12 },
-                boxWidth: 20
-              },
-            },
-            tooltip: {
-              callbacks: {
-                label: (context) => {
-                  const label = context.label || '';
-                  const value = context.raw || 0;
-                  const total = context.dataset.data.reduce((acc, current) => acc + current, 0);
-                  const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                  return `${label}: ${currencyFormatter.format(value)} (${percentage}%)`;
-                },
-              },
-              backgroundColor: 'rgba(0, 0, 0, 0.7)',
-              titleColor: '#fff',
-              bodyColor: '#fff',
-              padding: 10,
-              displayColors: true,
-            },
-          },
-        },
-      }, 'Không có dữ liệu doanh thu theo danh mục để hiển thị.');
-
-      renderChart('revenueByHourChart', {
-        type: 'bar',
-        data: {
-          labels: revenueByHourData.value.map((item) => `${item.hour}h`),
-          datasets: [
-            {
-              label: 'Doanh thu',
-              data: revenueByHourData.value.map((item) => item.revenue),
-              backgroundColor: '#f97316',
-              borderColor: '#ea580c',
-              borderWidth: 1,
-              borderRadius: 5,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: {
-                callback: (value) => currencyFormatter.format(value),
-                color: '#4b5563',
-              },
-              grid: { color: '#e5e7eb' },
-            },
-            x: {
-              ticks: { color: '#4b5563' },
-              grid: { display: false },
-            },
-          },
-          plugins: {
-            legend: {
-              display: true,
-              labels: {
-                color: '#374151',
-                font: { size: 14 }
-              }
-            },
-            tooltip: {
-              callbacks: {
-                label: (context) => `${context.dataset.label}: ${currencyFormatter.format(context.raw)}`,
-              },
-              backgroundColor: 'rgba(0, 0, 0, 0.7)',
-              titleColor: '#fff',
-              bodyColor: '#fff',
-              padding: 10,
-              displayColors: true,
-            },
-          },
-        },
-      }, 'Không có dữ liệu doanh thu theo giờ để hiển thị.');
-    };
-
-    const initChatbot = () => {
-      const script = document.createElement('script');
-      script.src = 'https://app.tudongchat.com/js/chatbox.js';
-      script.async = true;
-      script.onload = () => {
-        if (window.TuDongChat) {
-          const tudong_chatbox = new window.TuDongChat('rKnd8_19n6Lvrg-lDWmTs');
-          tudong_chatbox.initial();
-        } else {
-          console.error('TuDongChat script loaded but TuDongChat is undefined');
+      // Category Chart
+      if (categoryChart.value) {
+        const ctx2 = categoryChart.value.getContext('2d')
+        
+        if (categoryChartInstance) {
+          categoryChartInstance.destroy()
         }
-      };
-      script.onerror = () => {
-        console.error('Failed to load TuDongChat script');
-      };
-      document.body.appendChild(script);
-    };
+        
+        categoryChartInstance = new Chart(ctx2, {
+          type: 'doughnut',
+          data: {
+            labels: ['Sneaker', 'Chạy bộ', 'Canvas', 'Skateboard', 'Lifestyle'],
+            datasets: [{
+              data: [35, 25, 20, 12, 8],
+              backgroundColor: [
+                '#007bff',
+                '#28a745',
+                '#ffc107',
+                '#dc3545',
+                '#6f42c1'
+              ],
+              borderWidth: 0
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: {
+                  usePointStyle: true,
+                  padding: 20,
+                  font: {
+                    size: 12
+                  }
+                }
+              }
+            }
+          }
+        })
+      }
+    }
 
-    // Lắng nghe sự kiện invoice-completed để làm mới tổng doanh thu
+    const updateData = () => {
+      console.log('Updating data for range:', selectedTimeRange.value)
+    }
+
+    const exportReport = () => {
+      console.log('Exporting report...')
+    }
+
     onMounted(() => {
-      fetchDashboardData();
-      initChatbot();
-      emitter.on('invoice-completed', (invoice) => {
-        console.log('Nhận được sự kiện invoice-completed:', invoice);
-        fetchDashboardData();
-        toast.info('Tổng doanh thu đã được cập nhật!', { timeout: 3000 });
-      });
-    });
-
-    onUnmounted(() => {
-      Object.values(charts.value).forEach((chart) => chart?.destroy());
-      emitter.off('invoice-completed');
-    });
-
-    watch(
-      filters,
-      async () => {
-        // Không tự động lọc khi thay đổi, chỉ hiển thị thông báo nhắc nhở
-      },
-      { deep: true }
-    );
+      initCharts()
+    })
 
     return {
-      errorMessage,
-      isLoading,
-      filters,
-      categories,
-      overviewCards,
-      kpiStats,
-      topSellingProducts,
-      lowStockProducts,
-      topCustomers, 
-      revenueData,
-      orderStatusData,
-      inventoryStats,
-      revenueByWeekDay,
-      categoryRevenueData,
-      revenueByHourData,
-      invoices,
-      paginatedInvoices,
-      currentPage,
-      itemsPerPage,
-      totalPages,
-      goToPage,
-      prevPage,
-      nextPage,
-      filterData,
-      exportExcel,
+      selectedTimeRange,
+      stats,
+      topProducts,
+      recentOrders,
+      revenueChart,
+      categoryChart,
+      breadcrumbItems,
+      breadcrumbActions,
+      pageStats,
       formatCurrency,
-      formatPercent,
       formatDate,
-      getStatusText,
-      getStatusColor,
-      hasRevenueChartData,
-      hasOrderStatusData,
-      hasRevenueByWeekDay,
-      hasCategoryRevenue,
-      hasRevenueByHour,
-      hasData,
-      dailyRevenue,
-      weeklyRevenue,
-      monthlyRevenue,
-      showFilterReminder,
-    };
-  },
-};
+      getCategoryClass,
+      getStatusClass,
+      updateData,
+      exportReport
+    }
+  }
+}
 </script>
 
 <style scoped>
-@import 'vue-toastification/dist/index.css';
+/* ===== GENERAL STYLES ===== */
+.dashboard-container {
+  padding: 24px;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  min-height: 100vh;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
 
-.card {
-  border-radius: 16px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+/* ===== STATS GRID ===== */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.stat-card {
   background: white;
-  border: 1px solid rgba(229, 231, 235, 0.6);
+  border-radius: 20px;
+  padding: 28px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
 }
 
-.dark .card {
-  background: #2D3748;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(75, 85, 99, 0.7);
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--accent-color);
 }
 
-.card:hover {
+.stat-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
 }
 
-.dark .card:hover {
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+.revenue-card {
+  --accent-color: #007bff;
+}
+
+.orders-card {
+  --accent-color: #28a745;
+}
+
+.customers-card {
+  --accent-color: #ffc107;
+}
+
+.products-card {
+  --accent-color: #dc3545;
+}
+
+.card-icon {
+  font-size: 3rem;
+  color: var(--accent-color);
+  opacity: 0.8;
+}
+
+.card-content {
+  flex: 1;
+}
+
+.card-value {
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin: 0 0 4px 0;
+  color: #1a202c;
+}
+
+.card-label {
+  font-size: 0.95rem;
+  color: #64748b;
+  margin: 0 0 8px 0;
+  font-weight: 500;
+}
+
+.card-trend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.card-trend.positive {
+  color: #059669;
+}
+
+.card-trend.negative {
+  color: #dc2626;
+}
+
+.card-trend.neutral {
+  color: #6b7280;
+}
+
+/* ===== CHARTS SECTION ===== */
+.charts-section {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.chart-card {
+  background: white;
+  border-radius: 20px;
+  padding: 28px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.chart-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1a202c;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+.chart-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.chart-btn {
+  padding: 8px 16px;
+  border: 1px solid #e2e8f0;
+  background: white;
+  color: #64748b;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.chart-btn.active {
+  background: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+.chart-btn:hover:not(.active) {
+  background: #f8fafc;
 }
 
 .chart-container {
   position: relative;
-  height: 380px;
-  padding: 16px;
-  background-color: #fcfcfc;
-  border-radius: 10px;
-}
-
-.dark .chart-container {
-  background-color: #374151;
-}
-
-.table {
   width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  border-radius: 12px;
   overflow: hidden;
+}
+
+.revenue-chart-container {
+  height: 350px;
+}
+
+.category-chart-container {
+  height: 400px;
+}
+
+/* ===== TABLES SECTION - IMPROVED RESPONSIVE ===== */
+.tables-section {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.table-card {
   background: white;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border-radius: 20px;
+  padding: 28px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
 }
 
-.dark .table {
-  background: #374151;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 16px;
 }
 
-.table th,
-.table td {
-  padding: 14px 18px;
-  text-align: left;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.dark .table th,
-.dark .table td {
-  border-bottom: 1px solid #5a6773;
-}
-
-.table thead th {
-  background: #eef2ff;
-  color: #3b82f6;
+.table-title {
+  font-size: 1.25rem;
   font-weight: 700;
-  font-size: 1rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  color: #1a202c;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  flex: 1;
+  min-width: 0;
 }
 
-.dark .table thead th {
-  background: #4b5563;
-  color: #93c5fd;
+.view-all-btn {
+  color: #007bff;
+  font-weight: 500;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: color 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.table tbody tr {
-  transition: background 0.2s ease;
+.view-all-btn:hover {
+  color: #0056b3;
 }
 
-.table tbody tr:last-child td {
-  border-bottom: none;
+.table-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f5f9;
 }
 
-.table tbody tr:hover {
-  background: #f4f7fc;
+.table-container::-webkit-scrollbar {
+  height: 6px;
 }
 
-.dark .table tbody tr:hover {
-  background: #4a5568;
+.table-container::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 3px;
 }
 
-.btn-primary {
-  background: #2563eb;
-  color: white;
-  padding: 12px 24px;
-  border-radius: 10px;
-  transition: background 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease;
+.table-container::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 3px;
+}
+
+.table-container::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 800px;
+  table-layout: fixed;
+}
+
+.data-table th {
+  text-align: left;
   font-weight: 600;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+  color: #64748b;
+  font-size: 0.875rem;
+  padding: 12px 16px;
+  border-bottom: 2px solid #f1f5f9;
+  background: #f8fafc;
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
-.btn-primary:hover {
-  background: #1e40af;
-  transform: translateY(-3px);
-  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
+.data-table td {
+  padding: 16px 16px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
 }
 
-.btn-secondary {
-  background: #6b7280;
-  color: white;
-  padding: 12px 24px;
+.data-table tr:hover {
+  background: #f8fafc;
+}
+
+/* Column specific widths */
+.data-table th:nth-child(1),
+.data-table td:nth-child(1) {
+  width: 280px;
+  min-width: 280px;
+}
+
+.data-table th:nth-child(2),
+.data-table td:nth-child(2) {
+  width: 120px;
+  min-width: 120px;
+}
+
+.data-table th:nth-child(3),
+.data-table td:nth-child(3) {
+  width: 100px;
+  min-width: 100px;
+  text-align: center;
+}
+
+.data-table th:nth-child(4),
+.data-table td:nth-child(4) {
+  width: 140px;
+  min-width: 140px;
+  text-align: right;
+}
+
+.data-table th:nth-child(5),
+.data-table td:nth-child(5) {
+  width: 120px;
+  min-width: 120px;
+  text-align: center;
+}
+
+.data-table th:nth-child(6),
+.data-table td:nth-child(6) {
+  width: 140px;
+  min-width: 140px;
+  text-align: center;
+}
+
+/* ===== PRODUCT INFO STYLES ===== */
+.product-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 260px;
+}
+
+.product-image {
+  width: 48px;
+  height: 48px;
   border-radius: 10px;
-  transition: background 0.3s ease, transform 0.2s ease, box-shadow 0.2s ease;
-  font-weight: 600;
-  box-shadow: 0 4px 12px rgba(107, 114, 128, 0.2);
+  overflow: hidden;
+  flex-shrink: 0;
 }
 
-.btn-secondary:hover {
-  background: #4b5563;
-  transform: translateY(-3px);
-  box-shadow: 0 6px 16px rgba(107, 114, 128, 0.3);
+.product-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
-.btn-secondary:disabled {
-  background: #d1d5db;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-  opacity: 0.7;
-}
-
-.no-data {
+.product-details {
   display: flex;
   flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.product-name {
+  font-weight: 600;
+  color: #1a202c;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+
+.product-sku {
+  font-size: 0.8rem;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+
+/* ===== CUSTOMER INFO STYLES ===== */
+.customer-info {
+  display: flex;
   align-items: center;
-  justify-content: center;
-  min-height: 150px;
-  color: #6b7280;
-  font-size: 1.1rem;
+  gap: 10px;
+  max-width: 260px;
+}
+
+.customer-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.customer-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.customer-name {
+  font-weight: 500;
+  color: #1a202c;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+/* ===== CATEGORY BADGES ===== */
+.category-badge {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
   text-align: center;
+  display: inline-block;
+  white-space: nowrap;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.dark .no-data {
-  color: #d1d5db;
+.category-sneaker {
+  background: #dbeafe;
+  color: #1e40af;
 }
 
-.no-data-icon {
-  font-size: 60px;
-  color: #a0a0a0;
-  margin-bottom: 16px;
+.category-running {
+  background: #dcfce7;
+  color: #166534;
 }
 
-.dark .no-data-icon {
-  color: #888888;
+.category-canvas {
+  background: #fef3c7;
+  color: #92400e;
 }
 
-.filter-group {
-  display: grid;
-  gap: 20px;
-  grid-template-columns: repeat(1, minmax(0, 1fr));
+.category-skateboard {
+  background: #fecaca;
+  color: #991b1b;
 }
 
-@media (min-width: 768px) {
-  .filter-group {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
+.category-lifestyle {
+  background: #e9d5ff;
+  color: #7c2d12;
 }
 
-.kpi-card {
-  background: linear-gradient(135deg, #3b82f6, #0A53E0);
-  color: white;
-  border-radius: 16px;
-  padding: 30px;
-  transition: transform 0.3s ease;
-  box-shadow: 0 8px 30px rgba(59, 130, 246, 0.3);
+.category-default {
+  background: #f1f5f9;
+  color: #64748b;
 }
 
-.kpi-card:hover {
-  transform: scale(1.02);
-  box-shadow: 0 12px 35px rgba(59, 130, 246, 0.4);
-}
-
-.kpi-card h4 {
-  font-size: 1.75rem;
-}
-
-.kpi-card ul li {
-  font-size: 1.15rem;
-  margin-bottom: 8px;
-}
-
-.tooltip .tooltip-text {
-  visibility: hidden;
-  width: 200px;
-  background: #334155;
-  color: white;
+/* ===== STATUS BADGES ===== */
+.status-badge {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
   text-align: center;
-  border-radius: 8px;
-  padding: 10px 12px;
-  position: absolute;
-  z-index: 10;
-  bottom: 125%;
-  left: 50%;
-  transform: translateX(-50%);
-  opacity: 0;
-  transition: opacity 0.3s, transform 0.3s;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  display: inline-block;
+  white-space: nowrap;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.tooltip:hover .tooltip-text {
-  visibility: visible;
-  opacity: 1;
-  transform: translateX(-50%) translateY(-5px);
+.status-delivered {
+  background: #dcfce7;
+  color: #166534;
 }
 
-@media (max-width: 1024px) {
-  .chart-container {
-    height: 320px;
-  }
-}
-
-@media (max-width: 640px) {
-  .chart-container {
-    height: 250px;
-  }
-
-  .table th,
-  .table td {
-    padding: 10px;
-    font-size: 0.8rem;
-  }
-
-  .filter-group {
-    grid-template-columns: repeat(1, minmax(0, 1fr));
-  }
-
-  .kpi-card {
-    padding: 20px;
-  }
-}
-
-.status-success {
-  background-color: #d1fae5;
-  color: #065f46;
-}
-.dark .status-success {
-  background-color: #10b981;
-  color: white;
+.status-shipping {
+  background: #dbeafe;
+  color: #1e40af;
 }
 
 .status-pending {
-  background-color: #fffbeb;
+  background: #fef3c7;
   color: #92400e;
-}
-.dark .status-pending {
-  background-color: #f59e0b;
-  color: white;
 }
 
 .status-cancelled {
-  background-color: #fee2e2;
+  background: #fecaca;
   color: #991b1b;
 }
-.dark .status-cancelled {
-  background-color: #ef4444;
-  color: white;
+
+.status-default {
+  background: #f1f5f9;
+  color: #64748b;
 }
 
-.font-sans {
-  font-family: 'Inter', sans-serif;
+/* ===== TABLE DATA STYLES ===== */
+.sold-count,
+.revenue-amount,
+.order-total {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sold-count {
+  color: #1a202c;
+}
+
+.revenue-amount,
+.order-total {
+  color: #059669;
+}
+
+.growth-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.growth-indicator.positive {
+  color: #059669;
+}
+
+.growth-indicator.negative {
+  color: #dc2626;
+}
+
+.order-code {
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-weight: 600;
+  color: #1a202c;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.product-count {
+  color: #64748b;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.order-date {
+  color: #64748b;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+/* ===== QUICK STATS ===== */
+.quick-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 32px;
+}
+
+.quick-stat-card {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.quick-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.stat-icon {
+  font-size: 2rem;
+  color: #007bff;
+  opacity: 0.8;
+}
+
+.stat-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1a202c;
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+/* ===== DARK THEME ===== */
+.dark .dashboard-container {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  color: #f1f5f9;
+}
+
+.dark .stat-card,
+.dark .chart-card,
+.dark .table-card,
+.dark .quick-stat-card {
+  background: #1e293b;
+  border: 1px solid #334155;
+}
+
+.dark .card-value,
+.dark .chart-title,
+.dark .table-title,
+.dark .product-name,
+.dark .customer-name,
+.dark .order-code,
+.dark .stat-value,
+.dark .sold-count {
+  color: #f1f5f9;
+}
+
+.dark .card-label,
+.dark .product-sku,
+.dark .product-count,
+.dark .order-date,
+.dark .stat-label {
+  color: #94a3b8;
+}
+
+.dark .data-table th {
+  background: #334155;
+  color: #94a3b8;
+  border-bottom-color: #475569;
+}
+
+.dark .data-table td {
+  border-bottom-color: #475569;
+}
+
+.dark .data-table tr:hover {
+  background: #334155;
+}
+
+.dark .chart-btn {
+  background: #334155;
+  color: #cbd5e1;
+  border-color: #475569;
+}
+
+.dark .chart-btn.active {
+  background: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+}
+
+.dark .chart-btn:hover:not(.active) {
+  background: #475569;
+}
+
+.dark .table-container::-webkit-scrollbar-track {
+  background: #334155;
+}
+
+.dark .table-container::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+.dark .table-container::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
+
+/* Extra Large screens (1400px+) */
+@media (min-width: 1400px) {
+  .tables-section {
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  .charts-section {
+    grid-template-columns: 2fr 1fr;
+  }
+}
+
+/* Large screens (1200-1399px) */
+@media (min-width: 1200px) and (max-width: 1399px) {
+  .tables-section {
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  .charts-section {
+    grid-template-columns: 2fr 1fr;
+  }
+  
+  .data-table {
+    min-width: 700px;
+  }
+  
+  .data-table th:nth-child(1),
+  .data-table td:nth-child(1) {
+    width: 240px;
+    min-width: 240px;
+  }
+  
+  .product-info,
+  .customer-info {
+    max-width: 220px;
+  }
+}
+
+/* Medium Large screens (992-1199px) */
+@media (min-width: 992px) and (max-width: 1199px) {
+  .tables-section {
+    grid-template-columns: 1fr;
+  }
+  
+  .charts-section {
+    grid-template-columns: 1fr;
+  }
+  
+  .category-chart-container {
+    height: 350px;
+  }
+  
+  .data-table {
+    min-width: 750px;
+  }
+}
+
+/* Medium screens (768-991px) */
+@media (min-width: 768px) and (max-width: 991px) {
+  .table-card,
+  .chart-card {
+    padding: 24px;
+  }
+  
+  .data-table {
+    min-width: 700px;
+  }
+  
+  .data-table th,
+  .data-table td {
+    padding: 12px 14px;
+  }
+  
+  .data-table th:nth-child(1),
+  .data-table td:nth-child(1) {
+    width: 260px;
+    min-width: 260px;
+  }
+  
+  .chart-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .chart-actions {
+    align-self: flex-end;
+  }
+}
+
+/* Small Medium screens (640-767px) */
+@media (min-width: 640px) and (max-width: 767px) {
+  .dashboard-container {
+    padding: 16px;
+  }
+  
+  .table-card,
+  .chart-card {
+    padding: 20px;
+    margin: 0 -8px;
+    border-radius: 16px;
+  }
+  
+  .table-container {
+    margin: 0 -20px;
+    padding: 0 20px;
+  }
+  
+  .data-table {
+    min-width: 650px;
+  }
+  
+  .data-table th,
+  .data-table td {
+    padding: 10px 12px;
+  }
+  
+  .data-table th:nth-child(1),
+  .data-table td:nth-child(1) {
+    width: 240px;
+    min-width: 240px;
+  }
+  
+  .product-image {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .customer-avatar {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .quick-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .revenue-chart-container,
+  .category-chart-container {
+    height: 300px;
+  }
+}
+
+/* Small screens (480-639px) */
+@media (min-width: 480px) and (max-width: 639px) {
+  .dashboard-container {
+    padding: 16px;
+  }
+  
+  .table-card,
+  .chart-card {
+    padding: 16px;
+    margin: 0 -8px;
+    border-radius: 12px;
+  }
+  
+  .table-container {
+    margin: 0 -16px;
+    padding: 0 16px;
+  }
+  
+  .data-table {
+    min-width: 600px;
+  }
+  
+  .data-table th,
+  .data-table td {
+    padding: 8px 10px;
+  }
+  
+  .data-table th {
+    font-size: 0.8rem;
+  }
+  
+  .data-table th:nth-child(1),
+  .data-table td:nth-child(1) {
+    width: 200px;
+    min-width: 200px;
+  }
+  
+  .data-table th:nth-child(2),
+  .data-table td:nth-child(2) {
+    width: 100px;
+    min-width: 100px;
+  }
+  
+  .data-table th:nth-child(3),
+  .data-table td:nth-child(3) {
+    width: 80px;
+    min-width: 80px;
+  }
+  
+  .data-table th:nth-child(4),
+  .data-table td:nth-child(4) {
+    width: 120px;
+    min-width: 120px;
+  }
+  
+  .data-table th:nth-child(5),
+  .data-table td:nth-child(5) {
+    width: 100px;
+    min-width: 100px;
+  }
+  
+  .product-info,
+  .customer-info {
+    max-width: 180px;
+    gap: 8px;
+  }
+  
+  .product-image {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .customer-avatar {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .product-name,
+  .customer-name {
+    font-size: 0.85rem;
+    max-width: 120px;
+  }
+  
+  .product-sku {
+    font-size: 0.75rem;
+    max-width: 120px;
+  }
+  
+  .category-badge,
+  .status-badge {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+    max-width: 80px;
+  }
+  
+  .table-title,
+  .chart-title {
+    font-size: 1.1rem;
+  }
+  
+  .view-all-btn {
+    font-size: 0.85rem;
+  }
+  
+  .quick-stats {
+    grid-template-columns: 1fr;
+  }
+  
+  .stat-card {
+    padding: 20px;
+    flex-direction: column;
+    text-align: center;
+    gap: 16px;
+  }
+  
+  .card-icon {
+    font-size: 2.5rem;
+  }
+  
+  .chart-actions {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .chart-btn {
+    flex: 1;
+    text-align: center;
+    min-width: 60px;
+  }
+}
+
+/* Extra Small screens (320-479px) */
+@media (max-width: 479px) {
+  .dashboard-container {
+    padding: 12px;
+  }
+  
+  .table-card,
+  .chart-card {
+    padding: 12px;
+    margin: 0 -6px;
+  }
+  
+  .table-container {
+    margin: 0 -12px;
+    padding: 0 12px;
+  }
+  
+  .data-table {
+    min-width: 550px;
+  }
+  
+  .data-table th:nth-child(1),
+  .data-table td:nth-child(1) {
+    width: 180px;
+    min-width: 180px;
+  }
+  
+  .product-info,
+  .customer-info {
+    max-width: 160px;
+  }
+  
+  .product-name,
+  .customer-name {
+    max-width: 100px;
+  }
+  
+  .product-sku {
+    max-width: 100px;
+  }
+  
+  .table-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .view-all-btn {
+    align-self: flex-end;
+  }
+  
+  .quick-stat-card {
+    padding: 16px;
+  }
+  
+  .stat-icon {
+    font-size: 1.75rem;
+  }
+  
+  .stat-value {
+    font-size: 1.25rem;
+  }
+  
+  .revenue-chart-container,
+  .category-chart-container {
+    height: 250px;
+  }
+}
+
+/* Ultra Small screens (max-width: 360px) */
+@media (max-width: 360px) {
+  .dashboard-container {
+    padding: 8px;
+  }
+  
+  .stats-grid {
+    gap: 16px;
+  }
+  
+  .stat-card {
+    padding: 16px;
+  }
+  
+  .card-value {
+    font-size: 1.25rem;
+  }
+  
+  .chart-card,
+  .table-card {
+    padding: 10px;
+  }
+  
+  .data-table {
+    min-width: 500px;
+  }
+  
+  .product-info,
+  .customer-info {
+    max-width: 140px;
+    gap: 6px;
+  }
+  
+  .product-image {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .customer-avatar {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .product-name,
+  .customer-name {
+    font-size: 0.8rem;
+    max-width: 90px;
+  }
+  
+  .revenue-chart-container,
+  .category-chart-container {
+    height: 200px;
+  }
 }
 </style>

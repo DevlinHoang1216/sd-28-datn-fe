@@ -86,7 +86,7 @@
         <div class="footer-content">
           <div class="version-info">
             <span class="version-label">Version 2.0.1</span>
-            <span class="build-info">Build 2024</span>
+            <span class="build-info">Build 2025</span>
           </div>
         </div>
       </div>
@@ -107,8 +107,8 @@ export default {
     return {
       menuItems: [
         { path: '/dashboard', label: 'Thống kê', icon: 'solar:home-smile-outline' },
-        { path: '/dot-giam-gia', label: 'Đợt Giảm Giá', icon: 'solar:sale-outline' },
         { path: '/ban-tai-quay', label: 'Bán Tại Quầy', icon: 'solar:shop-outline' },
+        { path: '/hoa-don', label: 'Quản Lý Hóa Đơn', icon: 'solar:document-outline' },
         {
           path: '/quan-ly-san-pham',
           label: 'Quản Lý Sản Phẩm',
@@ -116,21 +116,21 @@ export default {
         },
         // Thêm mục 'Thuộc tính' với các mục con và icon cho từng mục con
         {
-          label: 'Thuộc tính',
+          label: 'Quản Lý Thuộc Tính',
           icon: 'solar:tag-outline', // Icon cho mục thuộc tính chính
           expanded: true, // Đặt thành true để mở rộng mặc định
           children: [
             { path: '/thuoc-tinh/hang', label: 'Hãng', icon: 'mdi:factory' }, // Đã thay đổi icon cho Hãng
-            { path: '/thuoc-tinh/mau-sac', label: 'Màu sắc', icon: 'solar:palette-outline' },
-            { path: '/thuoc-tinh/kich-co', label: 'Kích cỡ', icon: 'solar:ruler-outline' },
-            { path: '/thuoc-tinh/chat-lieu', label: 'Chất liệu', icon: 'mdi:tshirt-crew-outline' }, // Đã thay đổi icon cho Chất liệu
-            { path: '/thuoc-tinh/danh-muc', label: 'Danh mục', icon: 'solar:folder-outline' },
+            { path: '/thuoc-tinh/mau-sac', label: 'Màu Sắc', icon: 'solar:palette-outline' },
+            { path: '/thuoc-tinh/kich-co', label: 'Kích Cỡ', icon: 'solar:ruler-outline' },
+            { path: '/thuoc-tinh/chat-lieu', label: 'Chất Liệu', icon: 'mdi:tshirt-crew-outline' }, // Đã thay đổi icon cho Chất liệu
+            { path: '/thuoc-tinh/danh-muc', label: 'Danh Mục', icon: 'solar:folder-outline' },
           ],
         },
-        { path: '/hoa-don', label: 'Hóa Đơn', icon: 'solar:document-outline' },
-        { path: '/phieu-giam-gia', label: 'Phiếu Giảm Giá', icon: 'solar:tag-horizontal-outline' },
-        { path: '/nhan-vien', label: 'Nhân Viên', icon: 'solar:users-group-rounded-outline' },
-        { path: '/khach-hang', label: 'Khách Hàng', icon: 'solar:user-outline' },
+        { path: '/phieu-giam-gia', label: 'Quản Lý Phiếu Giảm Giá', icon: 'solar:tag-horizontal-outline' },
+        { path: '/dot-giam-gia', label: 'Quản Lý Đợt Giảm Giá', icon: 'solar:sale-outline' },
+        { path: '/nhan-vien', label: 'Quản Lý Nhân Viên', icon: 'solar:users-group-rounded-outline' },
+        { path: '/khach-hang', label: 'Quản Lý Khách Hàng', icon: 'solar:user-outline' },
       ],
     };
   },
@@ -176,9 +176,9 @@ export default {
 <style lang="scss" scoped>
 .modern-sidebar {
   position: fixed;
-  top: 70px;
+  top: 0;
   left: 0;
-  height: calc(100vh - 70px);
+  height: 100vh;
   width: 280px;
   z-index: 100;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -559,6 +559,13 @@ export default {
     background: rgba(15, 23, 42, 0.8);
     border-bottom: 1px solid rgba(71, 85, 105, 0.3);
 
+    .logo-container {
+      .logo-wrapper {
+        .logo-image {
+          filter: brightness(0) invert(1);
+        }
+      }
+    }
   }
 
   .sidebar-navigation {
