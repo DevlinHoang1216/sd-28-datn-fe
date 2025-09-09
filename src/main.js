@@ -1,38 +1,33 @@
-import { createApp } from 'vue';
-import { createPinia } from 'pinia';
-import { autoAnimatePlugin } from '@formkit/auto-animate/vue';
-import Toast from 'vue-toastification';
-import router  from './router.js';
+import { createApp } from 'vue'
+import { createPinia } from 'pinia'
+import { autoAnimatePlugin } from '@formkit/auto-animate/vue'
+import Toast from 'vue-toastification'
+import { Icon } from '@iconify/vue'
 import CoreUI from '@coreui/vue'
 import CIcon from '@coreui/icons-vue'
-import * as icons from '@coreui/icons' // Đã sửa lỗi cú pháp ở đây
-import { Icon } from '@iconify/vue'; // Import component Icon từ Iconify
-import App from './App.vue';
-import '@coreui/coreui/dist/css/coreui.min.css'; // CoreUI CSS
-// CSS
-import './assets/main.scss'; // Đảm bảo file tồn tại
-import 'bootstrap/dist/css/bootstrap.min.css'; // Hoặc dùng CDN
-import './assets/style.css';
-import 'vue-toastification/dist/index.css';
+import * as icons from '@coreui/icons'
 
+import App from './App.vue'
+import router from './router.js'
 
+// Styles
+import '@coreui/coreui/dist/css/coreui.min.css'
+import 'bootstrap/dist/css/bootstrap.min.css'
+import 'vue-toastification/dist/index.css'
+import './assets/main.scss'
+import './assets/style.css'
 
+// Create app instance
+const app = createApp(App)
+const pinia = createPinia()
 
-const pinia = createPinia();
-const app = createApp(App);
+// Register plugins
+app.use(pinia)
+app.use(router)
 app.use(CoreUI)
-// Đăng ký CoreUI Icons
-app.provide('icons', icons); // Cung cấp icons toàn cục qua provide/inject
-app.component('CIcon', CIcon); // Đăng ký component CIcon
+app.use(autoAnimatePlugin)
 
-// Kiểm tra trước khi mount
-if (!document.getElementById('app')) {
-  console.error('Không tìm thấy phần tử #app trong index.html');
-}
-
-app.use(pinia);
-app.use(router);
-app.use(autoAnimatePlugin);
+// Configure Toast notifications
 app.use(Toast, {
   transition: 'Vue-Toastification__bounce',
   maxToasts: 20,
@@ -45,11 +40,21 @@ app.use(Toast, {
   toastDefaults: {
     success: { timeout: 3000, playSound: false },
     error: { timeout: 5000, playSound: false },
-    warning: { timeout: 4000, playSound: false },
-  },
-});
+    warning: { timeout: 4000, playSound: false }
+  }
+})
 
-// Đăng ký component IconifyIcon toàn cục
-// Điều này cho phép bạn sử dụng <iconify-icon> ở bất cứ đâu trong ứng dụng
-app.component('iconify-icon', Icon);
-app.mount('#app');
+// Register global components
+app.component('CIcon', CIcon)
+app.component('iconify-icon', Icon)
+
+// Provide global icons
+app.provide('icons', icons)
+
+// Validate DOM element exists before mounting
+if (!document.getElementById('app')) {
+  console.error('Element #app not found in index.html')
+}
+
+// Mount the application
+app.mount('#app')
