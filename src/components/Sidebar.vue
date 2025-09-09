@@ -1,51 +1,93 @@
 <template>
-  <aside :class="['sidebar', { 'active': isSidebarActive, 'sidebar-hidden': !isSidebarActive }]" aria-label="Main navigation">
-    <div class="sidebar-logo">
-      <img src="/src/assets/images/Pho-Step_logo.png" alt="Logo Pho Tiep" class="img-fluid" style="max-width: 150px;">
-    </div>
-    <div class="sidebar-menu-header">MENU CHÍNH</div>
-    <div v-for="item in menuItems" :key="item.path || item.label" class="sidebar-menu-item-wrapper">
-      <router-link
-        v-if="!item.children"
-        :to="item.path"
-        class="sidebar-menu-item"
-        :class="{ 'active': isActive(item) }"
-        :aria-current="isActive(item) ? 'page' : null"
-        @click="handleMenuClick"
-      >
-        <iconify-icon :icon="item.icon" class="me-2" aria-hidden="true"></iconify-icon>
-        {{ item.label }}
-      </router-link>
-      <div v-else>
-        <a
-          href="#"
-          class="sidebar-menu-item"
-          :class="{ 'active': isActive(item) }"
-          @click.prevent="toggleSubMenu(item)"
-          :aria-expanded="item.expanded ? 'true' : 'false'"
-          :aria-controls="`submenu-${item.label.replace(/\s/g, '-')}`"
-        >
-          <iconify-icon :icon="item.icon" class="me-2" aria-hidden="true"></iconify-icon>
-          {{ item.label }}
-          <iconify-icon
-            :icon="item.expanded ? 'solar:alt-arrow-up-outline' : 'solar:alt-arrow-down-outline'"
-            class="ms-auto"
-            aria-hidden="true"
-          ></iconify-icon>
-        </a>
-        <div v-if="item.children" :class="['sidebar-submenu', { 'sidebar-submenu-expanded': item.expanded }]" :id="`submenu-${item.label.replace(/\s/g, '-')}`">
-          <router-link
-            v-for="subItem in item.children"
-            :key="subItem.path"
-            :to="subItem.path"
-            class="sidebar-menu-item sidebar-submenu-item"
-            :class="{ 'active': $route.path === subItem.path }"
-            :aria-current="$route.path === subItem.path ? 'page' : null"
-            @click="handleMenuClick"
-          >
-            <iconify-icon v-if="subItem.icon" :icon="subItem.icon" class="me-2" aria-hidden="true"></iconify-icon>
-            {{ subItem.label }}
-          </router-link>
+  <aside :class="['modern-sidebar', { 'sidebar-open': isSidebarActive, 'sidebar-closed': !isSidebarActive }]" aria-label="Main navigation">
+    <div class="sidebar-backdrop" v-if="isSidebarActive" @click="$emit('toggle-sidebar')"></div>
+    
+    <div class="sidebar-content">
+      <div class="sidebar-header">
+        <div class="logo-container">
+          <div class="logo-wrapper">
+            <img src="/src/assets/images/Pho-Step_logo.png" alt="PhoStep Logo" class="logo-image">
+          </div>
+        </div>
+      </div>
+
+      <div class="sidebar-navigation">
+        <div class="nav-section">
+          <div class="nav-section-header">
+            <span class="section-title">ĐIỀU HƯỚNG CHÍNH</span>
+            <div class="section-line"></div>
+          </div>
+
+          <nav class="nav-menu">
+            <div v-for="item in menuItems" :key="item.path || item.label" class="menu-item-container">
+              <router-link
+                v-if="!item.children"
+                :to="item.path"
+                class="menu-item"
+                :class="{ 'menu-item-active': isActive(item) }"
+                @click="handleMenuClick"
+              >
+                <div class="menu-item-content">
+                  <div class="menu-icon">
+                    <iconify-icon :icon="item.icon"></iconify-icon>
+                  </div>
+                  <span class="menu-label">{{ item.label }}</span>
+                </div>
+                <div class="menu-item-indicator"></div>
+              </router-link>
+
+              <div v-else class="menu-group">
+                <button
+                  class="menu-item menu-group-toggle"
+                  :class="{ 'menu-item-active': isActive(item), 'menu-group-expanded': item.expanded }"
+                  @click="toggleSubMenu(item)"
+                >
+                  <div class="menu-item-content">
+                    <div class="menu-icon">
+                      <iconify-icon :icon="item.icon"></iconify-icon>
+                    </div>
+                    <span class="menu-label">{{ item.label }}</span>
+                  </div>
+                  <div class="menu-expand-icon">
+                    <iconify-icon 
+                      :icon="item.expanded ? 'solar:alt-arrow-up-outline' : 'solar:alt-arrow-down-outline'"
+                      class="expand-arrow"
+                    ></iconify-icon>
+                  </div>
+                </button>
+
+                <div class="submenu-container" :class="{ 'submenu-expanded': item.expanded }">
+                  <div class="submenu-content">
+                    <router-link
+                      v-for="subItem in item.children"
+                      :key="subItem.path"
+                      :to="subItem.path"
+                      class="submenu-item"
+                      :class="{ 'submenu-item-active': $route.path === subItem.path }"
+                      @click="handleMenuClick"
+                    >
+                      <div class="submenu-item-content">
+                        <div class="submenu-dot"></div>
+                        <div class="submenu-icon" v-if="subItem.icon">
+                          <iconify-icon :icon="subItem.icon"></iconify-icon>
+                        </div>
+                        <span class="submenu-label">{{ subItem.label }}</span>
+                      </div>
+                    </router-link>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </nav>
+        </div>
+      </div>
+
+      <div class="sidebar-footer">
+        <div class="footer-content">
+          <div class="version-info">
+            <span class="version-label">Version 2.0.1</span>
+            <span class="build-info">Build 2024</span>
+          </div>
         </div>
       </div>
     </div>
@@ -131,127 +173,535 @@ export default {
 };
 </script>
 
-<style scoped>
-/* Các style hiện có */
-.sidebar {
-  width: 250px;
-  height: 100vh;
+<style lang="scss" scoped>
+.modern-sidebar {
   position: fixed;
-  top: 0;
+  top: 70px;
   left: 0;
-  background-color: #ffffff;
-  color: #000000;
-  transition: transform 0.3s ease;
-  z-index: 1001;
-  overflow-y: auto;
-}
-.dark .sidebar {
-  background-color: #1f2937;
-  color: #e5e7eb;
-}
-.sidebar-hidden {
-  transform: translateX(-250px);
-}
-.sidebar.active {
-  transform: translateX(0);
-}
-.sidebar-logo {
-  padding: 20px;
-  text-align: center;
-  background: #ffffff;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-.dark .sidebar-logo {
-  background: #1f2937;
-}
-.sidebar-menu-header {
-  color: #6b7280;
-  font-weight: 600;
-  padding: 10px 20px;
-  text-transform: uppercase;
-  font-size: 0.75rem;
-}
-.dark .sidebar-menu-header {
-  color: #a0aec0;
-}
-.sidebar-menu-item-wrapper {
-  margin-bottom: 5px;
-}
-.sidebar-menu-item {
-  display: flex;
-  align-items: center;
-  padding: 10px 20px;
-  color: #000000;
-  text-decoration: none;
-  transition: background-color 0.2s ease;
-  font-size: 0.95rem;
-}
-.dark .sidebar-menu-item {
-  color: #e5e7eb;
-}
-.sidebar-menu-item:hover {
-  background-color: #f0f0f0;
-  color: #2563eb;
-}
-.dark .sidebar-menu-item:hover {
-  background-color: #374151;
-  color: #60a5fa;
-}
-.sidebar-menu-item.active {
-  background-color: #e6f0ff;
-  color: #2563eb;
-  font-weight: 600;
-}
-.dark .sidebar-menu-item.active {
-  background-color: #374151;
-  color: #60a5fa;
-}
-.sidebar-menu-item iconify-icon {
-  font-size: 1.25rem;
-  color: #6b7280;
-}
-.dark .sidebar-menu-item iconify-icon {
-  color: #d1d5db;
-}
-.sidebar-menu-item:hover iconify-icon,
-.sidebar-menu-item.active iconify-icon {
-  color: #2563eb;
-}
-.dark .sidebar-menu-item:hover iconify-icon,
-.dark .sidebar-menu-item.active iconify-icon {
-  color: #60a5fa;
-}
-.sidebar-submenu {
-  padding-left: 2rem;
-  /* Thêm transition cho submenu để tạo hiệu ứng mượt mà khi mở/đóng */
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.3s ease-out;
-}
-/* Khi submenu được mở */
-.sidebar-submenu-expanded {
-  max-height: 500px; /* Đặt một giá trị đủ lớn để chứa tất cả các mục con */
-  transition: max-height 0.3s ease-in;
-}
-.sidebar-submenu-item {
-  font-size: 0.9rem;
-  padding: 8px 20px;
-  display: flex; /* Đảm bảo icon và text nằm trên cùng một hàng */
-  align-items: center; /* Căn chỉnh icon và text theo chiều dọc */
-}
-@media (max-width: 768px) {
-  .sidebar {
-    width: 100%;
-    height: auto;
+  height: calc(100vh - 70px);
+  width: 280px;
+  z-index: 100;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+
+  .sidebar-backdrop {
     position: fixed;
-    top: 60px;
-    left: -100%;
-    transition: left 0.3s ease;
-  }
-  .sidebar.active {
+    top: 0;
     left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    z-index: -1;
+  }
+
+  .sidebar-content {
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(180deg, 
+      rgba(255, 255, 255, 0.95) 0%, 
+      rgba(248, 250, 252, 0.95) 100%);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-right: 1px solid rgba(226, 232, 240, 0.8);
+    box-shadow: 
+      0 25px 50px rgba(0, 0, 0, 0.15),
+      0 0 0 1px rgba(255, 255, 255, 0.05);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .sidebar-header {
+    border-bottom: 1px solid rgba(226, 232, 240, 0.5);
+    background: rgba(255, 255, 255, 0.8);
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+
+      .logo-wrapper {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        .logo-image {
+          width: 200px;
+          height: 100px;
+          object-fit: contain;
+        }
+      }
+
+    }
+  }
+
+  .sidebar-navigation {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 0;
+
+    &::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.3);
+      border-radius: 2px;
+    }
+
+    .nav-section {
+      padding: 0 20px;
+
+      .nav-section-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 16px;
+
+        .section-title {
+          font-size: 11px;
+          font-weight: 600;
+          color: #64748b;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          white-space: nowrap;
+        }
+
+        .section-line {
+          flex: 1;
+          height: 1px;
+          background: linear-gradient(90deg, 
+            rgba(148, 163, 184, 0.3) 0%, 
+            transparent 100%);
+        }
+      }
+
+      .nav-menu {
+        .menu-item-container {
+          margin-bottom: 4px;
+
+          .menu-item {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            border-radius: 12px;
+            text-decoration: none;
+            color: #475569;
+            font-weight: 500;
+            font-size: 14px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            width: 100%;
+
+            .menu-item-content {
+              display: flex;
+              align-items: center;
+              gap: 12px;
+              flex: 1;
+
+              .menu-icon {
+                width: 20px;
+                height: 20px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: #64748b;
+                font-size: 18px;
+                transition: all 0.3s ease;
+              }
+
+              .menu-label {
+                font-weight: 500;
+                transition: all 0.3s ease;
+              }
+            }
+
+            .menu-item-indicator {
+              position: absolute;
+              left: 0;
+              top: 50%;
+              transform: translateY(-50%);
+              width: 3px;
+              height: 0;
+              background: linear-gradient(180deg, #007bff 0%, #0056b3 100%);
+              border-radius: 0 2px 2px 0;
+              transition: all 0.3s ease;
+            }
+
+            .menu-expand-icon {
+              color: #94a3b8;
+              font-size: 16px;
+              transition: all 0.3s ease;
+
+              .expand-arrow {
+                transition: transform 0.3s ease;
+              }
+            }
+
+            &:hover {
+              background: rgba(0, 123, 255, 0.08);
+              color: #007bff;
+              transform: translateX(4px);
+
+              .menu-icon {
+                color: #007bff;
+                transform: scale(1.1);
+              }
+
+              .menu-expand-icon {
+                color: #007bff;
+              }
+            }
+
+            &.menu-item-active {
+              background: linear-gradient(135deg, 
+                rgba(0, 123, 255, 0.15) 0%, 
+                rgba(0, 86, 179, 0.1) 100%);
+              color: #007bff;
+              font-weight: 600;
+              box-shadow: 0 4px 12px rgba(0, 123, 255, 0.2);
+
+              .menu-icon {
+                color: #007bff;
+                transform: scale(1.1);
+              }
+
+              .menu-item-indicator {
+                height: 20px;
+              }
+
+              .menu-expand-icon {
+                color: #007bff;
+              }
+            }
+
+            &.menu-group-expanded {
+              .expand-arrow {
+                transform: rotate(180deg);
+              }
+            }
+          }
+
+          .menu-group {
+            .submenu-container {
+              max-height: 0;
+              overflow: hidden;
+              transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+              margin-top: 4px;
+
+              .submenu-content {
+                padding: 8px 0 8px 12px;
+                border-left: 2px solid rgba(0, 123, 255, 0.1);
+                margin-left: 16px;
+
+                .submenu-item {
+                  display: flex;
+                  align-items: center;
+                  padding: 10px 16px;
+                  border-radius: 8px;
+                  text-decoration: none;
+                  color: #64748b;
+                  font-size: 13px;
+                  font-weight: 500;
+                  transition: all 0.3s ease;
+                  margin-bottom: 2px;
+
+                  .submenu-item-content {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+
+                    .submenu-dot {
+                      width: 6px;
+                      height: 6px;
+                      border-radius: 50%;
+                      background: #cbd5e1;
+                      transition: all 0.3s ease;
+                    }
+
+                    .submenu-icon {
+                      width: 16px;
+                      height: 16px;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      font-size: 14px;
+                      color: #94a3b8;
+                      transition: all 0.3s ease;
+                    }
+
+                    .submenu-label {
+                      transition: all 0.3s ease;
+                    }
+                  }
+
+                  &:hover {
+                    background: rgba(0, 123, 255, 0.06);
+                    color: #007bff;
+                    transform: translateX(4px);
+
+                    .submenu-dot {
+                      background: #007bff;
+                      transform: scale(1.3);
+                    }
+
+                    .submenu-icon {
+                      color: #007bff;
+                    }
+                  }
+
+                  &.submenu-item-active {
+                    background: rgba(0, 123, 255, 0.1);
+                    color: #007bff;
+                    font-weight: 600;
+
+                    .submenu-dot {
+                      background: #007bff;
+                      transform: scale(1.3);
+                      box-shadow: 0 0 8px rgba(0, 123, 255, 0.4);
+                    }
+
+                    .submenu-icon {
+                      color: #007bff;
+                    }
+                  }
+                }
+              }
+
+              &.submenu-expanded {
+                max-height: 400px;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  .sidebar-footer {
+    padding: 20px;
+    border-top: 1px solid rgba(226, 232, 240, 0.5);
+    background: rgba(248, 250, 252, 0.8);
+
+    .footer-content {
+      .version-info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        text-align: center;
+
+        .version-label {
+          font-size: 12px;
+          font-weight: 600;
+          color: #475569;
+        }
+
+        .build-info {
+          font-size: 10px;
+          color: #94a3b8;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+      }
+    }
+  }
+
+  // Closed state
+  &.sidebar-closed {
+    transform: translateX(-100%);
+
+    @media (max-width: 768px) {
+      .sidebar-backdrop {
+        opacity: 0;
+        visibility: hidden;
+      }
+    }
+  }
+
+  // Open state
+  &.sidebar-open {
+    transform: translateX(0);
+
+    @media (max-width: 768px) {
+      .sidebar-backdrop {
+        opacity: 1;
+        visibility: visible;
+      }
+    }
+  }
+}
+
+// Dark theme styles
+.dark .modern-sidebar {
+  .sidebar-content {
+    background: linear-gradient(180deg, 
+      rgba(15, 23, 42, 0.95) 0%, 
+      rgba(30, 41, 59, 0.95) 100%);
+    border-right: 1px solid rgba(71, 85, 105, 0.5);
+    box-shadow: 
+      0 25px 50px rgba(0, 0, 0, 0.5),
+      0 0 0 1px rgba(255, 255, 255, 0.05);
+  }
+
+  .sidebar-header {
+    background: rgba(15, 23, 42, 0.8);
+    border-bottom: 1px solid rgba(71, 85, 105, 0.3);
+
+  }
+
+  .sidebar-navigation {
+    .nav-section {
+      .nav-section-header {
+        .section-title {
+          color: #94a3b8;
+        }
+
+        .section-line {
+          background: linear-gradient(90deg, 
+            rgba(148, 163, 184, 0.2) 0%, 
+            transparent 100%);
+        }
+      }
+
+      .nav-menu {
+        .menu-item-container {
+          .menu-item {
+            color: #cbd5e1;
+
+            .menu-item-content {
+              .menu-icon {
+                color: #94a3b8;
+              }
+            }
+
+            .menu-expand-icon {
+              color: #64748b;
+            }
+
+            &:hover {
+              background: rgba(0, 123, 255, 0.15);
+              color: #66b3ff;
+
+              .menu-icon {
+                color: #66b3ff;
+              }
+
+              .menu-expand-icon {
+                color: #66b3ff;
+              }
+            }
+
+            &.menu-item-active {
+              background: linear-gradient(135deg, 
+                rgba(0, 123, 255, 0.2) 0%, 
+                rgba(0, 86, 179, 0.15) 100%);
+              color: #66b3ff;
+
+              .menu-icon {
+                color: #66b3ff;
+              }
+
+              .menu-expand-icon {
+                color: #66b3ff;
+              }
+            }
+          }
+
+          .menu-group {
+            .submenu-container {
+              .submenu-content {
+                border-left: 2px solid rgba(0, 123, 255, 0.2);
+
+                .submenu-item {
+                  color: #94a3b8;
+
+                  .submenu-item-content {
+                    .submenu-dot {
+                      background: #64748b;
+                    }
+
+                    .submenu-icon {
+                      color: #64748b;
+                    }
+                  }
+
+                  &:hover {
+                    background: rgba(0, 123, 255, 0.1);
+                    color: #66b3ff;
+
+                    .submenu-dot {
+                      background: #66b3ff;
+                    }
+
+                    .submenu-icon {
+                      color: #66b3ff;
+                    }
+                  }
+
+                  &.submenu-item-active {
+                    background: rgba(0, 123, 255, 0.15);
+                    color: #66b3ff;
+
+                    .submenu-dot {
+                      background: #66b3ff;
+                    }
+
+                    .submenu-icon {
+                      color: #66b3ff;
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  .sidebar-footer {
+    background: rgba(15, 23, 42, 0.8);
+    border-top: 1px solid rgba(71, 85, 105, 0.3);
+
+    .footer-content {
+      .version-info {
+        .version-label {
+          color: #cbd5e1;
+        }
+
+        .build-info {
+          color: #64748b;
+        }
+      }
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .modern-sidebar {
+    width: 100%;
+    max-width: 320px;
+
+    &.sidebar-closed {
+      transform: translateX(-100%);
+    }
+
+    &.sidebar-open {
+      transform: translateX(0);
+    }
   }
 }
 </style>

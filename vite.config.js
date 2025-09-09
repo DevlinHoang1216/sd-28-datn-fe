@@ -8,6 +8,7 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    strictPort: true,
     proxy: {
       '/api/mokky': {
         target: 'https://a5687b208ca7ac57.mokky.dev',

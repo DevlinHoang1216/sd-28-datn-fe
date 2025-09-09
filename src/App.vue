@@ -7,6 +7,7 @@
         v-if="showMainLayoutElements"
         :total-price="totalPrice"
         :cart="cart"
+        :is-sidebar-active="isSidebarActive"
         @toggle-sidebar="toggleSidebar"
         @toggle-theme="toggleTheme"
       />
@@ -162,11 +163,14 @@ watch(route, () => {
 }
 .main-content-wrapper {
   flex-grow: 1;
-  /* Nếu main layout elements không hiển thị, margin-left sẽ là 0 */
-  margin-left: v-bind("showMainLayoutElements ? '250px' : '0'");
-  margin-top: v-bind("showMainLayoutElements ? '60px' : '0'"); /* Chỉ có margin-top nếu Header hiển thị */
-  max-width: v-bind("showMainLayoutElements ? 'calc(100vw - 250px)' : '100vw'");
-  transition: margin-left 0.3s ease, max-width 0.3s ease, margin-top 0.3s ease;
+  /* Updated for new header height and sidebar width */
+  padding-left: v-bind("showMainLayoutElements && isSidebarActive ? '280px' : '0'");
+  padding-top: v-bind("showMainLayoutElements ? '70px' : '0'"); /* Updated for new header height */
+  width: 100vw;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  min-height: 100vh;
+  position: relative;
+  z-index: 1;
 }
 /* Loại bỏ .full-width vì chúng ta dùng v-bind trực tiếp cho margin-left và max-width */
 /* .main-content-wrapper.full-width {
@@ -177,14 +181,17 @@ watch(route, () => {
   flex-grow: 1;
   padding: 20px;
   background-color: #ffffff;
+  position: relative;
+  z-index: 1;
 }
 .dark .content-area {
   background-color: #1f2937;
 }
 @media (max-width: 768px) {
   .main-content-wrapper {
-    margin-left: 0 !important; /* Đảm bảo luôn bằng 0 trên mobile */
-    max-width: 100vw !important; /* Đảm bảo luôn 100vw trên mobile */
+    padding-left: 0 !important; /* Đảm bảo luôn bằng 0 trên mobile */
+    width: 100vw !important; /* Đảm bảo luôn 100vw trên mobile */
+    padding-top: v-bind("showMainLayoutElements ? '70px' : '0'") !important; /* Maintain header height on mobile */
   }
 }
 </style>
