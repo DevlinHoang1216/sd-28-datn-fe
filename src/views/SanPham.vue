@@ -1,15 +1,9 @@
 <template>
   <div class="quan-ly-san-pham-container">
     <!-- Breadcrumb -->
-    <Breadcrumb 
-      :items="breadcrumbItems"
-      :show-page-info="true"
-      page-title="Quản Lý Sản Phẩm"
-      page-description="Hệ thống quản lý sản phẩm toàn diện cho Shop Giày"
-      page-icon="solar:box-bold-duotone"
-      :page-stats="pageStats"
-      :actions="breadcrumbActions"
-    />
+    <Breadcrumb :items="breadcrumbItems" :show-page-info="true" page-title="Quản Lý Sản Phẩm"
+      page-description="Hệ thống quản lý sản phẩm toàn diện cho Shop Giày" page-icon="solar:box-bold-duotone"
+      :page-stats="pageStats" :actions="breadcrumbActions" />
 
     <!-- Filter Section -->
     <div class="filter-section">
@@ -19,7 +13,6 @@
           Bộ Lọc Sản Phẩm
         </h3>
         <button class="reset-filter-btn" @click="resetFilters">
-          <iconify-icon icon="solar:refresh-bold-duotone"></iconify-icon>
           Đặt lại bộ lọc
         </button>
       </div>
@@ -27,12 +20,8 @@
         <div class="filter-row">
           <div class="filter-group">
             <label class="filter-label">Tìm kiếm</label>
-            <input 
-              type="text" 
-              v-model="filters.search" 
-              class="filter-input"
-              placeholder="Tìm theo tên hoặc mã sản phẩm..."
-            />
+            <input type="text" v-model="filters.search" class="filter-input"
+              placeholder="Tìm theo tên hoặc mã sản phẩm..." />
           </div>
           <div class="filter-group">
             <label class="filter-label">Danh mục</label>
@@ -63,22 +52,17 @@
           </div>
         </div>
         <div class="filter-row">
-          <div class="filter-group">
+          <div class="filter-group price-filter-group">
             <label class="filter-label">Khoảng giá</label>
-            <div class="price-range">
-              <input 
-                type="number" 
-                v-model="filters.priceFrom" 
-                class="price-input"
-                placeholder="Từ"
-              />
-              <span class="price-separator">-</span>
-              <input 
-                type="number" 
-                v-model="filters.priceTo" 
-                class="price-input"
-                placeholder="Đến"
-              />
+            <div class="price-inputs">
+              <div class="price-input-wrapper">
+                <label class="price-sub-label">Từ</label>
+                <input type="number" v-model="filters.priceFrom" class="filter-input" placeholder="0" />
+              </div>
+              <div class="price-input-wrapper">
+                <label class="price-sub-label">Đến</label>
+                <input type="number" v-model="filters.priceTo" class="filter-input" placeholder="10,000,000" />
+              </div>
             </div>
           </div>
           <div class="filter-group">
@@ -119,18 +103,10 @@
           </h3>
           <div class="section-actions">
             <div class="view-toggle">
-              <button 
-                class="view-btn"
-                :class="{ active: viewMode === 'grid' }"
-                @click="viewMode = 'grid'"
-              >
+              <button class="view-btn" :class="{ active: viewMode === 'grid' }" @click="viewMode = 'grid'">
                 <iconify-icon icon="solar:widget-4-bold-duotone"></iconify-icon>
               </button>
-              <button 
-                class="view-btn"
-                :class="{ active: viewMode === 'list' }"
-                @click="viewMode = 'list'"
-              >
+              <button class="view-btn" :class="{ active: viewMode === 'list' }" @click="viewMode = 'list'">
                 <iconify-icon icon="solar:list-bold-duotone"></iconify-icon>
               </button>
             </div>
@@ -139,12 +115,8 @@
 
         <!-- Grid View -->
         <div v-if="viewMode === 'grid'" class="products-grid">
-          <div 
-            v-for="product in paginatedProducts" 
-            :key="product.id"
-            class="product-card"
-            @click="selectProduct(product)"
-          >
+          <div v-for="product in paginatedProducts" :key="product.id" class="product-card"
+            @click="selectProduct(product)">
             <div class="product-image">
               <img :src="product.image" :alt="product.name" />
               <div class="product-overlay">
@@ -169,162 +141,142 @@
               </div>
             </div>
           </div>
-          
+
           <div v-if="filteredProducts.length === 0" class="empty-state">
             <iconify-icon icon="solar:box-bold-duotone" class="empty-icon"></iconify-icon>
             <h4>Không tìm thấy sản phẩm</h4>
             <p>Thử điều chỉnh bộ lọc hoặc thêm sản phẩm mới</p>
             <button class="empty-action-btn" @click="showAddProductModal = true">
-              <iconify-icon icon="solar:add-circle-bold"></iconify-icon>
               Thêm Sản Phẩm Đầu Tiên
             </button>
           </div>
         </div>
 
         <!-- List View -->
-        <div v-if="viewMode === 'list'" class="products-table-container">
-          <table class="products-table">
-            <thead>
-              <tr>
-                <th>STT</th>
-                <th>Hình ảnh</th>
-                <th>Mã SP</th>
-                <th>Tên sản phẩm</th>
-                <th>Thương hiệu</th>
-                <th>Giá bán</th>
-                <th>Tồn kho</th>
-                <th>Trạng thái</th>
-                <th>Thao tác</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(product, index) in paginatedProducts" :key="product.id">
-                <td>{{ (currentPage - 1) * itemsPerPage + index + 1 }}</td>
-                <td>
-                  <div class="table-product-image">
-                    <img :src="product.image" :alt="product.name" />
-                  </div>
-                </td>
-                <td class="product-code">{{ product.code }}</td>
-                <td>
-                  <div class="table-product-info">
-                    <span class="table-product-name">{{ product.name }}</span>
-                    <span class="table-product-category">{{ getCategoryName(product.categoryId) }}</span>
-                  </div>
-                </td>
-                <td>{{ getBrandName(product.brandId) }}</td>
-                <td class="price">{{ formatCurrency(product.price) }}</td>
-                <td class="stock" :class="getStockClass(product.stock)">{{ product.stock }}</td>
-                <td>
-                  <span class="status-badge" :class="product.status">
-                    {{ getStatusLabel(product.status) }}
-                  </span>
-                </td>
-                <td class="actions">
-                  <button @click="viewProduct(product)" class="action-btn view" title="Xem chi tiết">
-                    <iconify-icon icon="solar:eye-bold"></iconify-icon>
-                  </button>
-                  <button @click="editProduct(product)" class="action-btn edit" title="Chỉnh sửa">
-                    <iconify-icon icon="solar:pen-bold"></iconify-icon>
-                  </button>
-                  <button @click="deleteProduct(product)" class="action-btn delete" title="Xóa">
-                    <iconify-icon icon="solar:trash-bin-trash-bold"></iconify-icon>
-                  </button>
-                </td>
-              </tr>
-              <tr v-if="filteredProducts.length === 0">
-                <td colspan="9" class="empty-message">Không tìm thấy sản phẩm nào.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <div v-if="viewMode === 'list'">
+          <DataTable :data="filteredProducts" :columns="tableColumns" item-label="sản phẩm"
+            empty-message="Không tìm thấy sản phẩm nào." key-field="id">
+            <!-- STT Column -->
+            <template #stt="{ rowIndex }">
+              {{ rowIndex }}
+            </template>
 
-        <!-- Pagination -->
-        <div v-if="filteredProducts.length > 0" class="pagination-container">
-          <div class="pagination-info-left">
-            <span class="pagination-summary">
-              Hiển thị {{ startItem }} - {{ endItem }} của {{ filteredProducts.length }} sản phẩm
-            </span>
-            <div class="page-size-selector">
-              <label>Hiển thị:</label>
-              <select v-model="itemsPerPage" @change="currentPage = 1" class="page-size-select">
-                <option :value="6">6</option>
-                <option :value="12">12</option>
-                <option :value="24">24</option>
-                <option :value="48">48</option>
-              </select>
-              <span>sản phẩm/trang</span>
+            <!-- Image Column -->
+            <template #image="{ item }">
+              <div class="table-product-image">
+                <img :src="item.image" :alt="item.name" />
+              </div>
+            </template>
+
+            <!-- Code Column -->
+            <template #code="{ item }">
+              <span class="product-code">{{ item.code }}</span>
+            </template>
+
+            <!-- Name Column -->
+            <template #name="{ item }">
+              <div class="table-product-info">
+                <span class="table-product-name">{{ item.name }}</span>
+                <span class="table-product-category">{{ getCategoryName(item.categoryId) }}</span>
+              </div>
+            </template>
+
+            <!-- Brand Column -->
+            <template #brand="{ item }">
+              {{ getBrandName(item.brandId) }}
+            </template>
+
+            <!-- Price Column -->
+            <template #price="{ item }">
+              <span class="price">{{ formatCurrency(item.price) }}</span>
+            </template>
+
+            <!-- Stock Column -->
+            <template #stock="{ item }">
+              <span class="stock" :class="getStockClass(item.stock)">{{ item.stock }}</span>
+            </template>
+
+            <!-- Status Column -->
+            <template #status="{ item }">
+              <span class="status-badge" :class="item.status">
+                {{ getStatusLabel(item.status) }}
+              </span>
+            </template>
+
+            <!-- Actions Column -->
+            <template #actions="{ item }">
+              <div class="actions">
+                <button @click="viewProduct(item)" class="action-btn view" title="Xem chi tiết">
+                  <iconify-icon icon="solar:eye-bold"></iconify-icon>
+                </button>
+                <button @click="editProduct(item)" class="action-btn edit" title="Chỉnh sửa">
+                  <iconify-icon icon="solar:pen-bold"></iconify-icon>
+                </button>
+                <button @click="deleteProduct(item)" class="action-btn delete" title="Xóa">
+                  <iconify-icon icon="solar:trash-bin-trash-bold"></iconify-icon>
+                </button>
+              </div>
+            </template>
+          </DataTable>
+        </div>
+        <!-- Grid Pagination Footer -->
+        <div v-if="viewMode === 'grid' && filteredProducts.length > 0" class="pagination-footer">
+          <div class="pagination-container">
+            <div class="pagination-info-left">
+              <span class="pagination-summary">
+                Hiển thị {{ startItem }} - {{ endItem }} của {{ filteredProducts.length }} sản phẩm
+              </span>
+              <div class="page-size-selector">
+                <label>Hiển thị:</label>
+                <select v-model="itemsPerPage" @change="currentPage = 1" class="page-size-select">
+                  <option :value="6">6</option>
+                  <option :value="12">12</option>
+                  <option :value="24">24</option>
+                  <option :value="48">48</option>
+                </select>
+                <span>sản phẩm/trang</span>
+              </div>
             </div>
-          </div>
-          
-          <div v-if="totalPages > 1" class="pagination">
-            <button 
-              class="pagination-btn" 
-              @click="currentPage = 1"
-              :disabled="currentPage === 1"
-              title="Trang đầu"
-            >
-              <iconify-icon icon="solar:double-alt-arrow-left-bold"></iconify-icon>
-            </button>
-            <button 
-              class="pagination-btn" 
-              @click="currentPage--"
-              :disabled="currentPage === 1"
-              title="Trang trước"
-            >
-              <iconify-icon icon="solar:alt-arrow-left-bold"></iconify-icon>
-            </button>
-            
-            <!-- Page Numbers -->
-            <div class="page-numbers">
-              <button
-                v-for="page in visiblePages"
-                :key="page"
-                class="page-number-btn"
-                :class="{ active: page === currentPage, ellipsis: page === '...' }"
-                @click="page !== '...' && (currentPage = page)"
-                :disabled="page === '...'"
-              >
-                {{ page }}
+
+            <div v-if="totalPages > 1" class="pagination">
+              <button class="pagination-btn" @click="currentPage = 1" :disabled="currentPage === 1" title="Trang đầu">
+                <iconify-icon icon="solar:double-alt-arrow-left-bold"></iconify-icon>
+              </button>
+              <button class="pagination-btn" @click="currentPage--" :disabled="currentPage === 1" title="Trang trước">
+                <iconify-icon icon="solar:alt-arrow-left-bold"></iconify-icon>
+              </button>
+
+              <!-- Page Numbers -->
+              <div class="page-numbers">
+                <button v-for="page in visiblePages" :key="page" class="page-number-btn"
+                  :class="{ active: page === currentPage, ellipsis: page === '...' }"
+                  @click="page !== '...' && (currentPage = page)" :disabled="page === '...'">
+                  {{ page }}
+                </button>
+              </div>
+
+              <button class="pagination-btn" @click="currentPage++" :disabled="currentPage === totalPages"
+                title="Trang sau">
+                <iconify-icon icon="solar:alt-arrow-right-bold"></iconify-icon>
+              </button>
+              <button class="pagination-btn" @click="currentPage = totalPages" :disabled="currentPage === totalPages"
+                title="Trang cuối">
+                <iconify-icon icon="solar:double-alt-arrow-right-bold"></iconify-icon>
               </button>
             </div>
-            
-            <button 
-              class="pagination-btn" 
-              @click="currentPage++"
-              :disabled="currentPage === totalPages"
-              title="Trang sau"
-            >
-              <iconify-icon icon="solar:alt-arrow-right-bold"></iconify-icon>
-            </button>
-            <button 
-              class="pagination-btn" 
-              @click="currentPage = totalPages"
-              :disabled="currentPage === totalPages"
-              title="Trang cuối"
-            >
-              <iconify-icon icon="solar:double-alt-arrow-right-bold"></iconify-icon>
-            </button>
-          </div>
-          
-          <div class="pagination-info-right">
-            <span class="pagination-current">
-              Trang {{ currentPage }} / {{ totalPages }}
-            </span>
-            <div class="goto-page">
-              <label>Đi tới:</label>
-              <input 
-                type="number" 
-                v-model.number="gotoPage" 
-                @keyup.enter="goToPage"
-                :min="1" 
-                :max="totalPages"
-                class="goto-input"
-                placeholder="Trang"
-              />
-              <button @click="goToPage" class="goto-btn" :disabled="!isValidGotoPage">
-                <iconify-icon icon="solar:arrow-right-bold"></iconify-icon>
-              </button>
+
+            <div class="pagination-info-right">
+              <span class="pagination-current">
+                Trang {{ currentPage }} / {{ totalPages }}
+              </span>
+              <div class="goto-page">
+                <label>Đi tới:</label>
+                <input type="number" v-model.number="gotoPage" @keyup.enter="goToPage" :min="1" :max="totalPages"
+                  class="goto-input" placeholder="Trang" />
+                <button @click="goToPage" class="goto-btn" :disabled="!isValidGotoPage">
+                  <iconify-icon icon="solar:arrow-right-bold"></iconify-icon>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -421,23 +373,13 @@
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label required">Tên sản phẩm</label>
-                <input 
-                  type="text" 
-                  v-model="productForm.name" 
-                  class="form-input"
-                  placeholder="Nhập tên sản phẩm"
-                  required
-                />
+                <input type="text" v-model="productForm.name" class="form-input" placeholder="Nhập tên sản phẩm"
+                  required />
               </div>
               <div class="form-group">
                 <label class="form-label required">Mã sản phẩm</label>
-                <input 
-                  type="text" 
-                  v-model="productForm.code" 
-                  class="form-input"
-                  placeholder="Nhập mã sản phẩm"
-                  required
-                />
+                <input type="text" v-model="productForm.code" class="form-input" placeholder="Nhập mã sản phẩm"
+                  required />
               </div>
             </div>
             <div class="form-row">
@@ -463,36 +405,19 @@
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label required">Giá bán</label>
-                <input 
-                  type="number" 
-                  v-model="productForm.price" 
-                  class="form-input"
-                  placeholder="Nhập giá bán"
-                  min="0"
-                  required
-                />
+                <input type="number" v-model="productForm.price" class="form-input" placeholder="Nhập giá bán" min="0"
+                  required />
               </div>
               <div class="form-group">
                 <label class="form-label required">Số lượng tồn kho</label>
-                <input 
-                  type="number" 
-                  v-model="productForm.stock" 
-                  class="form-input"
-                  placeholder="Nhập số lượng"
-                  min="0"
-                  required
-                />
+                <input type="number" v-model="productForm.stock" class="form-input" placeholder="Nhập số lượng" min="0"
+                  required />
               </div>
             </div>
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label">URL hình ảnh</label>
-                <input 
-                  type="url" 
-                  v-model="productForm.image" 
-                  class="form-input"
-                  placeholder="Nhập URL hình ảnh"
-                />
+                <input type="url" v-model="productForm.image" class="form-input" placeholder="Nhập URL hình ảnh" />
               </div>
               <div class="form-group">
                 <label class="form-label">Trạng thái</label>
@@ -504,12 +429,8 @@
             </div>
             <div class="form-group full-width">
               <label class="form-label">Mô tả sản phẩm</label>
-              <textarea 
-                v-model="productForm.description" 
-                class="form-textarea"
-                placeholder="Nhập mô tả sản phẩm"
-                rows="4"
-              ></textarea>
+              <textarea v-model="productForm.description" class="form-textarea" placeholder="Nhập mô tả sản phẩm"
+                rows="4"></textarea>
             </div>
           </form>
         </div>
@@ -553,11 +474,13 @@ import { ref, computed, watch, onMounted } from 'vue';
 import { useToast } from 'vue-toastification';
 import { useRouter } from 'vue-router';
 import Breadcrumb from '@/components/Breadcrumb.vue';
+import DataTable from '@/components/DataTable.vue';
 
 export default {
   name: 'QuanLySanPham',
   components: {
-    Breadcrumb
+    Breadcrumb,
+    DataTable
   },
   setup() {
     const router = useRouter();
@@ -572,13 +495,11 @@ export default {
     const breadcrumbActions = ref([
       {
         label: 'Thêm sản phẩm',
-        icon: 'solar:add-circle-bold-duotone',
         type: 'primary',
         handler: () => showAddProductModal.value = true
       },
       {
         label: 'Xuất Excel',
-        icon: 'solar:file-download-bold-duotone',
         type: 'default',
         handler: () => exportToExcel()
       }
@@ -664,6 +585,19 @@ export default {
       { id: 4, name: 'Vans' },
       { id: 5, name: 'New Balance' },
       { id: 6, name: 'Puma' }
+    ]);
+
+    // Table columns configuration
+    const tableColumns = ref([
+      { key: 'stt', label: 'STT', class: 'text-center' },
+      { key: 'image', label: 'Hình ảnh', class: 'text-center' },
+      { key: 'code', label: 'Mã SP' },
+      { key: 'name', label: 'Tên sản phẩm' },
+      { key: 'brand', label: 'Thương hiệu' },
+      { key: 'price', label: 'Giá bán', class: 'text-right' },
+      { key: 'stock', label: 'Tồn kho', class: 'text-center' },
+      { key: 'status', label: 'Trạng thái', class: 'text-center' },
+      { key: 'actions', label: 'Thao tác', class: 'text-center' }
     ]);
 
     const products = ref([
@@ -806,7 +740,7 @@ export default {
       // Search filter
       if (filters.value.search.trim()) {
         const search = filters.value.search.toLowerCase();
-        result = result.filter(product => 
+        result = result.filter(product =>
           product.name.toLowerCase().includes(search) ||
           product.code.toLowerCase().includes(search)
         );
@@ -888,6 +822,7 @@ export default {
       return result;
     });
 
+    // Grid view pagination (separate from DataTable)
     const totalPages = computed(() => Math.ceil(filteredProducts.value.length / itemsPerPage.value));
 
     const paginatedProducts = computed(() => {
@@ -896,7 +831,6 @@ export default {
       return filteredProducts.value.slice(start, end);
     });
 
-    // Enhanced pagination computed properties
     const startItem = computed(() => {
       if (filteredProducts.value.length === 0) return 0;
       return (currentPage.value - 1) * itemsPerPage.value + 1;
@@ -910,42 +844,34 @@ export default {
     const visiblePages = computed(() => {
       const total = totalPages.value;
       const current = currentPage.value;
-      const delta = 2; // Number of pages to show on each side of current page
-      
+      const delta = 2;
+
       if (total <= 7) {
-        // If we have 7 or fewer pages, show all
         return Array.from({ length: total }, (_, i) => i + 1);
       }
-      
+
       const pages = [];
-      
-      // Always show first page
       pages.push(1);
-      
-      // Calculate range around current page
+
       const rangeStart = Math.max(2, current - delta);
       const rangeEnd = Math.min(total - 1, current + delta);
-      
-      // Add ellipsis after first page if needed
+
       if (rangeStart > 2) {
         pages.push('...');
       }
-      
-      // Add pages around current page
+
       for (let i = rangeStart; i <= rangeEnd; i++) {
         pages.push(i);
       }
-      
-      // Add ellipsis before last page if needed
+
       if (rangeEnd < total - 1) {
         pages.push('...');
       }
-      
-      // Always show last page (if it's not already included)
+
       if (total > 1) {
         pages.push(total);
       }
-      
+
       return pages;
     });
 
@@ -953,6 +879,7 @@ export default {
       const page = Number(gotoPage.value);
       return page >= 1 && page <= totalPages.value && !isNaN(page);
     });
+
 
     // Utility functions
     const formatCurrency = (value) => {
@@ -1108,7 +1035,7 @@ export default {
       toast.info('Tính năng xuất Excel đang được phát triển');
     };
 
-    // Pagination methods
+    // Grid pagination methods
     const goToPage = () => {
       if (isValidGotoPage.value) {
         currentPage.value = Number(gotoPage.value);
@@ -1118,6 +1045,7 @@ export default {
         toast.error(`Vui lòng nhập số trang hợp lệ (1-${totalPages.value})`);
       }
     };
+
 
     // Watch for filter changes
     watch([filters], () => {
@@ -1129,29 +1057,29 @@ export default {
       breadcrumbItems,
       breadcrumbActions,
       pageStats,
-      
+
       // State
       viewMode,
       currentPage,
       itemsPerPage,
       gotoPage,
-      
+
       // Modals
       showDetailModal,
       showAddProductModal,
       showEditProductModal,
       showDeleteModal,
-      
+
       // Selected items
       selectedProductDetail,
       productToDelete,
-      
+
       // Filters
       filters,
-      
+
       // Form
       productForm,
-      
+
       // Data
       categories,
       brands,
@@ -1163,7 +1091,8 @@ export default {
       endItem,
       visiblePages,
       isValidGotoPage,
-      
+      tableColumns,
+
       // Utility functions
       formatCurrency,
       formatDate,
@@ -1171,19 +1100,20 @@ export default {
       getBrandName,
       getStatusLabel,
       getStockClass,
-      
+
       // Filter functions
       resetFilters,
       applyFilters,
-      
+
       // Pagination functions
       goToPage,
-      
+
+
       // Product functions
       selectProduct,
       viewProduct,
       editProduct,
-      
+
       // Other functions
       deleteProduct,
       confirmDelete,
@@ -1233,17 +1163,18 @@ export default {
 }
 
 .reset-filter-btn {
+  padding: 10px 16px;
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
-  color: white;
-  border: none;
-  border-radius: 12px;
-  padding: 12px 20px;
-  font-weight: 600;
-  transition: all 0.3s ease;
-  cursor: pointer;
+  gap: 6px;
+  font-size: 0.9rem;
 }
 
 .reset-filter-btn:hover {
@@ -1293,30 +1224,33 @@ export default {
   box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
 }
 
-.price-range {
+/* ===== PRICE FILTER STYLES ===== */
+.price-filter-group {
+  min-width: 280px;
+}
+
+.price-inputs {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  gap: 12px;
+  align-items: flex-end;
 }
 
-.price-input {
+.price-input-wrapper {
   flex: 1;
-  padding: 12px 16px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font-size: 0.95rem;
-  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.price-input:focus {
-  outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
-}
-
-.price-separator {
-  font-weight: 600;
+.price-sub-label {
+  font-size: 0.8rem;
+  font-weight: 500;
   color: #64748b;
+  margin-bottom: 2px;
+}
+
+.price-input-wrapper .filter-input {
+  width: 100%;
 }
 
 .apply-filter-btn {
@@ -1582,38 +1516,6 @@ export default {
   color: #dc2626;
 }
 
-/* ===== PRODUCTS TABLE ===== */
-.products-table-container {
-  overflow-x: auto;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
-}
-
-.products-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.products-table th {
-  background: #f8fafc;
-  padding: 16px 12px;
-  text-align: left;
-  font-weight: 600;
-  color: #64748b;
-  font-size: 0.875rem;
-  border-bottom: 1px solid #e2e8f0;
-  white-space: nowrap;
-}
-
-.products-table td {
-  padding: 16px 12px;
-  border-bottom: 1px solid #f1f5f9;
-  vertical-align: middle;
-}
-
-.products-table tbody tr:hover {
-  background: #f8fafc;
-}
 
 .table-product-image {
   width: 48px;
@@ -1736,7 +1638,12 @@ export default {
   transform: scale(1.1);
 }
 
-/* ===== ENHANCED PAGINATION ===== */
+/* ===== PAGINATION FOOTER ===== */
+.pagination-footer {
+  margin-top: 24px;
+}
+
+/* ===== PAGINATION STYLES ===== */
 .pagination-container {
   display: flex;
   justify-content: space-between;
@@ -1997,6 +1904,7 @@ export default {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -2019,6 +1927,7 @@ export default {
     transform: translateY(30px);
     opacity: 0;
   }
+
   to {
     transform: translateY(0);
     opacity: 1;
@@ -2284,7 +2193,7 @@ export default {
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 16px;
   }
-  
+
   .products-grid {
     grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   }
@@ -2295,12 +2204,16 @@ export default {
     grid-template-columns: repeat(2, 1fr);
     gap: 16px;
   }
-  
-  .price-range {
+
+  .price-inputs {
     flex-direction: column;
-    gap: 8px;
+    gap: 12px;
   }
   
+  .price-filter-group {
+    min-width: auto;
+  }
+
   .price-separator {
     display: none;
   }
@@ -2310,130 +2223,139 @@ export default {
   .quan-ly-san-pham-container {
     padding: 12px;
   }
-  
+
   .filter-section,
   .products-section {
     padding: 16px;
     border-radius: 12px;
   }
-  
+
   .filter-header {
     flex-direction: column;
     align-items: stretch;
     gap: 12px;
     text-align: center;
   }
-  
+
   .filter-title {
     font-size: 1.1rem;
     justify-content: center;
   }
-  
+
   .reset-filter-btn {
     align-self: center;
     padding: 10px 16px;
     font-size: 0.9rem;
   }
-  
+
   .filter-content {
     gap: 16px;
   }
-  
+
   .filter-row {
     grid-template-columns: 1fr;
     gap: 16px;
   }
-  
+
   .filter-group {
     gap: 8px;
   }
-  
+
   .filter-label {
     font-size: 0.85rem;
   }
-  
+
   .filter-input,
   .filter-select {
     padding: 10px 12px;
     font-size: 0.9rem;
   }
-  
-  .price-range {
+
+  .price-inputs {
     flex-direction: column;
     gap: 12px;
+    align-items: stretch;
   }
   
+  .price-input-wrapper {
+    width: 100%;
+  }
+
   .price-input {
     width: 100%;
   }
-  
+
+  .price-sub-label {
+    font-size: 0.75rem;
+  }
+
   .price-separator {
     display: block;
     text-align: center;
     font-weight: 700;
     color: #94a3b8;
   }
-  
+
   .section-header {
     flex-direction: column;
     align-items: stretch;
     gap: 12px;
   }
-  
+
   .section-title {
     font-size: 1.1rem;
     justify-content: center;
   }
-  
+
   .section-actions {
     justify-content: center;
     gap: 12px;
   }
-  
+
   .view-toggle {
     order: 1;
   }
-  
+
   .form-row {
     grid-template-columns: 1fr;
   }
-  
+
   .products-grid {
     grid-template-columns: 1fr;
     gap: 16px;
   }
-  
+
   .product-detail {
     grid-template-columns: 1fr;
     gap: 20px;
   }
-  
+
   .detail-image {
     height: 250px;
   }
-  
+
   .info-group {
     grid-template-columns: 1fr;
     gap: 4px;
   }
-  
+
   .modal-container.large {
     width: 95vw;
     margin: 10px;
   }
-  
+
   .modal-header,
   .modal-content,
   .modal-footer {
     padding: 16px;
   }
-  
+
   .pagination-container {
     flex-direction: column;
     gap: 16px;
     padding: 16px;
   }
-  
+
   .pagination-info-left,
   .pagination-info-right {
     min-width: auto;
@@ -2441,32 +2363,32 @@ export default {
     align-items: center;
     text-align: center;
   }
-  
+
   .pagination {
     justify-content: center;
     flex-wrap: wrap;
     gap: 6px;
   }
-  
+
   .page-numbers {
     margin: 0 4px;
   }
-  
+
   .goto-page {
     justify-content: center;
   }
-  
+
   .btn {
     min-width: 100px;
     padding: 10px 16px;
   }
-  
+
   .products-table th,
   .products-table td {
     padding: 12px 8px;
     font-size: 0.85rem;
   }
-  
+
   .table-product-image {
     width: 40px;
     height: 40px;
@@ -2494,8 +2416,13 @@ export default {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* ===== ACCESSIBILITY ===== */
@@ -2529,11 +2456,11 @@ export default {
   .product-card {
     border-width: 2px;
   }
-  
+
   .btn {
     border: 2px solid currentColor;
   }
-  
+
   .status-badge {
     border: 1px solid currentColor;
   }
@@ -2541,6 +2468,7 @@ export default {
 
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {
@@ -2556,13 +2484,13 @@ export default {
     background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
     color: #f7fafc;
   }
-  
+
   .filter-section,
   .products-section {
     background: #2d3748;
     color: #f7fafc;
   }
-  
+
   .filter-input,
   .filter-select,
   .form-input,
@@ -2571,15 +2499,14 @@ export default {
     border-color: #718096;
     color: #f7fafc;
   }
-  
+
   .products-table th {
     background: #4a5568;
     color: #e2e8f0;
   }
-  
+
   .products-table tbody tr:hover {
     background: #4a5568;
   }
 }
-
 </style>

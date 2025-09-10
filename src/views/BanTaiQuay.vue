@@ -19,7 +19,6 @@
           Hóa Đơn Đang Xử Lý
         </h3>
         <button class="add-invoice-btn" @click="themHoaDonMoi">
-          <iconify-icon icon="solar:add-circle-bold-duotone"></iconify-icon>
           Tạo Hóa Đơn Mới
         </button>
       </div>
@@ -60,7 +59,6 @@
             </h3>
             <div class="card-actions">
               <button class="action-btn primary" @click="showThemSanPhamModal = true">
-                <iconify-icon icon="solar:add-square-bold-duotone"></iconify-icon>
                 Thêm sản phẩm
               </button>
             </div>
@@ -71,10 +69,6 @@
               <iconify-icon icon="solar:cart-large-2-bold-duotone" class="empty-icon"></iconify-icon>
               <h4>Giỏ hàng trống</h4>
               <p>Hãy thêm sản phẩm vào giỏ hàng để bắt đầu tạo hóa đơn</p>
-              <button class="empty-action-btn" @click="showThemSanPhamModal = true">
-                <iconify-icon icon="solar:add-circle-bold"></iconify-icon>
-                Thêm Sản Phẩm Ngay
-              </button>
             </div>
 
             <div v-else class="cart-items">
@@ -192,7 +186,6 @@
               />
             </div>
             <button class="customer-select-btn" @click="showModal = true">
-              <iconify-icon icon="solar:users-group-rounded-bold-duotone"></iconify-icon>
               Chọn Khách Hàng
             </button>
           </div>
@@ -218,7 +211,6 @@
                   placeholder="Nhập mã giảm giá"
                 />
                 <button class="discount-btn" @click="apDungMaGiamGia">
-                  <iconify-icon icon="solar:ticket-bold-duotone"></iconify-icon>
                   Áp Dụng
                 </button>
               </div>
@@ -249,7 +241,6 @@
               @click="showThanhToanModal = true"
               :disabled="!currentHoaDon || currentHoaDon.items.length === 0"
             >
-              <iconify-icon icon="solar:card-2-bold-duotone"></iconify-icon>
               Tiến Hành Thanh Toán
             </button>
           </div>
@@ -300,11 +291,9 @@
                 @keyup.enter="timKhachHangTheoMa"
               />
               <button class="search-btn primary" @click="timKhachHangTheoMa">
-                <iconify-icon icon="solar:magnifer-bold"></iconify-icon>
                 Tìm
               </button>
               <button class="search-btn secondary" @click="tuKhoaMaKH = ''; fetchTatCaKhachHang()">
-                <iconify-icon icon="solar:refresh-bold"></iconify-icon>
                 Làm mới
               </button>
             </div>
@@ -530,13 +519,11 @@ export default {
     const breadcrumbActions = ref([
       {
         label: 'Lịch sử bán hàng',
-        icon: 'solar:history-bold-duotone',
         type: 'default',
         handler: () => router.push('/lich-su-ban-hang')
       },
       {
         label: 'Làm mới',
-        icon: 'solar:refresh-bold-duotone',
         type: 'default',
         handler: () => window.location.reload()
       }
@@ -1070,11 +1057,11 @@ export default {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  background: #007bff;
   color: white;
   border: none;
   border-radius: 12px;
-  padding: 12px 20px;
+  padding: 10px 14px;
   font-weight: 600;
   transition: all 0.3s ease;
   cursor: pointer;
@@ -1138,7 +1125,7 @@ export default {
 }
 
 .invoice-tab.active .tab-items-count {
-  background: #0056b3;
+  background: #007bff;
 }
 
 .tab-total {
@@ -1232,7 +1219,7 @@ export default {
 }
 
 .action-btn.primary {
-  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  background: #007bff;
   color: white;
 }
 
@@ -1274,7 +1261,7 @@ export default {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  background: #007bff;
   color: white;
   border: none;
   border-radius: 12px;
@@ -1532,7 +1519,7 @@ export default {
   color: white;
   border: none;
   border-radius: 10px;
-  padding: 12px 16px;
+  padding: 10px 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -1648,7 +1635,7 @@ export default {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  background: #007bff;
   color: white;
   border: none;
   border-radius: 12px;
@@ -1795,7 +1782,7 @@ export default {
 }
 
 .btn.primary {
-  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  background: #007bff;
   color: white;
 }
 
@@ -1865,7 +1852,7 @@ export default {
 }
 
 .search-btn.primary {
-  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  background: #007bff;
   color: white;
 }
 
