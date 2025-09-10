@@ -1,641 +1,64 @@
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
-import { useToast } from 'vue-toastification';
-import { useRoute } from 'vue-router';
 import { Icon } from '@iconify/vue';
-import { getInvoices, updateInvoice as apiUpdateInvoice, deleteInvoice as apiDeleteInvoice } from '@/services/api';
-import mitt from 'mitt';
 import Breadcrumb from '@/components/Breadcrumb.vue';
 import DataTable from '@/components/DataTable.vue';
+import { useHoaDonLogic } from '@/services/hoaDonService/hoaDonGetAll.js';
 
-const emitter = mitt();
-const toast = useToast();
-const route = useRoute();
-
-const errorMessage = ref('');
-const allInvoices = ref([]);
-const totalRevenue = ref(0);
-const currentPage = ref(0);
-const pageSize = ref(10);
-
-const filters = ref({
-  search: '',
-  trangThaiId: '',
-  loaiDon: '',
-  startDate: '',
-  endDate: '',
-  minPrice: '',
-  maxPrice: '',
-  sortBy: ''
-});
-
-const tempFilters = ref({
-  search: '',
-  trangThaiId: '',
-  loaiDon: '',
-  startDate: '',
-  endDate: '',
-  minPrice: '',
-  maxPrice: '',
-  sortBy: ''
-});
-
-const activeTab = ref('all');
-const showEditModal = ref(false);
-const showDeleteModal = ref(false);
-const editInvoiceData = ref({});
-const deleteInvoiceId = ref(null);
-const isUpdating = ref(false);
-const isDeleting = ref(false);
-const highlightedInvoice = ref(null);
-
-const tabs = ref([
-  { id: 'all', label: 'Tất cả' },
-  { id: 'cho_xac_nhan', label: 'Chờ xác nhận', statusId: 6 },
-  { id: 'pending', label: 'Chờ xử lý', statusId: 7 },
-  { id: 'cho_van_chuyen', label: 'Chờ vận chuyển', statusId: 8 },
-  { id: 'dang_van_chuyen', label: 'Đang vận chuyển', statusId: 9 },
-  { id: 'completed', label: 'Đã hoàn thành', statusId: 21 },
-  { id: 'canceled', label: 'Đã hủy', statusId: 22 },
-]);
-
-// Tính tổng doanh thu từ danh sách hóa đơn có trạng thái "Đã hoàn thành"
-const calculateTotalRevenue = () => {
-  totalRevenue.value = allInvoices.value
-    .filter((invoice) => invoice.trangThai?.id === 21)
-    .reduce((sum, invoice) => sum + (invoice.tongTienThanhToan || 0), 0);
-};
-
-const printInvoicePDF = (invoice) => {
-  // Create a new window for printing
-  const printWindow = window.open('', '_blank');
-  const orderTypeText = invoice.loaiDon === 'online' ? 'Online' : 'Trực tiếp';
+// Use the composable to get all reactive state and functions
+const {
+  // State
+  errorMessage,
+  allInvoices,
+  totalRevenue,
+  currentPage,
+  pageSize,
+  filters,
+  tempFilters,
+  activeTab,
+  showEditModal,
+  showDeleteModal,
+  editInvoiceData,
+  deleteInvoiceId,
+  isUpdating,
+  isDeleting,
+  highlightedInvoice,
   
-  printWindow.document.write(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>Hóa đơn ${invoice.maHoaDon}</title>
-      <style>
-        body { font-family: Arial, sans-serif; padding: 20px; }
-        .header { text-align: center; margin-bottom: 30px; }
-        .info { margin-bottom: 20px; }
-        .label { font-weight: bold; }
-        .total { font-size: 18px; font-weight: bold; color: #e74c3c; }
-      </style>
-    </head>
-    <body>
-      <div class="header">
-        <h1>HÓA ĐƠN BÁN HÀNG</h1>
-        <p>Mã hóa đơn: <span class="label">${invoice.maHoaDon}</span></p>
-        <p>Ngày tạo: <span class="label">${formatDate(invoice.ngayTao)}</span></p>
-      </div>
-      
-      <div class="info">
-        <h3>Thông tin khách hàng</h3>
-        <p>Tên: <span class="label">${invoice.khachHang?.tenKhachHang || 'Khách lẻ'}</span></p>
-        <p>Số điện thoại: <span class="label">${invoice.khachHang?.soDienThoai || 'N/A'}</span></p>
-        <p>Loại đơn: <span class="label">${orderTypeText}</span></p>
-      </div>
-      
-      <div class="info">
-        <h3>Thông tin thanh toán</h3>
-        <p>Phí vận chuyển: <span class="label">${formatCurrency(invoice.phiVanChuyen)}</span></p>
-        <p class="total">Tổng tiền: ${formatCurrency(invoice.tongTienThanhToan)}</p>
-      </div>
-    </body>
-    </html>
-  `);
+  // Configuration
+  tabs,
+  tableColumns,
+  breadcrumbItems,
+  breadcrumbActions,
   
-  printWindow.document.close();
-  printWindow.print();
-};
-
-const downloadQRCode = (invoice) => {
-  // Create QR code data
-  const qrData = {
-    maHoaDon: invoice.maHoaDon,
-    khachHang: invoice.khachHang?.tenKhachHang || 'Khách lẻ',
-    tongTien: invoice.tongTienThanhToan,
-    ngayTao: invoice.ngayTao
-  };
+  // Computed
+  filteredInvoices,
+  pageStats,
+  paginatedInvoices,
+  totalPages,
+  displayedPages,
   
-  // Create QR code content
-  const qrContent = `Hóa đơn: ${qrData.maHoaDon}\nKhách hàng: ${qrData.khachHang}\nTổng tiền: ${formatCurrency(qrData.tongTien)}\nNgày: ${formatDate(qrData.ngayTao)}`;
+  // Functions
+  loadInvoices,
+  editInvoice,
+  handleUpdateInvoice,
+  confirmDelete,
+  handleDeleteInvoice,
+  getTabCountLocal,
+  switchTabLocal,
+  filterInvoicesLocal,
+  resetFiltersLocal,
+  changePageLocal,
+  navigateToSalesCounter,
   
-  // Create a simple QR code URL (using a free QR code API)
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrContent)}`;
-  
-  // Create download link
-  const link = document.createElement('a');
-  link.href = qrUrl;
-  link.download = `QR_${invoice.maHoaDon}.png`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-};
-
-const exportToExcel = () => {
-  // Create Excel data from filtered invoices
-  const excelData = filteredInvoices.value.map((invoice, index) => ({
-    'STT': index + 1,
-    'Mã Hóa Đơn': invoice.maHoaDon,
-    'Khách Hàng': invoice.khachHang?.tenKhachHang || 'Khách lẻ',
-    'Số Điện Thoại': invoice.khachHang?.soDienThoai || 'N/A',
-    'Loại Đơn': invoice.loaiDon === 'online' ? 'Online' : 'Trực tiếp',
-    'Phí Vận Chuyển': invoice.phiVanChuyen,
-    'Ngày Tạo': formatDate(invoice.ngayTao),
-    'Tổng Tiền': invoice.tongTienThanhToan,
-    'Trạng Thái': getStatusText(invoice.trangThai?.id)
-  }));
-  
-  // Convert to CSV format
-  const headers = Object.keys(excelData[0]).join(',');
-  const csvContent = [headers, ...excelData.map(row => Object.values(row).join(','))].join('\n');
-  
-  // Create and download file
-  const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = `Danh_sach_hoa_don_${new Date().toISOString().split('T')[0]}.csv`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  
-  console.log('Exported invoices to Excel');
-};
-
-const scanQRInvoice = () => {
-  // Open QR scanner modal or navigate to QR scanner page
-  alert('Chức năng quét QR hóa đơn sẽ được phát triển trong phiên bản tiếp theo');
-  console.log('QR Scanner opened');
-};
-
-const navigateToSalesCounter = () => {
-  // Navigate to sales counter page
-  router.push({ name: 'BanHangTaiQuay' });
-};
-
-// Computed để lọc hóa đơn
-const filteredInvoices = computed(() => {
-  let result = allInvoices.value;
-
-  const activeTabObj = tabs.value.find((tab) => tab.id === activeTab.value);
-  if (activeTabObj?.statusId) {
-    result = result.filter((invoice) => invoice.trangThai?.id === activeTabObj.statusId);
-  } else if (filters.value.trangThaiId) {
-    result = result.filter((invoice) => invoice.trangThai?.id === parseInt(filters.value.trangThaiId));
-  }
-
-  if (filters.value.search) {
-    result = result.filter((invoice) =>
-      invoice.maHoaDon?.toLowerCase().includes(filters.value.search.toLowerCase()) ||
-      invoice.khachHang?.tenKhachHang?.toLowerCase().includes(filters.value.search.toLowerCase()) ||
-      invoice.khachHang?.soDienThoai?.includes(filters.value.search)
-    );
-  }
-
-  if (filters.value.loaiDon) {
-    result = result.filter((invoice) => invoice.loaiDon === filters.value.loaiDon);
-  }
-
-  if (filters.value.startDate) {
-    const start = new Date(filters.value.startDate);
-    result = result.filter((invoice) => new Date(invoice.ngayTao) >= start);
-  }
-  if (filters.value.endDate) {
-    const end = new Date(filters.value.endDate);
-    end.setHours(23, 59, 59, 999);
-    result = result.filter((invoice) => new Date(invoice.ngayTao) <= end);
-  }
-
-  if (filters.value.minPrice) {
-    result = result.filter((invoice) => invoice.tongTienThanhToan >= parseFloat(filters.value.minPrice));
-  }
-  if (filters.value.maxPrice) {
-    result = result.filter((invoice) => invoice.tongTienThanhToan <= parseFloat(filters.value.maxPrice));
-  }
-
-  if (filters.value.sortBy) {
-    result = [...result];
-    if (filters.value.sortBy === 'newest') {
-      result.sort((a, b) => new Date(b.ngayTao) - new Date(a.ngayTao));
-    } else if (filters.value.sortBy === 'most_expensive') {
-      result.sort((a, b) => b.tongTienThanhToan - a.tongTienThanhToan);
-    } else if (filters.value.sortBy === 'cheapest') {
-      result.sort((a, b) => a.tongTienThanhToan - b.tongTienThanhToan);
-    }
-  }
-
-  return result;
-});
-
-// DataTable columns configuration
-const tableColumns = ref([
-  { key: 'stt', label: 'STT', class: 'text-center' },
-  { key: 'maHoaDon', label: 'Mã Hóa Đơn', class: 'font-weight-bold' },
-  { key: 'khachHang', label: 'Khách Hàng' },
-  { key: 'soDienThoai', label: 'Số Điện Thoại' },
-  { key: 'loaiDon', label: 'Loại Đơn', class: 'text-center' },
-  { key: 'phiVanChuyen', label: 'Phí Vận Chuyển', class: 'text-right' },
-  { key: 'ngayTao', label: 'Ngày Tạo' },
-  { key: 'tongTien', label: 'Tổng Tiền', class: 'text-right' },
-  { key: 'trangThai', label: 'Trạng Thái', class: 'text-center' },
-  { key: 'actions', label: 'Hành Động', class: 'text-center' }
-]);
-
-// Breadcrumb configuration
-const breadcrumbItems = ref([
-  { label: 'Quản lý bán hàng', path: '/dashboard' },
-  { label: 'Hóa đơn' }
-]);
-
-const breadcrumbActions = ref([
-  {
-    label: 'Làm mới',
-    type: 'default',
-    handler: () => fetchAllInvoices()
-  },
-  {
-    label: 'Xuất Excel',
-    type: 'primary',
-    handler: () => exportToExcel()
-  },
-  {
-    label: 'Quét QR hóa đơn',
-    type: 'primary',
-    handler: () => scanQRInvoice()
-  },
-  {
-    label: 'Thêm hóa đơn',
-    type: 'primary',
-    handler: () => navigateToSalesCounter()
-  }
-]);
-
-const pageStats = computed(() => [
-  {
-    icon: 'solar:bill-list-bold',
-    value: allInvoices.value.length,
-    label: 'Tổng hóa đơn'
-  },
-  {
-    icon: 'solar:dollar-minimalistic-bold',
-    value: formatCurrency(totalRevenue.value),
-    label: 'Tổng doanh thu'
-  },
-  {
-    icon: 'solar:check-circle-bold',
-    value: allInvoices.value.filter(inv => inv.trangThai?.id === 21).length,
-    label: 'Đã hoàn thành'
-  }
-]);
-
-const paginatedInvoices = computed(() => {
-  const start = currentPage.value * pageSize.value;
-  const end = start + pageSize.value;
-  return filteredInvoices.value.slice(start, end);
-});
-
-const totalPages = computed(() => Math.ceil(filteredInvoices.value.length / pageSize.value) || 1);
-
-const displayedPages = computed(() => {
-  const maxPagesToShow = 5;
-  const total = totalPages.value;
-  const current = currentPage.value + 1;
-  let startPage = Math.max(1, current - Math.floor(maxPagesToShow / 2));
-  let endPage = Math.min(total, startPage + maxPagesToShow - 1);
-  if (endPage - startPage + 1 < maxPagesToShow) {
-    startPage = Math.max(1, endPage - maxPagesToShow + 1);
-  }
-  return Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i);
-});
-
-// Enhanced fake data for testing
-const generateFakeInvoices = () => {
-  const statuses = [
-    { id: 6, name: 'Chờ xác nhận' },
-    { id: 7, name: 'Chờ xử lý' },
-    { id: 8, name: 'Chờ vận chuyển' },
-    { id: 9, name: 'Đang vận chuyển' },
-    { id: 21, name: 'Đã hoàn thành' },
-    { id: 22, name: 'Đã hủy' },
-  ];
-
-  const customers = [
-    { tenKhachHang: 'Nguyễn Văn An', soDienThoai: '0901234567' },
-    { tenKhachHang: 'Trần Thị Bình', soDienThoai: '0912345678' },
-    { tenKhachHang: 'Lê Hoàng Cường', soDienThoai: '0923456789' },
-    { tenKhachHang: 'Phạm Thị Dung', soDienThoai: '0934567890' },
-    { tenKhachHang: 'Hoàng Văn Em', soDienThoai: '0945678901' },
-    { tenKhachHang: 'Vũ Thị Phương', soDienThoai: '0956789012' },
-    { tenKhachHang: 'Đặng Minh Quân', soDienThoai: '0967890123' },
-    { tenKhachHang: 'Bùi Thị Hoa', soDienThoai: '0978901234' },
-    { tenKhachHang: 'Ngô Văn Tùng', soDienThoai: '0989012345' },
-    { tenKhachHang: 'Lý Thị Mai', soDienThoai: '0990123456' }
-  ];
-
-  const products = [
-    'Nike Air Max 270', 'Adidas Ultraboost 22', 'Converse Chuck Taylor', 
-    'Vans Old Skool', 'New Balance 990v5', 'Puma RS-X', 'Reebok Classic',
-    'Jordan 1 Retro High', 'Asics Gel-Kayano', 'Skechers D\'Lites'
-  ];
-
-  const fakeInvoices = [];
-  
-  for (let i = 1; i <= 50; i++) {
-    const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
-    const randomCustomer = customers[Math.floor(Math.random() * customers.length)];
-    const randomAmount = Math.floor(Math.random() * 3000000) + 200000; // 200k - 3.2M VND
-    const randomDate = new Date();
-    randomDate.setDate(randomDate.getDate() - Math.floor(Math.random() * 60)); // Last 60 days
-    
-    const randomProduct = products[Math.floor(Math.random() * products.length)];
-
-    const orderType = Math.random() > 0.6 ? 'online' : 'trực tiếp';
-    
-    fakeInvoices.push({
-      id: i,
-      maHoaDon: `HD${String(i).padStart(6, '0')}`,
-      khachHang: randomCustomer,
-      trangThai: randomStatus,
-      tongTienThanhToan: randomAmount,
-      ngayTao: randomDate.toISOString(),
-      loaiDon: orderType,
-      phiVanChuyen: orderType === 'online' ? Math.floor(Math.random() * 50000) + 15000 : 0, // Online có phí ship, trực tiếp = 0
-      sanPham: randomProduct,
-      soLuong: Math.floor(Math.random() * 3) + 1,
-      ghiChu: Math.random() > 0.5 ? 'Giao hàng nhanh' : 'Giao hàng tiêu chuẩn'
-    });
-  }
-
-  return fakeInvoices;
-};
-
-const fetchAllInvoices = async () => {
-  console.log('Bắt đầu tải hóa đơn...');
-  errorMessage.value = '';
-  
-  try {
-    // Use fake data instead of API
-    const fakeData = generateFakeInvoices();
-    allInvoices.value = fakeData;
-
-    // Tính tổng doanh thu sau khi lấy danh sách hóa đơn
-    calculateTotalRevenue();
-
-    if (route.query.maHoaDon) {
-      highlightedInvoice.value = route.query.maHoaDon;
-      setTimeout(() => {
-        const element = document.querySelector(`tr[data-ma-hoa-don="${highlightedInvoice.value}"]`);
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          element.classList.add('highlight');
-          setTimeout(() => element.classList.remove('highlight'), 3000);
-        }
-      }, 500);
-    }
-
-    if (allInvoices.value.length === 0) {
-      toast.info('Không có hóa đơn nào trong hệ thống.', { timeout: 4000 });
-    } else {
-      toast.success('Dữ liệu hóa đơn đã được tải thành công!', { timeout: 3000 });
-    }
-  } catch (error) {
-    console.error('Lỗi khi lấy dữ liệu hóa đơn:', error);
-    errorMessage.value = `Lỗi khi tải dữ liệu hóa đơn: ${error.message}`;
-    toast.error(errorMessage.value, { timeout: 5000 });
-  } finally {
-    if (currentPage.value >= totalPages.value) {
-      currentPage.value = Math.max(0, totalPages.value - 1);
-    }
-    console.log('Kết thúc tải hóa đơn:', allInvoices.value);
-  }
-};
-
-const editInvoice = (invoice) => {
-  editInvoiceData.value = {
-    id: invoice.id,
-    maHoaDon: invoice.maHoaDon,
-    khachHang: {
-      tenKhachHang: invoice.khachHang?.tenKhachHang || 'Khách lẻ',
-      soDienThoai: invoice.khachHang?.soDienThoai || '',
-    },
-    trangThai: { id: invoice.trangThai?.id || 6 },
-    tongTienThanhToan: invoice.tongTienThanhToan || 0,
-  };
-  showEditModal.value = true;
-};
-
-const handleUpdateInvoice = async () => {
-  if (!editInvoiceData.value.maHoaDon) {
-    toast.error('Mã hóa đơn không được để trống!');
-    return;
-  }
-  if (!editInvoiceData.value.tongTienThanhToan) {
-    toast.error('Tổng tiền thanh toán không hợp lệ!');
-    return;
-  }
-  isUpdating.value = true;
-  try {
-    const updatedStatusId = parseInt(editInvoiceData.value.trangThai.id);
-    await apiUpdateInvoice(editInvoiceData.value.id, {
-      maHoaDon: editInvoiceData.value.maHoaDon,
-      khachHang: {
-        tenKhachHang: editInvoiceData.value.khachHang.tenKhachHang || 'Khách lẻ',
-        soDienThoai: editInvoiceData.value.khachHang.soDienThoai || '',
-      },
-      trangThai: { id: updatedStatusId },
-      tongTienThanhToan: editInvoiceData.value.tongTienThanhToan,
-    });
-    toast.success('Cập nhật hóa đơn thành công!');
-    showEditModal.value = false;
-    await fetchAllInvoices();
-
-    if (updatedStatusId === 21) {
-      emitter.emit('invoice-completed', editInvoiceData.value);
-      console.log('Đã phát ra sự kiện invoice-completed với hóa đơn:', editInvoiceData.value);
-    }
-  } catch (error) {
-    console.error('Lỗi khi cập nhật hóa đơn:', error.response ? error.response.data : error.message);
-    toast.error(`Lỗi khi cập nhật hóa đơn: ${error.response?.data?.message || error.message}`);
-  } finally {
-    isUpdating.value = false;
-  }
-};
-
-const confirmDelete = (id) => {
-  deleteInvoiceId.value = id;
-  showDeleteModal.value = true;
-};
-
-const handleDeleteInvoice = async () => {
-  isDeleting.value = true;
-  try {
-    await apiDeleteInvoice(deleteInvoiceId.value);
-    toast.success('Xóa hóa đơn thành công!');
-    showDeleteModal.value = false;
-    deleteInvoiceId.value = null;
-    await fetchAllInvoices();
-  } catch (error) {
-    console.error('Lỗi khi xóa hóa đơn:', error.response ? error.response.data : error.message);
-    toast.error(`Lỗi khi xóa hóa hóa đơn: ${error.response?.data?.message || error.message}`);
-  } finally {
-    isDeleting.value = false;
-  }
-};
-
-const getTabCount = (tabId) => {
-  if (!allInvoices.value.length) return 0;
-  if (tabId === 'all') return allInvoices.value.length;
-  const tab = tabs.value.find((t) => t.id === tabId);
-  if (!tab?.statusId) return 0;
-  return allInvoices.value.filter((invoice) => invoice.trangThai?.id === tab.statusId).length;
-};
-
-const formatDate = (date) => {
-  if (!date) return 'N/A';
-  try {
-    const d = new Date(date);
-    if (isNaN(d.getTime())) return 'Invalid Date';
-    return d.toLocaleString('vi-VN', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-      timeZone: 'UTC',
-    });
-  } catch (e) {
-    console.error('Error formatting date:', date, e);
-    return 'Invalid Date';
-  }
-};
-
-const formatCurrency = (value) => {
-  return new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-    minimumFractionDigits: 0,
-  }).format(value || 0);
-};
-
-const getStatusText = (statusId) => {
-  const statusMap = {
-    6: 'Chờ xác nhận',
-    7: 'Chờ xử lý',
-    8: 'Chờ vận chuyển',
-    9: 'Đang vận chuyển',
-    21: 'Đã hoàn thành',
-    22: 'Đã hủy',
-  };
-  return statusMap[statusId] || 'Không xác định';
-};
-
-const getStatusColor = (statusId) => {
-  const colorMap = {
-    6: 'text-orange-600 bg-orange-100 px-3.5 py-1.5 rounded-full font-bold text-xs uppercase',
-    7: 'text-amber-600 bg-amber-100 px-3.5 py-1.5 rounded-full font-bold text-xs uppercase',
-    8: 'text-cyan-600 bg-cyan-100 px-3.5 py-1.5 rounded-full font-bold text-xs uppercase',
-    9: 'text-green-600 bg-green-100 px-3.5 py-1.5 rounded-full font-bold text-xs uppercase',
-    21: 'text-lime-700 bg-lime-200 px-3.5 py-1.5 rounded-full font-bold text-xs uppercase',
-    22: 'text-red-700 bg-red-200 px-3.5 py-1.5 rounded-full font-bold text-xs uppercase',
-  };
-  return colorMap[statusId] || 'text-gray-600 bg-gray-100 px-3.5 py-1.5 rounded-full font-bold text-xs uppercase';
-};
-
-const switchTab = (tabId) => {
-  activeTab.value = tabId;
-  const tab = tabs.value.find((t) => t.id === tabId);
-  filters.value.trangThaiId = tab.statusId ? String(tab.statusId) : '';
-  currentPage.value = 0;
-  if (tabId === 'all') {
-    toast.info('Đang hiển thị tất cả hóa đơn.', { timeout: 2000 });
-  } else {
-    toast.info(`Đang hiển thị hóa đơn trạng thái: ${tab.label}.`, { timeout: 2000 });
-  }
-};
-
-const filterInvoices = () => {
-  filters.value.search = tempFilters.value.search;
-  filters.value.trangThaiId = tempFilters.value.trangThaiId;
-  filters.value.startDate = tempFilters.value.startDate;
-  filters.value.endDate = tempFilters.value.endDate;
-  filters.value.minPrice = tempFilters.value.minPrice;
-  filters.value.maxPrice = tempFilters.value.maxPrice;
-  filters.value.sortBy = tempFilters.value.sortBy;
-
-  currentPage.value = 0;
-  let message = 'Đã áp dụng bộ lọc: ';
-  let filterApplied = false;
-
-  if (filters.value.search) {
-    message += `Mã hóa đơn, tên khách hàng hoặc SĐT: "${filters.value.search}". `;
-    filterApplied = true;
-  }
-  if (filters.value.trangThaiId) {
-    const statusText = getStatusText(parseInt(filters.value.trangThaiId));
-    message += `Trạng thái: "${statusText}". `;
-    filterApplied = true;
-  }
-  if (filters.value.startDate) {
-    message += `Từ ngày: "${formatDate(filters.value.startDate)}". `;
-    filterApplied = true;
-  }
-  if (filters.value.endDate) {
-    message += `Đến ngày: "${formatDate(filters.value.endDate)}". `;
-    filterApplied = true;
-  }
-  if (filters.value.sortBy) {
-    const sortByText = {
-      newest: 'Mới nhất',
-      most_expensive: 'Đắt nhất',
-      cheapest: 'Rẻ nhất',
-    }[filters.value.sortBy];
-    message += `Sắp xếp theo: "${sortByText}". `;
-    filterApplied = true;
-  }
-
-  if (filterApplied) {
-    toast.success(message, { timeout: 4000 });
-  } else {
-    toast.info('Không có bộ lọc nào được áp dụng.', { timeout: 2000 });
-  }
-};
-
-const resetFilters = () => {
-  filters.value = { search: '', trangThaiId: '', loaiDon: '', startDate: '', endDate: '', minPrice: '', maxPrice: '', sortBy: '' };
-  tempFilters.value = { search: '', trangThaiId: '', loaiDon: '', startDate: '', endDate: '', minPrice: '', maxPrice: '', sortBy: '' };
-  activeTab.value = 'all';
-  currentPage.value = 0;
-  toast.info('Đã đặt lại tất cả bộ lọc!', { timeout: 2000 });
-};
-
-
-const changePage = (page) => {
-  if (page >= 0 && page < totalPages.value) {
-    currentPage.value = page;
-    toast.info(`Đang hiển thị trang ${page + 1} của danh sách hóa đơn.`, { timeout: 1500 });
-  }
-};
-
-
-// Lắng nghe sự kiện invoice-completed để cập nhật tổng doanh thu
-emitter.on('invoice-completed', (invoice) => {
-  console.log('Nhận được sự kiện invoice-completed:', invoice);
-  calculateTotalRevenue();
-  toast.info('Tổng doanh thu đã được cập nhật!', { timeout: 3000 });
-});
-
-onMounted(() => {
-  fetchAllInvoices();
-});
-
-// Theo dõi thay đổi danh sách hóa đơn để cập nhật tổng doanh thu
-watch(allInvoices, () => {
-  calculateTotalRevenue();
-});
+  // Service functions
+  formatDate,
+  formatCurrency,
+  getStatusText,
+  getStatusColor,
+  printInvoicePDF,
+  downloadQRCode,
+  exportToExcel,
+  scanQRInvoice
+} = useHoaDonLogic();
 </script>
 
 <template>
@@ -665,7 +88,7 @@ watch(allInvoices, () => {
           <Icon icon="solar:filter-bold-duotone" class="text-xl" />
           Bộ Lọc Hóa Đơn
         </h3>
-        <button class="reset-filter-btn" @click="resetFilters">
+        <button class="reset-filter-btn" @click="resetFiltersLocal">
           Đặt lại bộ lọc
         </button>
       </div>
@@ -679,7 +102,7 @@ watch(allInvoices, () => {
               type="text"
               placeholder="Tìm kiếm mã hóa đơn, tên khách hàng..."
               class="filter-input"
-              @input="filterInvoices"
+              @input="filterInvoicesLocal"
             />
           </div>
           <div class="filter-group">
@@ -689,7 +112,7 @@ watch(allInvoices, () => {
               type="number"
               placeholder="0"
               class="filter-input"
-              @input="filterInvoices"
+              @input="filterInvoicesLocal"
             />
           </div>
           <div class="filter-group">
@@ -699,7 +122,7 @@ watch(allInvoices, () => {
               type="number"
               placeholder="10,000,000"
               class="filter-input"
-              @input="filterInvoices"
+              @input="filterInvoicesLocal"
             />
           </div>
         </div>
@@ -737,7 +160,7 @@ watch(allInvoices, () => {
               v-model="tempFilters.startDate"
               type="date"
               class="filter-input"
-              @change="filterInvoices"
+              @change="filterInvoicesLocal"
             />
           </div>
           <div class="filter-group">
@@ -746,7 +169,7 @@ watch(allInvoices, () => {
               v-model="tempFilters.endDate"
               type="date"
               class="filter-input"
-              @change="filterInvoices"
+              @change="filterInvoicesLocal"
             />
           </div>
           <div class="filter-group">
@@ -754,7 +177,7 @@ watch(allInvoices, () => {
             <select
               v-model="tempFilters.sortBy"
               class="filter-select"
-              @change="filterInvoices"
+              @change="filterInvoicesLocal"
             >
               <option value="">Sắp xếp mặc định</option>
               <option value="newest">Mới nhất</option>
@@ -780,10 +203,10 @@ watch(allInvoices, () => {
                 ? 'bg-white dark:bg-gray-600 text-blue-800 dark:text-blue-400 shadow-sm' 
                 : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-gray-600/50'
             ]"
-            @click="switchTab(tab.id)"
+            @click="switchTabLocal(tab.id)"
           >
             <span>{{ tab.label }}</span>
-            <span class="bg-blue-200 dark:bg-blue-500 text-xs px-2 py-0.5 rounded-full">{{ getTabCount(tab.id) }}</span>
+            <span class="bg-blue-200 dark:bg-blue-500 text-xs px-2 py-0.5 rounded-full">{{ getTabCountLocal(tab.id) }}</span>
           </button>
         </div>
 
