@@ -115,7 +115,7 @@
       <div class="footer-bottom">
         <div class="footer-bottom-content">
           <div class="copyright">
-            <span>&copy; 2024 PhoStep Team. All Rights Reserved.</span>
+            <span>&copy; 2025 PhoStep Team. All Rights Reserved.</span>
           </div>
           <div class="footer-meta">
             <span class="version-info">Version 2.0.1</span>

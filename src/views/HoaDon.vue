@@ -5,12 +5,13 @@ import { useRoute } from 'vue-router';
 import { Icon } from '@iconify/vue';
 import { getInvoices, updateInvoice as apiUpdateInvoice, deleteInvoice as apiDeleteInvoice } from '@/services/api';
 import mitt from 'mitt';
+import Breadcrumb from '@/components/Breadcrumb.vue';
+import DataTable from '@/components/DataTable.vue';
 
 const emitter = mitt();
 const toast = useToast();
 const route = useRoute();
 
-const isLoading = ref(false);
 const errorMessage = ref('');
 const allInvoices = ref([]);
 const totalRevenue = ref(0);
@@ -20,17 +21,23 @@ const pageSize = ref(10);
 const filters = ref({
   search: '',
   trangThaiId: '',
+  loaiDon: '',
   startDate: '',
   endDate: '',
-  sortBy: '',
+  minPrice: '',
+  maxPrice: '',
+  sortBy: ''
 });
 
 const tempFilters = ref({
   search: '',
   trangThaiId: '',
+  loaiDon: '',
   startDate: '',
   endDate: '',
-  sortBy: '',
+  minPrice: '',
+  maxPrice: '',
+  sortBy: ''
 });
 
 const activeTab = ref('all');
@@ -50,7 +57,6 @@ const tabs = ref([
   { id: 'dang_van_chuyen', label: 'Đang vận chuyển', statusId: 9 },
   { id: 'completed', label: 'Đã hoàn thành', statusId: 21 },
   { id: 'canceled', label: 'Đã hủy', statusId: 22 },
-  { id: 'hoan_mot_phan', label: 'Hoàn 1 phần', statusId: 23 },
 ]);
 
 // Tính tổng doanh thu từ danh sách hóa đơn có trạng thái "Đã hoàn thành"
@@ -58,6 +64,116 @@ const calculateTotalRevenue = () => {
   totalRevenue.value = allInvoices.value
     .filter((invoice) => invoice.trangThai?.id === 21)
     .reduce((sum, invoice) => sum + (invoice.tongTienThanhToan || 0), 0);
+};
+
+const printInvoicePDF = (invoice) => {
+  // Create a new window for printing
+  const printWindow = window.open('', '_blank');
+  const orderTypeText = invoice.loaiDon === 'online' ? 'Online' : 'Trực tiếp';
+  
+  printWindow.document.write(`
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <title>Hóa đơn ${invoice.maHoaDon}</title>
+      <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .header { text-align: center; margin-bottom: 30px; }
+        .info { margin-bottom: 20px; }
+        .label { font-weight: bold; }
+        .total { font-size: 18px; font-weight: bold; color: #e74c3c; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1>HÓA ĐƠN BÁN HÀNG</h1>
+        <p>Mã hóa đơn: <span class="label">${invoice.maHoaDon}</span></p>
+        <p>Ngày tạo: <span class="label">${formatDate(invoice.ngayTao)}</span></p>
+      </div>
+      
+      <div class="info">
+        <h3>Thông tin khách hàng</h3>
+        <p>Tên: <span class="label">${invoice.khachHang?.tenKhachHang || 'Khách lẻ'}</span></p>
+        <p>Số điện thoại: <span class="label">${invoice.khachHang?.soDienThoai || 'N/A'}</span></p>
+        <p>Loại đơn: <span class="label">${orderTypeText}</span></p>
+      </div>
+      
+      <div class="info">
+        <h3>Thông tin thanh toán</h3>
+        <p>Phí vận chuyển: <span class="label">${formatCurrency(invoice.phiVanChuyen)}</span></p>
+        <p class="total">Tổng tiền: ${formatCurrency(invoice.tongTienThanhToan)}</p>
+      </div>
+    </body>
+    </html>
+  `);
+  
+  printWindow.document.close();
+  printWindow.print();
+};
+
+const downloadQRCode = (invoice) => {
+  // Create QR code data
+  const qrData = {
+    maHoaDon: invoice.maHoaDon,
+    khachHang: invoice.khachHang?.tenKhachHang || 'Khách lẻ',
+    tongTien: invoice.tongTienThanhToan,
+    ngayTao: invoice.ngayTao
+  };
+  
+  // Create QR code content
+  const qrContent = `Hóa đơn: ${qrData.maHoaDon}\nKhách hàng: ${qrData.khachHang}\nTổng tiền: ${formatCurrency(qrData.tongTien)}\nNgày: ${formatDate(qrData.ngayTao)}`;
+  
+  // Create a simple QR code URL (using a free QR code API)
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrContent)}`;
+  
+  // Create download link
+  const link = document.createElement('a');
+  link.href = qrUrl;
+  link.download = `QR_${invoice.maHoaDon}.png`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
+const exportToExcel = () => {
+  // Create Excel data from filtered invoices
+  const excelData = filteredInvoices.value.map((invoice, index) => ({
+    'STT': index + 1,
+    'Mã Hóa Đơn': invoice.maHoaDon,
+    'Khách Hàng': invoice.khachHang?.tenKhachHang || 'Khách lẻ',
+    'Số Điện Thoại': invoice.khachHang?.soDienThoai || 'N/A',
+    'Loại Đơn': invoice.loaiDon === 'online' ? 'Online' : 'Trực tiếp',
+    'Phí Vận Chuyển': invoice.phiVanChuyen,
+    'Ngày Tạo': formatDate(invoice.ngayTao),
+    'Tổng Tiền': invoice.tongTienThanhToan,
+    'Trạng Thái': getStatusText(invoice.trangThai?.id)
+  }));
+  
+  // Convert to CSV format
+  const headers = Object.keys(excelData[0]).join(',');
+  const csvContent = [headers, ...excelData.map(row => Object.values(row).join(','))].join('\n');
+  
+  // Create and download file
+  const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `Danh_sach_hoa_don_${new Date().toISOString().split('T')[0]}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  console.log('Exported invoices to Excel');
+};
+
+const scanQRInvoice = () => {
+  // Open QR scanner modal or navigate to QR scanner page
+  alert('Chức năng quét QR hóa đơn sẽ được phát triển trong phiên bản tiếp theo');
+  console.log('QR Scanner opened');
+};
+
+const navigateToSalesCounter = () => {
+  // Navigate to sales counter page
+  router.push({ name: 'BanHangTaiQuay' });
 };
 
 // Computed để lọc hóa đơn
@@ -72,13 +188,15 @@ const filteredInvoices = computed(() => {
   }
 
   if (filters.value.search) {
-    const searchTerm = filters.value.search.toLowerCase();
-    result = result.filter(
-      (invoice) =>
-        invoice.maHoaDon.toLowerCase().includes(searchTerm) ||
-        invoice.khachHang?.tenKhachHang?.toLowerCase().includes(searchTerm) ||
-        invoice.khachHang?.soDienThoai?.includes(searchTerm)
+    result = result.filter((invoice) =>
+      invoice.maHoaDon?.toLowerCase().includes(filters.value.search.toLowerCase()) ||
+      invoice.khachHang?.tenKhachHang?.toLowerCase().includes(filters.value.search.toLowerCase()) ||
+      invoice.khachHang?.soDienThoai?.includes(filters.value.search)
     );
+  }
+
+  if (filters.value.loaiDon) {
+    result = result.filter((invoice) => invoice.loaiDon === filters.value.loaiDon);
   }
 
   if (filters.value.startDate) {
@@ -89,6 +207,13 @@ const filteredInvoices = computed(() => {
     const end = new Date(filters.value.endDate);
     end.setHours(23, 59, 59, 999);
     result = result.filter((invoice) => new Date(invoice.ngayTao) <= end);
+  }
+
+  if (filters.value.minPrice) {
+    result = result.filter((invoice) => invoice.tongTienThanhToan >= parseFloat(filters.value.minPrice));
+  }
+  if (filters.value.maxPrice) {
+    result = result.filter((invoice) => invoice.tongTienThanhToan <= parseFloat(filters.value.maxPrice));
   }
 
   if (filters.value.sortBy) {
@@ -104,6 +229,67 @@ const filteredInvoices = computed(() => {
 
   return result;
 });
+
+// DataTable columns configuration
+const tableColumns = ref([
+  { key: 'stt', label: 'STT', class: 'text-center' },
+  { key: 'maHoaDon', label: 'Mã Hóa Đơn', class: 'font-weight-bold' },
+  { key: 'khachHang', label: 'Khách Hàng' },
+  { key: 'soDienThoai', label: 'Số Điện Thoại' },
+  { key: 'loaiDon', label: 'Loại Đơn', class: 'text-center' },
+  { key: 'phiVanChuyen', label: 'Phí Vận Chuyển', class: 'text-right' },
+  { key: 'ngayTao', label: 'Ngày Tạo' },
+  { key: 'tongTien', label: 'Tổng Tiền', class: 'text-right' },
+  { key: 'trangThai', label: 'Trạng Thái', class: 'text-center' },
+  { key: 'actions', label: 'Hành Động', class: 'text-center' }
+]);
+
+// Breadcrumb configuration
+const breadcrumbItems = ref([
+  { label: 'Quản lý bán hàng', path: '/dashboard' },
+  { label: 'Hóa đơn' }
+]);
+
+const breadcrumbActions = ref([
+  {
+    label: 'Làm mới',
+    type: 'default',
+    handler: () => fetchAllInvoices()
+  },
+  {
+    label: 'Xuất Excel',
+    type: 'primary',
+    handler: () => exportToExcel()
+  },
+  {
+    label: 'Quét QR hóa đơn',
+    type: 'primary',
+    handler: () => scanQRInvoice()
+  },
+  {
+    label: 'Thêm hóa đơn',
+    type: 'primary',
+    handler: () => navigateToSalesCounter()
+  }
+]);
+
+const pageStats = computed(() => [
+  {
+    icon: 'solar:bill-list-bold',
+    value: allInvoices.value.length,
+    label: 'Tổng hóa đơn'
+  },
+  {
+    icon: 'solar:dollar-minimalistic-bold',
+    value: formatCurrency(totalRevenue.value),
+    label: 'Tổng doanh thu'
+  },
+  {
+    icon: 'solar:check-circle-bold',
+    value: allInvoices.value.filter(inv => inv.trangThai?.id === 21).length,
+    label: 'Đã hoàn thành'
+  }
+]);
 
 const paginatedInvoices = computed(() => {
   const start = currentPage.value * pageSize.value;
@@ -125,19 +311,75 @@ const displayedPages = computed(() => {
   return Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i);
 });
 
+// Enhanced fake data for testing
+const generateFakeInvoices = () => {
+  const statuses = [
+    { id: 6, name: 'Chờ xác nhận' },
+    { id: 7, name: 'Chờ xử lý' },
+    { id: 8, name: 'Chờ vận chuyển' },
+    { id: 9, name: 'Đang vận chuyển' },
+    { id: 21, name: 'Đã hoàn thành' },
+    { id: 22, name: 'Đã hủy' },
+  ];
+
+  const customers = [
+    { tenKhachHang: 'Nguyễn Văn An', soDienThoai: '0901234567' },
+    { tenKhachHang: 'Trần Thị Bình', soDienThoai: '0912345678' },
+    { tenKhachHang: 'Lê Hoàng Cường', soDienThoai: '0923456789' },
+    { tenKhachHang: 'Phạm Thị Dung', soDienThoai: '0934567890' },
+    { tenKhachHang: 'Hoàng Văn Em', soDienThoai: '0945678901' },
+    { tenKhachHang: 'Vũ Thị Phương', soDienThoai: '0956789012' },
+    { tenKhachHang: 'Đặng Minh Quân', soDienThoai: '0967890123' },
+    { tenKhachHang: 'Bùi Thị Hoa', soDienThoai: '0978901234' },
+    { tenKhachHang: 'Ngô Văn Tùng', soDienThoai: '0989012345' },
+    { tenKhachHang: 'Lý Thị Mai', soDienThoai: '0990123456' }
+  ];
+
+  const products = [
+    'Nike Air Max 270', 'Adidas Ultraboost 22', 'Converse Chuck Taylor', 
+    'Vans Old Skool', 'New Balance 990v5', 'Puma RS-X', 'Reebok Classic',
+    'Jordan 1 Retro High', 'Asics Gel-Kayano', 'Skechers D\'Lites'
+  ];
+
+  const fakeInvoices = [];
+  
+  for (let i = 1; i <= 50; i++) {
+    const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
+    const randomCustomer = customers[Math.floor(Math.random() * customers.length)];
+    const randomAmount = Math.floor(Math.random() * 3000000) + 200000; // 200k - 3.2M VND
+    const randomDate = new Date();
+    randomDate.setDate(randomDate.getDate() - Math.floor(Math.random() * 60)); // Last 60 days
+    
+    const randomProduct = products[Math.floor(Math.random() * products.length)];
+
+    const orderType = Math.random() > 0.6 ? 'online' : 'trực tiếp';
+    
+    fakeInvoices.push({
+      id: i,
+      maHoaDon: `HD${String(i).padStart(6, '0')}`,
+      khachHang: randomCustomer,
+      trangThai: randomStatus,
+      tongTienThanhToan: randomAmount,
+      ngayTao: randomDate.toISOString(),
+      loaiDon: orderType,
+      phiVanChuyen: orderType === 'online' ? Math.floor(Math.random() * 50000) + 15000 : 0, // Online có phí ship, trực tiếp = 0
+      sanPham: randomProduct,
+      soLuong: Math.floor(Math.random() * 3) + 1,
+      ghiChu: Math.random() > 0.5 ? 'Giao hàng nhanh' : 'Giao hàng tiêu chuẩn'
+    });
+  }
+
+  return fakeInvoices;
+};
+
 const fetchAllInvoices = async () => {
   console.log('Bắt đầu tải hóa đơn...');
-  isLoading.value = true;
   errorMessage.value = '';
+  
   try {
-    const response = await getInvoices().catch((err) => {
-      console.error('Error fetching invoices:', err);
-      return { data: [] };
-    });
-
-    console.log('Hóa đơn:', response.data);
-
-    allInvoices.value = (response.data || []).map((invoice) => ({ ...invoice }));
+    // Use fake data instead of API
+    const fakeData = generateFakeInvoices();
+    allInvoices.value = fakeData;
 
     // Tính tổng doanh thu sau khi lấy danh sách hóa đơn
     calculateTotalRevenue();
@@ -155,17 +397,15 @@ const fetchAllInvoices = async () => {
     }
 
     if (allInvoices.value.length === 0) {
-      errorMessage.value = 'Không tìm thấy hóa đơn nào.';
       toast.info('Không có hóa đơn nào trong hệ thống.', { timeout: 4000 });
     } else {
       toast.success('Dữ liệu hóa đơn đã được tải thành công!', { timeout: 3000 });
     }
   } catch (error) {
     console.error('Lỗi khi lấy dữ liệu hóa đơn:', error);
-    errorMessage.value = `Lỗi khi tải dữ liệu hóa đơn: ${error.response?.status} - ${error.response?.data?.message || error.message}`;
+    errorMessage.value = `Lỗi khi tải dữ liệu hóa đơn: ${error.message}`;
     toast.error(errorMessage.value, { timeout: 5000 });
   } finally {
-    isLoading.value = false;
     if (currentPage.value >= totalPages.value) {
       currentPage.value = Math.max(0, totalPages.value - 1);
     }
@@ -289,7 +529,6 @@ const getStatusText = (statusId) => {
     9: 'Đang vận chuyển',
     21: 'Đã hoàn thành',
     22: 'Đã hủy',
-    23: 'Hoàn 1 phần',
   };
   return statusMap[statusId] || 'Không xác định';
 };
@@ -302,7 +541,6 @@ const getStatusColor = (statusId) => {
     9: 'text-green-600 bg-green-100 px-3.5 py-1.5 rounded-full font-bold text-xs uppercase',
     21: 'text-lime-700 bg-lime-200 px-3.5 py-1.5 rounded-full font-bold text-xs uppercase',
     22: 'text-red-700 bg-red-200 px-3.5 py-1.5 rounded-full font-bold text-xs uppercase',
-    23: 'text-rose-600 bg-rose-100 px-3.5 py-1.5 rounded-full font-bold text-xs uppercase',
   };
   return colorMap[statusId] || 'text-gray-600 bg-gray-100 px-3.5 py-1.5 rounded-full font-bold text-xs uppercase';
 };
@@ -324,6 +562,8 @@ const filterInvoices = () => {
   filters.value.trangThaiId = tempFilters.value.trangThaiId;
   filters.value.startDate = tempFilters.value.startDate;
   filters.value.endDate = tempFilters.value.endDate;
+  filters.value.minPrice = tempFilters.value.minPrice;
+  filters.value.maxPrice = tempFilters.value.maxPrice;
   filters.value.sortBy = tempFilters.value.sortBy;
 
   currentPage.value = 0;
@@ -364,13 +604,14 @@ const filterInvoices = () => {
   }
 };
 
-const clearFilter = () => {
-  filters.value = { search: '', trangThaiId: '', startDate: '', endDate: '', sortBy: '' };
-  tempFilters.value = { search: '', trangThaiId: '', startDate: '', endDate: '', sortBy: '' };
+const resetFilters = () => {
+  filters.value = { search: '', trangThaiId: '', loaiDon: '', startDate: '', endDate: '', minPrice: '', maxPrice: '', sortBy: '' };
+  tempFilters.value = { search: '', trangThaiId: '', loaiDon: '', startDate: '', endDate: '', minPrice: '', maxPrice: '', sortBy: '' };
   activeTab.value = 'all';
   currentPage.value = 0;
-  toast.info('Đã xóa tất cả bộ lọc!', { timeout: 2000 });
+  toast.info('Đã đặt lại tất cả bộ lọc!', { timeout: 2000 });
 };
+
 
 const changePage = (page) => {
   if (page >= 0 && page < totalPages.value) {
@@ -399,22 +640,17 @@ watch(allInvoices, () => {
 
 <template>
   <div class="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900 p-4 md:p-6 font-roboto transition-colors duration-300">
-    <!-- Hiển thị tổng doanh thu -->
-    <div class="card bg-white dark:bg-gray-800 mb-6 rounded-3xl shadow-2xl animate__animated animate__fadeInUp">
-      <div class="p-6 md:p-8">
-        <h2 class="text-2xl md:text-3xl font-extrabold text-gray-800 dark:text-gray-100 mb-4 flex items-center">
-          <Icon icon="solar:chart-bold-duotone" class="text-4xl mr-4 text-green-500" />
-          Tổng Doanh Thu
-        </h2>
-        <p class="text-xl font-bold text-gray-700 dark:text-gray-200">
-          {{ formatCurrency(totalRevenue) }}
-        </p>
-      </div>
-    </div>
+    <!-- Breadcrumb -->
+    <Breadcrumb 
+      :items="breadcrumbItems"
+      :actions="breadcrumbActions"
+      :show-page-info="true"
+      page-title="Quản lý Hóa đơn"
+      page-description="Quản lý và theo dõi tất cả hóa đơn bán hàng trong hệ thống"
+      page-icon="solar:bill-list-bold-duotone"
+      :page-stats="pageStats"
+    />
 
-    <div v-if="isLoading && !allInvoices.length" class="flex justify-center items-center h-40">
-      <div class="animate-spin rounded-full h-10 w-10 border-t-4 border-blue-500"></div>
-    </div>
     <div v-if="errorMessage" class="card bg-red-50 dark:bg-red-950 p-4 mb-6 rounded-3xl shadow-lg animate__animated animate__fadeIn">
       <p class="text-red-600 dark:text-red-300 font-medium flex items-center">
         <Icon icon="solar:danger-triangle-bold-duotone" class="text-2xl mr-3" />
@@ -422,27 +658,58 @@ watch(allInvoices, () => {
       </p>
     </div>
 
-    <div class="card bg-white dark:bg-gray-800 mb-6 rounded-3xl shadow-2xl animate__animated animate__fadeInUp">
-      <div class="p-6 md:p-8">
-        <h2 class="text-2xl md:text-3xl font-extrabold text-gray-800 dark:text-gray-100 mb-6 flex items-center">
-          <Icon icon="solar:filter-bold-duotone" class="text-4xl mr-4 text-blue-500" />
+    <!-- Filter Section -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-6">
+      <div class="filter-header mb-4">
+        <h3 class="filter-title">
+          <Icon icon="solar:filter-bold-duotone" class="text-xl" />
           Bộ Lọc Hóa Đơn
-        </h2>
-        <form @submit.prevent="filterInvoices" class="filter-group grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-5 items-end">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Mã hóa đơn</label>
+        </h3>
+        <button class="reset-filter-btn" @click="resetFilters">
+          Đặt lại bộ lọc
+        </button>
+      </div>
+      
+      <div class="filter-content">
+        <div class="filter-row mb-4">
+          <div class="filter-group">
+            <label class="filter-label">Tìm kiếm</label>
             <input
               v-model="tempFilters.search"
               type="text"
-              placeholder="Nhập mã hóa đơn..."
-              class="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition duration-300"
+              placeholder="Tìm kiếm mã hóa đơn, tên khách hàng..."
+              class="filter-input"
+              @input="filterInvoices"
             />
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Trạng thái</label>
+          <div class="filter-group">
+            <label class="filter-label">Giá từ</label>
+            <input
+              v-model="tempFilters.minPrice"
+              type="number"
+              placeholder="0"
+              class="filter-input"
+              @input="filterInvoices"
+            />
+          </div>
+          <div class="filter-group">
+            <label class="filter-label">Giá đến</label>
+            <input
+              v-model="tempFilters.maxPrice"
+              type="number"
+              placeholder="10,000,000"
+              class="filter-input"
+              @input="filterInvoices"
+            />
+          </div>
+        </div>
+      
+        <div class="filter-row">
+          <div class="filter-group">
+            <label class="filter-label">Trạng thái</label>
             <select
               v-model="tempFilters.trangThaiId"
-              class="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition duration-300"
+              class="filter-input"
             >
               <option value="">Tất cả trạng thái</option>
               <option value="6">Chờ xác nhận</option>
@@ -451,176 +718,164 @@ watch(allInvoices, () => {
               <option value="9">Đang vận chuyển</option>
               <option value="21">Đã hoàn thành</option>
               <option value="22">Đã hủy</option>
-              <option value="23">Hoàn 1 phần</option>
             </select>
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Từ ngày</label>
+          <div class="filter-group">
+            <label class="filter-label">Loại đơn</label>
+            <select
+              v-model="tempFilters.loaiDon"
+              class="filter-input"
+            >
+              <option value="">Tất cả loại đơn</option>
+              <option value="online">Online</option>
+              <option value="trực tiếp">Trực tiếp</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label class="filter-label">Từ ngày</label>
             <input
               v-model="tempFilters.startDate"
               type="date"
-              class="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition duration-300"
+              class="filter-input"
+              @change="filterInvoices"
             />
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Đến ngày</label>
+          <div class="filter-group">
+            <label class="filter-label">Đến ngày</label>
             <input
               v-model="tempFilters.endDate"
               type="date"
-              class="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition duration-300"
+              class="filter-input"
+              @change="filterInvoices"
             />
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Sắp xếp</label>
+          <div class="filter-group">
+            <label class="filter-label">Sắp xếp theo</label>
             <select
               v-model="tempFilters.sortBy"
-              class="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3.5 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 transition duration-300"
+              class="filter-select"
+              @change="filterInvoices"
             >
-              <option value="">Mặc định</option>
+              <option value="">Sắp xếp mặc định</option>
               <option value="newest">Mới nhất</option>
               <option value="most_expensive">Đắt nhất</option>
               <option value="cheapest">Rẻ nhất</option>
             </select>
           </div>
-          <div class="flex items-end gap-3 lg:col-span-1">
-            <button type="submit" class="btn-primary px-6 py-3 rounded-xl bg-emerald-500 text-white hover:bg-emerald-600 transition duration-300 shadow-lg hover:shadow-xl flex-1">
-              <Icon icon="solar:filter-bold" class="text-xl mr-2" /> Lọc
-            </button>
-            <button
-              type="button"
-              @click="clearFilter"
-              class="btn-secondary px-6 py-3 rounded-xl bg-rose-500 text-white hover:bg-rose-600 transition duration-300 shadow-lg hover:shadow-xl flex-1"
-            >
-              <Icon icon="solar:broom-bold" class="text-xl mr-2" /> Xóa Lọc
-            </button>
-          </div>
-        </form>
+        </div>
       </div>
     </div>
 
-    <div class="card bg-white dark:bg-gray-800 rounded-3xl shadow-2xl animate__animated animate__fadeInUp">
-      <div class="p-6 md:p-8">
-        <div class="tabs flex gap-4 mb-6 overflow-x-auto pb-2">
-          <div
+    <!-- Main Content -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg">
+      <div class="p-6">
+        <!-- Status Filter Tabs -->
+        <div class="flex flex-wrap gap-2 mb-6 p-1 bg-gray-100 dark:bg-gray-700 rounded-lg">
+          <button
             v-for="tab in tabs"
             :key="tab.id"
             :class="[
-              'tab px-6 py-2.5 cursor-pointer rounded-lg flex items-center whitespace-nowrap transition-all duration-300 font-semibold text-sm',
-              { 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md': activeTab === tab.id, 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600': activeTab !== tab.id },
+              'px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 flex items-center gap-2',
+              activeTab === tab.id 
+                ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm' 
+                : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-gray-600/50'
             ]"
             @click="switchTab(tab.id)"
           >
-            <span>{{ tab.label }} ({{ getTabCount(tab.id) }})</span>
-          </div>
+            <span>{{ tab.label }}</span>
+            <span class="bg-gray-200 dark:bg-gray-500 text-xs px-2 py-0.5 rounded-full">{{ getTabCount(tab.id) }}</span>
+          </button>
         </div>
 
-        <div class="card-body overflow-x-auto rounded-xl shadow-inner">
-          <table class="table w-full min-w-[1000px] border-collapse">
-            <thead>
-              <tr class="bg-blue-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100">
-                <th class="p-4 py-4 font-extrabold text-sm uppercase tracking-wider rounded-tl-xl">STT</th>
-                <th class="p-4 py-4 font-extrabold text-sm uppercase tracking-wider">Mã Hóa Đơn</th>
-                <th class="p-4 py-4 font-extrabold text-sm uppercase tracking-wider">Khách Hàng</th>
-                <th class="p-4 py-4 font-extrabold text-sm uppercase tracking-wider">Số Điện Thoại</th>
-                <th class="p-4 py-4 font-extrabold text-sm uppercase tracking-wider">Mã Vận Đơn</th>
-                <th class="p-4 py-4 font-extrabold text-sm uppercase tracking-wider">Ngày Tạo</th>
-                <th class="p-4 py-4 text-right font-extrabold text-sm uppercase tracking-wider">Tổng Tiền</th>
-                <th class="p-4 py-4 text-center font-extrabold text-sm uppercase tracking-wider">Trạng Thái</th>
-                <th class="p-4 py-4 text-center font-extrabold text-sm uppercase tracking-wider rounded-tr-xl">Hành Động</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-if="isLoading && allInvoices.length" class="text-center">
-                <td colspan="9" class="p-4.5">
-                  <div class="flex justify-center items-center">
-                    <div class="animate-spin rounded-full h-6 w-6 border-t-2 border-blue-500"></div>
-                    <span class="ml-2 text-gray-600 dark:text-gray-300">Đang tải dữ liệu...</span>
-                  </div>
-                </td>
-              </tr>
-              <tr v-else-if="filteredInvoices.length === 0" class="no-data">
-                <td colspan="9" class="p-6 text-center">
-                  <Icon icon="solar:cloud-cross-linear" class="text-6xl text-gray-400 dark:text-gray-500 mb-3" />
-                  <p class="text-gray-600 dark:text-gray-300 text-xl font-medium">Không có dữ liệu hóa đơn nào được tìm thấy.</p>
-                </td>
-              </tr>
-              <tr
-                v-for="(invoice, index) in paginatedInvoices"
-                :key="invoice.id"
-                :data-ma-hoa-don="invoice.maHoaDon"
-                class="border-b border-dashed border-gray-200 dark:border-gray-700 hover:bg-blue-50 dark:hover:bg-gray-700 transition-colors duration-200"
-              >
-                <td class="p-4.5 text-gray-700 dark:text-gray-200">{{ currentPage * pageSize + index + 1 }}</td>
-                <td class="p-4.5 font-bold text-gray-800 dark:text-gray-100">{{ invoice.maHoaDon }}</td>
-                <td class="p-4.5 text-gray-700 dark:text-gray-200">{{ invoice.khachHang?.tenKhachHang || 'Khách lẻ' }}</td>
-                <td class="p-4.5 text-gray-700 dark:text-gray-200">{{ invoice.khachHang?.soDienThoai || 'N/A' }}</td>
-                <td class="p-4.5 text-gray-700 dark:text-gray-200">{{ invoice.maVanDon || 'Chưa có' }}</td>
-                <td class="p-4.5 text-gray-700 dark:text-gray-200">{{ formatDate(invoice.ngayTao) }}</td>
-                <td class="p-4.5 text-right font-bold text-gray-800 dark:text-gray-100">{{ formatCurrency(invoice.tongTienThanhToan) }}</td>
-                <td class="p-4.5 text-center">
-                  <span :class="getStatusColor(invoice.trangThai?.id)">
-                    {{ getStatusText(invoice.trangThai?.id) }}
-                  </span>
-                </td>
-                <td class="p-4.5 text-center flex justify-center gap-2">
-                  <router-link
-                    :to="{ name: 'InvoiceDetail', params: { id: invoice.id } }"
-                    class="inline-flex items-center justify-center w-9 h-9 rounded-full bg-blue-100/70 dark:bg-blue-900/70 text-blue-600 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors duration-200 shadow-sm hover:shadow-md"
-                    title="Xem chi tiết"
-                  >
-                    <Icon icon="solar:eye-bold" class="text-xl" />
-                  </router-link>
-                  <button
-                    @click="editInvoice(invoice)"
-                    class="inline-flex items-center justify-center w-9 h-9 rounded-full bg-yellow-100/70 dark:bg-yellow-900/70 text-yellow-600 dark:text-yellow-300 hover:bg-yellow-200 dark:hover:bg-yellow-800 transition-colors duration-200 shadow-sm hover:shadow-md"
-                    title="Sửa hóa đơn"
-                  >
-                    <Icon icon="solar:pencil-bold" class="text-xl" />
-                  </button>
-                  <button
-                    @click="confirmDelete(invoice.id)"
-                    class="inline-flex items-center justify-center w-9 h-9 rounded-full bg-red-100/70 dark:bg-red-900/70 text-red-600 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-800 transition-colors duration-200 shadow-sm hover:shadow-md"
-                    title="Xóa hóa đơn"
-                  >
-                    <Icon icon="solar:trash-bin-bold" class="text-xl" />
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-
-          <div class="pagination flex justify-between items-center gap-3 mt-6 px-4 py-2">
-            <div class="text-sm text-gray-600 dark:text-gray-300">
-              Hiển thị {{ currentPage * pageSize + 1 }}-{{ Math.min((currentPage + 1) * pageSize, filteredInvoices.length) }} của {{ filteredInvoices.length }} hóa đơn
-            </div>
-            <div class="flex gap-2">
-              <button
-                @click="changePage(currentPage - 1)"
-                :disabled="currentPage === 0"
-                class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-100/70 dark:hover:bg-blue-800/70 transition-colors duration-200"
-              >
-                «
-              </button>
-              <button
-                v-for="page in displayedPages"
-                :key="page"
-                @click="changePage(page - 1)"
-                :class="[
-                  'px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl transition-colors duration-200',
-                  { 'bg-blue-600 text-white shadow-md': currentPage === page - 1, 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-blue-100/70 dark:hover:bg-blue-800/70': currentPage !== page - 1 },
-                ]"
-              >
-                {{ page }}
-              </button>
-              <button
-                @click="changePage(currentPage + 1)"
-                :disabled="currentPage === totalPages - 1"
-                class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-blue-100/70 dark:hover:bg-blue-800/70 transition-colors duration-200"
-              >
-                »
-              </button>
-            </div>
+        <!-- Invoice List Section -->
+        <div class="invoices-section">
+          <div class="section-header">
+            <h3 class="section-title">
+              <Icon icon="solar:bill-list-bold-duotone" class="text-xl" />
+              Danh Sách Hóa Đơn ({{ filteredInvoices.length }})
+            </h3>
           </div>
+
+          <!-- DataTable Component -->
+          <DataTable
+            :data="filteredInvoices"
+            :columns="tableColumns"
+            item-label="hóa đơn"
+            empty-message="Không có dữ liệu hóa đơn nào được tìm thấy."
+            key-field="id"
+          >
+            <!-- Custom column templates -->
+            <template #stt="{ rowIndex }">
+              {{ rowIndex }}
+            </template>
+            
+            <template #maHoaDon="{ item }">
+              <span class="font-bold text-gray-800 dark:text-gray-100">{{ item.maHoaDon }}</span>
+            </template>
+            
+            <template #khachHang="{ item }">
+              {{ item.khachHang?.tenKhachHang || 'Khách lẻ' }}
+            </template>
+            
+            <template #soDienThoai="{ item }">
+              {{ item.khachHang?.soDienThoai || 'N/A' }}
+            </template>
+            
+            <template #loaiDon="{ item }">
+              <span v-if="item.loaiDon === 'online'" class="order-type-badge online-order">
+                <Icon icon="solar:global-bold-duotone" class="w-3 h-3 mr-1" />
+                Online
+              </span>
+              <span v-else class="order-type-badge offline-order">
+                <Icon icon="solar:shop-bold-duotone" class="w-3 h-3 mr-1" />
+                Trực tiếp
+              </span>
+            </template>
+            
+            <template #phiVanChuyen="{ item }">
+              <span class="font-medium text-gray-800 dark:text-gray-100">{{ formatCurrency(item.phiVanChuyen) }}</span>
+            </template>
+            
+            <template #ngayTao="{ item }">
+              {{ formatDate(item.ngayTao) }}
+            </template>
+            
+            <template #tongTien="{ item }">
+              <span class="font-bold text-gray-800 dark:text-gray-100">{{ formatCurrency(item.tongTienThanhToan) }}</span>
+            </template>
+            
+            <template #trangThai="{ item }">
+              <span :class="getStatusColor(item.trangThai?.id)">
+                {{ getStatusText(item.trangThai?.id) }}
+              </span>
+            </template>
+            
+            <template #actions="{ item }">
+              <div class="flex justify-center gap-2">
+                <router-link
+                  :to="{ name: 'HoaDonChiTiet', params: { id: item.id } }"
+                  class="inline-flex items-center justify-center w-9 h-9 rounded-full bg-blue-100/70 dark:bg-blue-900/70 text-blue-600 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors duration-200 shadow-sm hover:shadow-md"
+                  title="Xem chi tiết"
+                >
+                  <Icon icon="solar:eye-bold" class="text-xl" />
+                </router-link>
+                <button
+                  @click="printInvoicePDF(item)"
+                  class="inline-flex items-center justify-center w-9 h-9 rounded-full bg-green-100/70 dark:bg-green-900/70 text-green-600 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800 transition-colors duration-200 shadow-sm hover:shadow-md"
+                  title="In hóa đơn PDF"
+                >
+                  <Icon icon="solar:printer-bold" class="text-xl" />
+                </button>
+                <button
+                  @click="downloadQRCode(item)"
+                  class="inline-flex items-center justify-center w-9 h-9 rounded-full bg-purple-100/70 dark:bg-purple-900/70 text-purple-600 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-800 transition-colors duration-200 shadow-sm hover:shadow-md"
+                  title="Tải mã QR hóa đơn"
+                >
+                  <Icon icon="solar:qr-code-bold" class="text-xl" />
+                </button>
+              </div>
+            </template>
+          </DataTable>
         </div>
       </div>
     </div>
@@ -669,7 +924,6 @@ watch(allInvoices, () => {
               <option value="9">Đang vận chuyển</option>
               <option value="21">Đã hoàn thành</option>
               <option value="22">Đã hủy</option>
-              <option value="23">Hoàn 1 phần</option>
             </select>
           </div>
           <div class="flex gap-3 mt-6">
@@ -678,8 +932,7 @@ watch(allInvoices, () => {
               :disabled="isUpdating"
               class="btn-primary px-6 py-3 rounded-xl bg-emerald-500 text-white hover:bg-emerald-600 transition duration-300 shadow-lg hover:shadow-xl flex-1 flex items-center justify-center"
             >
-              <span v-if="isUpdating" class="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></span>
-              {{ isUpdating ? 'Đang lưu...' : 'Lưu' }}
+  Lưu
             </button>
             <button
               type="button"
@@ -707,8 +960,7 @@ watch(allInvoices, () => {
             :disabled="isDeleting"
             class="btn-primary px-6 py-3 rounded-xl bg-red-500 text-white hover:bg-red-600 transition duration-300 shadow-lg hover:shadow-xl flex-1 flex items-center justify-center"
           >
-            <span v-if="isDeleting" class="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></span>
-            {{ isDeleting ? 'Đang xóa...' : 'Xóa' }}
+Xóa
           </button>
           <button
             type="button"
@@ -946,8 +1198,113 @@ watch(allInvoices, () => {
   }
 }
 
+/* Filter Section Styling */
+.filter-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.filter-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+.reset-filter-btn {
+  padding: 10px 16px;
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+}
+
+.reset-filter-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(107, 114, 128, 0.3);
+}
+
+.filter-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.filter-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.filter-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 0.25rem;
+}
+
+.filter-input,
+.filter-select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #1f2937;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.filter-input:focus,
+.filter-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.dark .section-header {
+  border-bottom-color: #4b5563;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1a202c;
+  margin: 0;
+}
+
 @media (max-width: 640px) {
-  .filter-group {
+  .filter-row {
     grid-template-columns: 1fr;
   }
   .table th,
@@ -971,5 +1328,43 @@ watch(allInvoices, () => {
     width: 100%;
     margin-bottom: 8px;
   }
+}
+
+/* Order Type Badge Styles */
+.order-type-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.online-order {
+  background: #dbeafe;
+  color: #1e40af;
+  border: 1px solid #93c5fd;
+}
+
+.online-order:hover {
+  background: #bfdbfe;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+}
+
+.offline-order {
+  background: #d1fae5;
+  color: #065f46;
+  border: 1px solid #86efac;
+}
+
+.offline-order:hover {
+  background: #bbf7d0;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
 }
 </style>

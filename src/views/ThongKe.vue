@@ -115,47 +115,41 @@
           </h3>
           <button class="view-all-btn">Xem tất cả</button>
         </div>
-        <div class="table-container">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Sản Phẩm</th>
-                <th>Danh Mục</th>
-                <th>Đã Bán</th>
-                <th>Doanh Thu</th>
-                <th>Tăng Trưởng</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="product in topProducts" :key="product.id">
-                <td>
-                  <div class="product-info">
-                    <div class="product-image">
-                      <img :src="product.image" :alt="product.name" />
-                    </div>
-                    <div class="product-details">
-                      <span class="product-name">{{ product.name }}</span>
-                      <span class="product-sku">{{ product.sku }}</span>
-                    </div>
-                  </div>
-                </td>
-                <td>
-                  <span class="category-badge" :class="getCategoryClass(product.category)">
-                    {{ product.category }}
-                  </span>
-                </td>
-                <td class="sold-count">{{ product.sold.toLocaleString() }}</td>
-                <td class="revenue-amount">{{ formatCurrency(product.revenue) }}</td>
-                <td>
-                  <div class="growth-indicator" :class="product.growth >= 0 ? 'positive' : 'negative'">
-                    <iconify-icon :icon="product.growth >= 0 ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'"></iconify-icon>
-                    <span>{{ Math.abs(product.growth) }}%</span>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <DataTable 
+          :data="topProducts" 
+          :columns="productColumns"
+          item-label="sản phẩm"
+          empty-message="Không có sản phẩm nào."
+        >
+          <template #product="{ item }">
+            <div class="product-info">
+              <div class="product-image">
+                <img :src="item.image" :alt="item.name" />
+              </div>
+              <div class="product-details">
+                <span class="product-name">{{ item.name }}</span>
+                <span class="product-sku">{{ item.sku }}</span>
+              </div>
+            </div>
+          </template>
+          <template #category="{ item }">
+            <span class="category-badge" :class="getCategoryClass(item.category)">
+              {{ item.category }}
+            </span>
+          </template>
+          <template #sold="{ item }">
+            <span class="sold-count">{{ item.sold.toLocaleString() }}</span>
+          </template>
+          <template #revenue="{ item }">
+            <span class="revenue-amount">{{ formatCurrency(item.revenue) }}</span>
+          </template>
+          <template #growth="{ item }">
+            <div class="growth-indicator" :class="item.growth >= 0 ? 'positive' : 'negative'">
+              <iconify-icon :icon="item.growth >= 0 ? 'solar:arrow-up-bold' : 'solar:arrow-down-bold'"></iconify-icon>
+              <span>{{ Math.abs(item.growth) }}%</span>
+            </div>
+          </template>
+        </DataTable>
       </div>
 
       <!-- Recent Orders -->
@@ -167,78 +161,41 @@
           </h3>
           <button class="view-all-btn">Xem tất cả</button>
         </div>
-        <div class="table-container">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Mã Đơn</th>
-                <th>Khách Hàng</th>
-                <th>Sản Phẩm</th>
-                <th>Tổng Tiền</th>
-                <th>Trạng Thái</th>
-                <th>Ngày Tạo</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="order in recentOrders" :key="order.id">
-                <td class="order-code">{{ order.code }}</td>
-                <td>
-                  <div class="customer-info">
-                    <div class="customer-avatar">
-                      <img :src="order.customer.avatar" :alt="order.customer.name" />
-                    </div>
-                    <span class="customer-name">{{ order.customer.name }}</span>
-                  </div>
-                </td>
-                <td class="product-count">{{ order.productCount }} sản phẩm</td>
-                <td class="order-total">{{ formatCurrency(order.total) }}</td>
-                <td>
-                  <span class="status-badge" :class="getStatusClass(order.status)">
-                    {{ order.status }}
-                  </span>
-                </td>
-                <td class="order-date">{{ formatDate(order.createdAt) }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <DataTable 
+          :data="recentOrders" 
+          :columns="orderColumns"
+          item-label="đơn hàng"
+          empty-message="Không có đơn hàng nào."
+        >
+          <template #code="{ item }">
+            <span class="order-code">{{ item.code }}</span>
+          </template>
+          <template #customer="{ item }">
+            <div class="customer-info">
+              <div class="customer-avatar">
+                <img :src="item.customer.avatar" :alt="item.customer.name" />
+              </div>
+              <span class="customer-name">{{ item.customer.name }}</span>
+            </div>
+          </template>
+          <template #productCount="{ item }">
+            <span class="product-count">{{ item.productCount }} sản phẩm</span>
+          </template>
+          <template #total="{ item }">
+            <span class="order-total">{{ formatCurrency(item.total) }}</span>
+          </template>
+          <template #status="{ item }">
+            <span class="status-badge" :class="getStatusClass(item.status)">
+              {{ item.status }}
+            </span>
+          </template>
+          <template #createdAt="{ item }">
+            <span class="order-date">{{ formatDate(item.createdAt) }}</span>
+          </template>
+        </DataTable>
       </div>
     </div>
 
-    <!-- Quick Stats -->
-    <div class="quick-stats">
-      <div class="quick-stat-card">
-        <iconify-icon icon="solar:eye-bold-duotone" class="stat-icon"></iconify-icon>
-        <div class="stat-info">
-          <span class="stat-value">{{ stats.pageViews.toLocaleString() }}</span>
-          <span class="stat-label">Lượt xem</span>
-        </div>
-      </div>
-      
-      <div class="quick-stat-card">
-        <iconify-icon icon="solar:cart-check-bold-duotone" class="stat-icon"></iconify-icon>
-        <div class="stat-info">
-          <span class="stat-value">{{ stats.conversionRate }}%</span>
-          <span class="stat-label">Tỷ lệ chuyển đổi</span>
-        </div>
-      </div>
-      
-      <div class="quick-stat-card">
-        <iconify-icon icon="solar:clock-circle-bold-duotone" class="stat-icon"></iconify-icon>
-        <div class="stat-info">
-          <span class="stat-value">{{ stats.avgOrderTime }}</span>
-          <span class="stat-label">Thời gian đặt hàng TB</span>
-        </div>
-      </div>
-      
-      <div class="quick-stat-card">
-        <iconify-icon icon="solar:star-bold-duotone" class="stat-icon"></iconify-icon>
-        <div class="stat-info">
-          <span class="stat-value">{{ stats.customerRating }}/5</span>
-          <span class="stat-label">Đánh giá TB</span>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -246,11 +203,13 @@
 import { ref, onMounted, nextTick } from 'vue'
 import Chart from 'chart.js/auto'
 import Breadcrumb from '@/components/Breadcrumb.vue'
+import DataTable from '@/components/DataTable.vue'
 
 export default {
   name: 'ShoeDashboard',
   components: {
-    Breadcrumb
+    Breadcrumb,
+    DataTable
   },
   setup() {
     const selectedTimeRange = ref('30')
@@ -267,13 +226,11 @@ export default {
     const breadcrumbActions = ref([
       {
         label: 'Xuất báo cáo',
-        icon: 'solar:download-bold-duotone',
         type: 'primary',
         handler: () => exportReport()
       },
       {
         label: 'Làm mới',
-        icon: 'solar:refresh-bold-duotone',
         type: 'default',
         handler: () => updateData()
       }
@@ -297,16 +254,30 @@ export default {
       }
     ])
 
+    // Column definitions
+    const productColumns = ref([
+      { key: 'product', label: 'Sản Phẩm', class: 'product-col' },
+      { key: 'category', label: 'Danh Mục', class: 'category-col' },
+      { key: 'sold', label: 'Đã Bán', class: 'sold-col' },
+      { key: 'revenue', label: 'Doanh Thu', class: 'revenue-col' },
+      { key: 'growth', label: 'Tăng Trưởng', class: 'growth-col' }
+    ])
+
+    const orderColumns = ref([
+      { key: 'code', label: 'Mã Đơn', class: 'code-col' },
+      { key: 'customer', label: 'Khách Hàng', class: 'customer-col' },
+      { key: 'productCount', label: 'Sản Phẩm', class: 'product-count-col' },
+      { key: 'total', label: 'Tổng Tiền', class: 'total-col' },
+      { key: 'status', label: 'Trạng Thái', class: 'status-col' },
+      { key: 'createdAt', label: 'Ngày Tạo', class: 'date-col' }
+    ])
+
     // Fake data
     const stats = ref({
       totalRevenue: 2850000000,
       totalOrders: 15420,
       totalCustomers: 8934,
-      totalProducts: 256,
-      pageViews: 125480,
-      conversionRate: 3.4,
-      avgOrderTime: '2.3 phút',
-      customerRating: 4.7
+      totalProducts: 256
     })
 
     const topProducts = ref([
@@ -584,6 +555,8 @@ export default {
       stats,
       topProducts,
       recentOrders,
+      productColumns,
+      orderColumns,
       revenueChart,
       categoryChart,
       breadcrumbItems,
@@ -660,6 +633,7 @@ export default {
 .products-card {
   --accent-color: #dc3545;
 }
+
 
 .card-icon {
   font-size: 3rem;
@@ -1153,53 +1127,6 @@ export default {
   white-space: nowrap;
 }
 
-/* ===== QUICK STATS ===== */
-.quick-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
-  margin-bottom: 32px;
-}
-
-.quick-stat-card {
-  background: white;
-  border-radius: 16px;
-  padding: 20px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
-}
-
-.quick-stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-}
-
-.stat-icon {
-  font-size: 2rem;
-  color: #007bff;
-  opacity: 0.8;
-}
-
-.stat-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.stat-value {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #1a202c;
-}
-
-.stat-label {
-  font-size: 0.85rem;
-  color: #64748b;
-  font-weight: 500;
-}
 
 /* ===== DARK THEME ===== */
 .dark .dashboard-container {
@@ -1209,8 +1136,7 @@ export default {
 
 .dark .stat-card,
 .dark .chart-card,
-.dark .table-card,
-.dark .quick-stat-card {
+.dark .table-card {
   background: #1e293b;
   border: 1px solid #334155;
 }
@@ -1221,7 +1147,6 @@ export default {
 .dark .product-name,
 .dark .customer-name,
 .dark .order-code,
-.dark .stat-value,
 .dark .sold-count {
   color: #f1f5f9;
 }
@@ -1229,8 +1154,7 @@ export default {
 .dark .card-label,
 .dark .product-sku,
 .dark .product-count,
-.dark .order-date,
-.dark .stat-label {
+.dark .order-date {
   color: #94a3b8;
 }
 
@@ -1414,9 +1338,6 @@ export default {
     grid-template-columns: 1fr;
   }
   
-  .quick-stats {
-    grid-template-columns: repeat(2, 1fr);
-  }
   
   .revenue-chart-container,
   .category-chart-container {
@@ -1528,9 +1449,6 @@ export default {
     font-size: 0.85rem;
   }
   
-  .quick-stats {
-    grid-template-columns: 1fr;
-  }
   
   .stat-card {
     padding: 20px;

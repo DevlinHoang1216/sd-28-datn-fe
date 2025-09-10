@@ -19,7 +19,6 @@
           Bộ Lọc Hãng
         </h3>
         <button class="reset-filter-btn" @click="resetFilters">
-          <iconify-icon icon="solar:refresh-bold-duotone"></iconify-icon>
           Đặt lại bộ lọc
         </button>
       </div>
@@ -285,13 +284,11 @@ export default {
     const breadcrumbActions = ref([
       {
         label: 'Thêm hãng',
-        icon: 'solar:add-circle-bold-duotone',
         type: 'primary',
         handler: () => showAddBrandModal.value = true
       },
       {
         label: 'Xuất Excel',
-        icon: 'solar:file-download-bold-duotone',
         type: 'default',
         handler: () => exportToExcel()
       }
@@ -569,17 +566,18 @@ export default {
 }
 
 .reset-filter-btn {
+  padding: 10px 16px;
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
-  color: white;
-  border: none;
-  border-radius: 12px;
-  padding: 12px 20px;
-  font-weight: 600;
-  transition: all 0.3s ease;
-  cursor: pointer;
+  gap: 6px;
+  font-size: 0.9rem;
 }
 
 .reset-filter-btn:hover {

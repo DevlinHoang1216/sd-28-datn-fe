@@ -6,22 +6,18 @@
           <ol class="breadcrumb-list">
             <li class="breadcrumb-item">
               <router-link to="/dashboard" class="breadcrumb-link home-link">
-                <iconify-icon icon="solar:home-smile-outline" class="breadcrumb-icon"></iconify-icon>
                 <span class="breadcrumb-text">Trang chủ</span>
               </router-link>
             </li>
             <li v-for="(item, index) in breadcrumbItems" :key="index" class="breadcrumb-item">
-              <iconify-icon icon="solar:alt-arrow-right-outline" class="breadcrumb-separator"></iconify-icon>
               <router-link 
                 v-if="item.path && index !== breadcrumbItems.length - 1"
                 :to="item.path" 
                 class="breadcrumb-link"
               >
-                <iconify-icon v-if="item.icon" :icon="item.icon" class="breadcrumb-icon"></iconify-icon>
                 <span class="breadcrumb-text">{{ item.label }}</span>
               </router-link>
               <span v-else class="breadcrumb-current">
-                <iconify-icon v-if="item.icon" :icon="item.icon" class="breadcrumb-icon"></iconify-icon>
                 <span class="breadcrumb-text">{{ item.label }}</span>
               </span>
             </li>
@@ -203,11 +199,6 @@
     font-size: 14px;
     font-weight: 600;
     white-space: nowrap;
-  }
-  
-  .breadcrumb-icon {
-    font-size: 16px;
-    flex-shrink: 0;
   }
   
   .breadcrumb-text {

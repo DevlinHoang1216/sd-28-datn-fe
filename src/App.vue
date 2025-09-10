@@ -55,24 +55,6 @@ onMounted(() => {
   if (isDarkTheme.value) {
     document.body.classList.add('dark')
   }
-  
-  // Remove any existing chatbot elements
-  const removeChatbot = () => {
-    const chatbotElements = document.querySelectorAll('[id*="tudong"], [class*="tudong"], [id*="chatbox"], [class*="chatbox"], [class*="chat"]')
-    chatbotElements.forEach(el => {
-      if (el.style.position === 'fixed' || el.style.zIndex > 1000) {
-        el.remove()
-      }
-    })
-    
-    const chatbotScripts = document.querySelectorAll('script[src*="tudongchat"], script[src*="chatbox"]')
-    chatbotScripts.forEach(el => el.remove())
-  }
-  
-  // Run cleanup immediately and after a delay
-  removeChatbot()
-  setTimeout(removeChatbot, 1000)
-  setTimeout(removeChatbot, 3000)
 })
 
 // Cart and favorites management
