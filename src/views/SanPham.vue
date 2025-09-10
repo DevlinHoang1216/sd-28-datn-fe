@@ -120,10 +120,10 @@
             <div class="product-image">
               <img :src="product.image" :alt="product.name" />
               <div class="product-overlay">
-                <button class="overlay-btn edit" @click.stop="editProduct(product)">
+                <button class="action-btn edit" @click.stop="editProduct(product)">
                   <iconify-icon icon="solar:pen-bold"></iconify-icon>
                 </button>
-                <button class="overlay-btn delete" @click.stop="deleteProduct(product)">
+                <button class="action-btn delete" @click.stop="deleteProduct(product)">
                   <iconify-icon icon="solar:trash-bin-trash-bold"></iconify-icon>
                 </button>
               </div>
@@ -1413,34 +1413,6 @@ export default {
   opacity: 1;
 }
 
-.overlay-btn {
-  width: 36px;
-  height: 36px;
-  border: none;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 14px;
-  backdrop-filter: blur(10px);
-}
-
-.overlay-btn.edit {
-  background: rgba(16, 185, 129, 0.9);
-  color: white;
-}
-
-.overlay-btn.delete {
-  background: rgba(220, 38, 38, 0.9);
-  color: white;
-}
-
-.overlay-btn:hover {
-  transform: scale(1.1);
-}
-
 .product-status {
   position: absolute;
   top: 8px;
@@ -2445,7 +2417,6 @@ export default {
 .form-textarea:focus,
 .btn:focus,
 .action-btn:focus,
-.overlay-btn:focus,
 .pagination-btn:focus {
   outline: 2px solid #007bff;
   outline-offset: 2px;

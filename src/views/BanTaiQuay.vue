@@ -1515,7 +1515,7 @@ export default {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+  background: #6b7280;
   color: white;
   border: none;
   border-radius: 10px;
