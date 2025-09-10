@@ -1,133 +1,240 @@
+```vue
 <template>
-  <div class="container-fluid py-5">
-    <h1 class="fs-4 fw-bold text-primary mb-5 text-center">Thêm Phiếu Giảm Giá Mới</h1>
+  <div class="coupon-add-container">
+    <!-- Breadcrumb -->
+    <Breadcrumb
+      :items="breadcrumbItems"
+      :show-page-info="true"
+      page-title="Thêm Phiếu Giảm Giá Mới"
+      page-description="Tạo phiếu giảm giá mới cho hệ thống bán hàng"
+      page-icon="solar:ticket-bold-duotone"
+      :page-stats="pageStats"
+      :actions="breadcrumbActions"
+    />
 
-    <div class="card shadow-sm border-0 p-4">
-      <div class="loading-spinner" v-if="loading"></div>
-      <div :class="{ 'loading-overlay': loading }">
-        <!-- Mã phiếu -->
-        <div class="mb-4">
-          <label class="form-label fw-semibold">Mã phiếu giảm giá</label>
-          <div class="d-flex align-items-center gap-3">
-            <CFormInput v-model="coupon.maPhieuGiamGia" type="text" class="custom-input" />
-            <CButton class="btn-outline-secondary" @click="generateCode">Tự sinh</CButton>
+    <!-- Main Content -->
+    <div class="main-content">
+      <!-- Left Panel - Coupon Form -->
+      <div class="left-panel">
+        <div class="card shadow-sm">
+          <div class="loading-spinner" v-if="loading"></div>
+          <div class="card-content" :class="{ 'loading-overlay': loading }">
+            <!-- Coupon Code -->
+            <div class="form-group">
+              <label class="form-label">Mã phiếu giảm giá</label>
+              <div class="input-group">
+                <input
+                  v-model="coupon.maPhieuGiamGia"
+                  type="text"
+                  class="form-input"
+                  placeholder="Nhập mã phiếu giảm giá"
+                />
+                <button class="action-btn secondary" @click="generateCode">
+                  <iconify-icon icon="solar:refresh-bold-duotone"></iconify-icon>
+                  Tự sinh
+                </button>
+              </div>
+            </div>
+
+            <!-- Coupon Name -->
+            <div class="form-group">
+              <label class="form-label">Tên phiếu giảm giá</label>
+              <input
+                v-model="coupon.tenPhieuGiamGia"
+                type="text"
+                class="form-input"
+                placeholder="Nhập tên phiếu giảm giá"
+              />
+            </div>
+
+            <!-- Discount Type -->
+            <div class="form-group">
+              <label class="form-label">Loại giảm giá</label>
+              <select
+                v-model="coupon.loaiGiamGia"
+                class="form-input"
+                @change="handleLoaiGiamGiaChange"
+              >
+                <option disabled value="">-- Chọn --</option>
+                <option value="PHAN_TRAM">Phần trăm</option>
+                <option value="SO_TIEN_CO_DINH">Số tiền cố định</option>
+              </select>
+            </div>
+
+            <!-- Discount Value -->
+            <div class="form-group">
+              <label class="form-label">{{ labelGiaTriGiam }}</label>
+              <input
+                v-model.number="coupon.giaTriGiam"
+                type="number"
+                class="form-input"
+                placeholder="Nhập giá trị giảm"
+              />
+            </div>
+
+            <!-- Maximum Discount (for Percentage) -->
+            <div class="form-group" v-if="coupon.loaiGiamGia === 'PHAN_TRAM'">
+              <label class="form-label">Số tiền giảm tối đa</label>
+              <input
+                v-model.number="coupon.soTienGiamToiDa"
+                type="number"
+                class="form-input"
+                placeholder="Nhập số tiền giảm tối đa"
+              />
+            </div>
+
+            <!-- Minimum Invoice Amount -->
+            <div class="form-group">
+              <label class="form-label">Hóa đơn tối thiểu</label>
+              <input
+                v-model.number="coupon.hoaDonToiThieu"
+                type="number"
+                class="form-input"
+                placeholder="Nhập giá trị hóa đơn tối thiểu"
+              />
+            </div>
+
+            <!-- Start Date -->
+            <div class="form-group">
+              <label class="form-label">Ngày bắt đầu</label>
+              <input
+                v-model="coupon.ngayBatDau"
+                type="datetime-local"
+                class="form-input"
+              />
+            </div>
+
+            <!-- End Date -->
+            <div class="form-group">
+              <label class="form-label">Ngày kết thúc</label>
+              <input
+                v-model="coupon.ngayKetThuc"
+                type="datetime-local"
+                class="form-input"
+              />
+            </div>
+
+            <!-- Private Coupon Checkbox -->
+            <div class="form-group">
+              <label class="form-label">Riêng tư</label>
+              <div class="checkbox-group">
+                <input
+                  type="checkbox"
+                  v-model="coupon.isPrivate"
+                  id="private-coupon"
+                  @change="handlePrivateCouponChange"
+                />
+                <label for="private-coupon" class="checkbox-label">
+                  Áp dụng cho khách hàng cụ thể
+                </label>
+              </div>
+            </div>
+
+            <!-- Submit Button -->
+            <button class="submit-btn primary" @click="submitForm">
+              <iconify-icon icon="solar:check-circle-bold-duotone"></iconify-icon>
+              Thêm Phiếu Giảm Giá
+            </button>
           </div>
         </div>
+      </div>
 
-        <!-- Tên phiếu -->
-        <div class="mb-4">
-          <label class="form-label fw-semibold">Tên phiếu giảm giá</label>
-          <CFormInput v-model="coupon.tenPhieuGiamGia" type="text" class="custom-input" />
-        </div>
-
-        <!-- Loại giảm giá -->
-        <div class="mb-4">
-          <label class="form-label fw-semibold">Loại giảm giá</label>
-          <CFormSelect v-model="coupon.loaiGiamGia" class="custom-select" @change="handleLoaiGiamGiaChange">
-            <option disabled value="">-- Chọn --</option>
-            <option value="PHAN_TRAM">Phần trăm</option>
-            <option value="SO_TIEN_CO_DINH">Số tiền cố định</option>
-          </CFormSelect>
-        </div>
-
-        <!-- Giá trị giảm -->
-        <div class="mb-4">
-          <label class="form-label fw-semibold">{{ labelGiaTriGiam }}</label>
-          <CFormInput v-model.number="coupon.giaTriGiam" type="number" class="custom-input" />
-        </div>
-
-        <!-- Số tiền giảm tối đa -->
-        <div class="mb-4" v-if="coupon.loaiGiamGia === 'PHAN_TRAM'">
-          <label class="form-label fw-semibold">Số tiền giảm tối đa</label>
-          <CFormInput v-model.number="coupon.soTienGiamToiDa" type="number" class="custom-input" />
-        </div>
-
-        <!-- Hóa đơn tối thiểu -->
-        <div class="mb-4">
-          <label class="form-label fw-semibold">Hóa đơn tối thiểu</label>
-          <CFormInput v-model.number="coupon.hoaDonToiThieu" type="number" class="custom-input" />
-        </div>
-
-        <!-- Ngày bắt đầu -->
-        <div class="mb-4">
-          <label class="form-label fw-semibold">Ngày bắt đầu</label>
-          <CFormInput v-model="coupon.ngayBatDau" type="datetime-local" class="custom-input" />
-        </div>
-
-        <!-- Ngày kết thúc -->
-        <div class="mb-4">
-          <label class="form-label fw-semibold">Ngày kết thúc</label>
-          <CFormInput v-model="coupon.ngayKetThuc" type="datetime-local" class="custom-input" />
-        </div>
-
-        <!-- Loại áp dụng -->
-        <div class="mb-4">
-          <label class="form-label fw-semibold">Loại áp dụng</label>
-          <CFormSelect
-            v-model="coupon.loaiApDung"
-            class="custom-select"
-            @change="handleLoaiApDungChange($event)"
-          >
-            <option disabled value="">-- Chọn --</option>
-            <option value="TOAN_BO">Toàn bộ</option>
-            <option value="KH_CU_THE">Khách hàng cụ thể</option>
-          </CFormSelect>
-        </div>
-
-        <!-- Bảng khách hàng -->
-        <div v-if="showCustomerTable" class="mb-4">
-          <h5 class="fw-semibold mb-3">Chọn khách hàng áp dụng</h5>
-          <div class="table-container">
-            <table class="custom-table">
-              <thead>
-                <tr>
-                  <th class="text-center">Chọn</th>
-                  <th class="text-center">Tên khách hàng</th>
-                  <th class="text-center">Email</th>
-                  <th class="text-center">SĐT</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-if="customers.length === 0">
-                  <td colspan="4" class="text-center py-4">Không có khách hàng nào để hiển thị.</td>
-                </tr>
-                <tr v-for="kh in customers" :key="kh.id">
-                  <td class="text-center">
-                    <input type="checkbox" v-model="selectedCustomers" :value="kh.id" />
-                  </td>
-                  <td class="text-center">{{ kh.tenKhachHang }}</td>
-                  <td class="text-center">{{ kh.email }}</td>
-                  <td class="text-center">{{ kh.soDienThoai }}</td>
-                </tr>
-              </tbody>
-            </table>
+      <!-- Right Panel - Customer Table -->
+      <div class="right-panel">
+        <div class="card shadow-sm">
+          <div class="card-content" :class="{ 'disabled-overlay': !coupon.isPrivate }">
+            <h3 class="section-title">
+              <iconify-icon icon="solar:users-group-rounded-bold-duotone"></iconify-icon>
+              Chọn khách hàng áp dụng
+            </h3>
+            <div class="table-container">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th style="width: 60px;">Chọn</th>
+                    <th>Tên khách hàng</th>
+                    <th>Email</th>
+                    <th>SĐT</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-if="customers.length === 0">
+                    <td colspan="4" class="empty-message">Không có khách hàng nào để hiển thị.</td>
+                  </tr>
+                  <tr v-for="kh in customers" :key="kh.id">
+                    <td class="text-center">
+                      <input
+                        type="checkbox"
+                        v-model="selectedCustomers"
+                        :value="kh.id"
+                        :disabled="!coupon.isPrivate"
+                      />
+                    </td>
+                    <td>{{ kh.ten || 'N/A' }}</td>
+                    <td>{{ kh.taiKhoan?.email || 'N/A' }}</td>
+                    <td>{{ kh.taiKhoan?.soDienThoai || 'N/A' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
-
-        <!-- Nút submit -->
-        <CButton class="btn-primary w-100" @click="submitForm">Thêm Phiếu Giảm Giá</CButton>
       </div>
     </div>
   </div>
 </template>
 
 <script>
-import { CFormInput, CFormSelect, CButton } from '@coreui/vue';
+import { ref, computed } from 'vue';
 import axios from 'axios';
-import { inject } from 'vue';
+import { useToast } from 'vue-toastification';
 import { useRouter } from 'vue-router';
+import Breadcrumb from '@/components/Breadcrumb.vue';
 
 export default {
   name: 'CouponAdditionForm',
   components: {
-    CFormInput,
-    CFormSelect,
-    CButton,
+    Breadcrumb,
   },
   setup() {
-    const toast = inject('$toast');
+    const toast = useToast();
     const router = useRouter();
-    return { toast, router };
+
+    // Breadcrumb data
+    const breadcrumbItems = ref([
+      { label: 'Phiếu giảm giá', path: '/phieu-giam-gia' },
+      { label: 'Thêm mới', path: '/phieu-giam-gia/them-moi' },
+    ]);
+
+    const breadcrumbActions = ref([
+      {
+        label: 'Danh sách phiếu',
+        icon: 'solar:list-bold-duotone',
+        type: 'default',
+        handler: () => router.push('/phieu-giam-gia'),
+      },
+      {
+        label: 'Làm mới',
+        icon: 'solar:refresh-bold-duotone',
+        type: 'default',
+        handler: () => window.location.reload(),
+      },
+    ]);
+
+    const pageStats = ref([
+      {
+        value: '0',
+        label: 'Phiếu đang hoạt động',
+        icon: 'solar:ticket-bold-duotone',
+      },
+      {
+        value: '0',
+        label: 'Lượt sử dụng hôm nay',
+        icon: 'solar:cart-check-bold-duotone',
+      },
+    ]);
+
+    return { toast, router, breadcrumbItems, breadcrumbActions, pageStats };
   },
   data() {
     return {
@@ -140,51 +247,28 @@ export default {
         ngayBatDau: '',
         ngayKetThuc: '',
         loaiGiamGia: '',
-        loaiApDung: '',
+        isPrivate: false,
       },
       customers: [],
       selectedCustomers: [],
-      showCustomerTable: false,
       loading: false,
     };
   },
-  watch: {
-    'coupon.loaiApDung': {
-      immediate: true,
-      async handler(newVal) {
-        if (newVal === 'KH_CU_THE') {
-          this.showCustomerTable = true;
-          await this.fetchCustomers();
-        } else {
-          this.showCustomerTable = false;
-          this.selectedCustomers = [];
-        }
-      }
-    }
-  },
   computed: {
     labelGiaTriGiam() {
-      return this.coupon.loaiGiamGia === 'SO_TIEN_CO_DINH' ? 'Giá trị giảm (VND)' : 'Giá trị giảm (%)';
+      return this.coupon.loaiGiamGia === 'SO_TIEN_CO_DINH'
+        ? 'Giá trị giảm (VND)'
+        : 'Giá trị giảm (%)';
     },
   },
+  mounted() {
+    this.fetchCustomers();
+  },
   methods: {
-    // Hàm hiển thị thông báo an toàn
-    showToast(type, message) {
-      if (this.toast && typeof this.toast[type] === 'function') {
-        this.toast[type](message);
-      } else {
-        // Fallback khi toast không có sẵn
-        console.log(`[${type.toUpperCase()}]: ${message}`);
-        if (type === 'error') {
-          alert(`Lỗi: ${message}`);
-        } else if (type === 'success') {
-          alert(`Thành công: ${message}`);
-        }
-      }
-    },
-
     generateCode() {
-      this.coupon.maPhieuGiamGia = 'PGG-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+      this.coupon.maPhieuGiamGia =
+        'PGG-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+      this.toast.info('Đã tạo mã phiếu giảm giá mới!');
     },
 
     handleLoaiGiamGiaChange() {
@@ -193,12 +277,8 @@ export default {
       }
     },
 
-    async handleLoaiApDungChange() {
-      if (this.coupon.loaiApDung === 'KH_CU_THE') {
-        this.showCustomerTable = true;
-        await this.fetchCustomers();
-      } else {
-        this.showCustomerTable = false;
+    handlePrivateCouponChange() {
+      if (!this.coupon.isPrivate) {
         this.selectedCustomers = [];
       }
     },
@@ -208,9 +288,10 @@ export default {
       try {
         const res = await axios.get('/api/khach-hang');
         this.customers = Array.isArray(res.data) ? res.data : res.data.content || [];
+        this.toast.success(`Tải danh sách khách hàng thành công! (${this.customers.length} khách hàng)`);
       } catch (err) {
         console.error('Lỗi tải khách hàng:', err);
-        this.showToast('error', `Không thể tải danh sách khách hàng: ${err.message || 'Lỗi không xác định'}`);
+        this.toast.error(`Không thể tải danh sách khách hàng: ${err.message || 'Lỗi không xác định'}`);
       } finally {
         this.loading = false;
       }
@@ -218,43 +299,47 @@ export default {
 
     validateForm() {
       if (!this.coupon.maPhieuGiamGia.trim()) {
-        this.showToast('error', 'Mã phiếu giảm giá không được để trống!');
+        this.toast.error('Mã phiếu giảm giá không được để trống!');
         return false;
       }
       if (!this.coupon.tenPhieuGiamGia.trim()) {
-        this.showToast('error', 'Tên phiếu giảm giá không được để trống!');
+        this.toast.error('Tên phiếu giảm giá không được để trống!');
         return false;
       }
       if (!this.coupon.loaiGiamGia) {
-        this.showToast('error', 'Vui lòng chọn loại giảm giá!');
+        this.toast.error('Vui lòng chọn loại giảm giá!');
         return false;
       }
       if (this.coupon.loaiGiamGia === 'PHAN_TRAM') {
         if (!this.coupon.giaTriGiam || this.coupon.giaTriGiam <= 0 || this.coupon.giaTriGiam > 100) {
-          this.showToast('error', 'Giá trị giảm phải từ 1 đến 100 (%)!');
+          this.toast.error('Giá trị giảm phải từ 1 đến 100 (%)!');
           return false;
         }
         if (!this.coupon.soTienGiamToiDa || this.coupon.soTienGiamToiDa <= 0) {
-          this.showToast('error', 'Số tiền giảm tối đa phải lớn hơn 0!');
+          this.toast.error('Số tiền giảm tối đa phải lớn hơn 0!');
           return false;
         }
       }
       if (this.coupon.loaiGiamGia === 'SO_TIEN_CO_DINH') {
         if (!this.coupon.giaTriGiam || this.coupon.giaTriGiam <= 0) {
-          this.showToast('error', 'Giá trị giảm (VND) phải lớn hơn 0!');
+          this.toast.error('Giá trị giảm (VND) phải lớn hơn 0!');
           return false;
         }
       }
       if (this.coupon.hoaDonToiThieu !== null && this.coupon.hoaDonToiThieu < 0) {
-        this.showToast('error', 'Hóa đơn tối thiểu không được nhỏ hơn 0!');
+        this.toast.error('Hóa đơn tối thiểu không được nhỏ hơn 0!');
         return false;
       }
       if (!this.coupon.ngayBatDau || !this.coupon.ngayKetThuc) {
-        this.showToast('error', 'Vui lòng chọn ngày bắt đầu và ngày kết thúc!');
+        this.toast.error('Vui lòng chọn ngày bắt đầu và ngày kết thúc!');
         return false;
       }
       if (this.coupon.ngayBatDau >= this.coupon.ngayKetThuc) {
-        this.showToast('error', 'Ngày bắt đầu phải nhỏ hơn ngày kết thúc!');
+        this.toast.error('Ngày bắt đầu phải nhỏ hơn ngày kết thúc!');
+        return false;
+      }
+      if (this.coupon.isPrivate && this.selectedCustomers.length === 0) {
+        this.toast.error('Vui lòng chọn ít nhất một khách hàng khi phiếu giảm giá là riêng tư!');
         return false;
       }
       return true;
@@ -262,7 +347,7 @@ export default {
 
     async submitForm() {
       if (!this.validateForm()) return;
-      
+
       this.loading = true;
       try {
         const formatDateTime = (dt) => (dt ? dt + ':00' : null);
@@ -270,12 +355,12 @@ export default {
           ...this.coupon,
           ngayBatDau: formatDateTime(this.coupon.ngayBatDau),
           ngayKetThuc: formatDateTime(this.coupon.ngayKetThuc),
-          customerIds: this.selectedCustomers,
+          customerIds: this.coupon.isPrivate ? this.selectedCustomers : [],
         };
-        
+
         const res = await axios.post('/api/phieu-giam-gia/create', dataToSend);
         if (res.status === 201) {
-          this.showToast('success', 'Thêm phiếu giảm giá thành công!');
+          this.toast.success('Thêm phiếu giảm giá thành công!');
           this.router.push({ name: 'PhieuGiamGia' });
         }
       } catch (err) {
@@ -283,7 +368,7 @@ export default {
         if (err.response && err.response.data && err.response.data.message) {
           errorMessage = err.response.data.message;
         }
-        this.showToast('error', errorMessage);
+        this.toast.error(errorMessage);
         console.error('Lỗi thêm phiếu:', err.response || err);
       } finally {
         this.loading = false;
@@ -294,109 +379,219 @@ export default {
 </script>
 
 <style scoped>
-.container-fluid {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  background-color: #f5f7fb;
+/* ===== GENERAL STYLES ===== */
+.coupon-add-container {
+  padding: 24px;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   min-height: 100vh;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
+/* ===== MAIN CONTENT ===== */
+.main-content {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+}
+
+/* ===== LEFT PANEL ===== */
+.left-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ===== RIGHT PANEL ===== */
+.right-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ===== CARD STYLES ===== */
 .card {
-  border-radius: 12px;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.08);
-  border: none;
-  background-color: #ffffff;
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
 }
 
-.text-primary {
-  color: #0052cc !important;
+.card-content {
+  padding: 28px;
+}
+
+/* ===== FORM STYLES ===== */
+.form-group {
+  margin-bottom: 20px;
 }
 
 .form-label {
+  display: block;
   font-weight: 600;
   color: #374151;
+  margin-bottom: 8px;
+  font-size: 0.95rem;
 }
 
-.custom-input,
-.custom-select {
-  border-radius: 8px;
+.form-input {
+  width: 100%;
+  padding: 12px 16px;
   border: 1px solid #d1d5db;
-  padding: 0.75rem 1rem;
-  font-size: 0.9rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
   transition: all 0.2s ease;
+  background: white;
 }
 
-.custom-input:focus,
-.custom-select:focus {
-  border-color: #0052cc;
-  box-shadow: 0 0 0 3px rgba(0, 82, 204, 0.1);
+.form-input:focus {
   outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
 }
 
-.btn-primary {
-  background-color: #0052cc;
-  border-color: #0052cc;
-  border-radius: 8px;
-  padding: 0.75rem 1.5rem;
+.input-group {
+  display: flex;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 16px;
   font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
   transition: all 0.2s ease;
+  width: 100%;
 }
 
-.btn-primary:hover {
-  background-color: #003d99;
-  border-color: #003d99;
+.action-btn.secondary {
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
 }
 
-.btn-outline-secondary {
-  border-color: #d1d5db;
+.action-btn.secondary:hover {
+  background: #e2e8f0;
   color: #374151;
-  border-radius: 8px;
-  padding: 0.75rem 1.5rem;
-  font-weight: 600;
-  transition: all 0.2s ease;
 }
 
-.btn-outline-secondary:hover {
-  background-color: #f3f4f6;
-  border-color: #d1d5db;
+/* ===== CHECKBOX STYLES ===== */
+.checkbox-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.checkbox-label {
+  font-size: 0.95rem;
+  color: #374151;
+  cursor: pointer;
+}
+
+input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+input[type="checkbox"]:checked {
+  background: #007bff;
+  border-color: #007bff;
+}
+
+input[type="checkbox"]:disabled {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+  cursor: not-allowed;
+}
+
+/* ===== CUSTOMER TABLE SECTION ===== */
+.section-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1a202c;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 20px;
 }
 
 .table-container {
-  position: relative;
   overflow-x: auto;
-  border-radius: 8px;
-  background-color: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
 }
 
-.custom-table {
+.data-table {
   width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
+  border-collapse: collapse;
 }
 
-.custom-table th,
-.custom-table td {
-  padding: 1rem;
-  vertical-align: middle;
-  border-bottom: 1px solid #e5e7eb;
-  font-size: 0.9rem;
-}
-
-.custom-table th {
-  background-color: #0052cc;
-  color: #ffffff;
-  text-align: center;
+.data-table th {
+  background: #f8fafc;
+  padding: 16px 12px;
+  text-align: left;
   font-weight: 600;
-  white-space: nowrap;
+  color: #64748b;
+  font-size: 0.875rem;
+  border-bottom: 1px solid #e2e8f0;
 }
 
-.custom-table tbody tr:hover {
-  background-color: #f9fafb;
+.data-table td {
+  padding: 16px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
 }
 
-.custom-table tbody tr:last-child td {
-  border-bottom: none;
+.data-table tbody tr:hover {
+  background: #f8fafc;
 }
 
+.empty-message {
+  text-align: center;
+  color: #64748b;
+  font-style: italic;
+  padding: 40px 20px;
+}
+
+/* ===== DISABLED OVERLAY ===== */
+.disabled-overlay {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* ===== SUBMIT BUTTON ===== */
+.submit-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 16px 24px;
+  font-weight: 700;
+  font-size: 1.05rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.submit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 123, 255, 0.3);
+}
+
+/* ===== LOADING STYLES ===== */
 .loading-overlay {
   opacity: 0.5;
   pointer-events: none;
@@ -409,7 +604,7 @@ export default {
   transform: translate(-50%, -50%);
   z-index: 10;
   border: 4px solid #f3f3f3;
-  border-top: 4px solid #0052cc;
+  border-top: 4px solid #007bff;
   border-radius: 50%;
   width: 40px;
   height: 40px;
@@ -417,39 +612,71 @@ export default {
 }
 
 @keyframes spin {
-  0% { transform: translate(-50%, -50%) rotate(0deg); }
-  100% { transform: translate(-50%, -50%) rotate(360deg); }
+  0% {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+/* ===== RESPONSIVE DESIGN ===== */
+@media (max-width: 1024px) {
+  .main-content {
+    grid-template-columns: 1fr;
+  }
+
+  .right-panel {
+    margin-top: 24px;
+  }
 }
 
 @media (max-width: 768px) {
-  .container-fluid {
-    padding: 1rem;
+  .coupon-add-container {
+    padding: 16px;
   }
 
-  .card {
-    padding: 1rem;
+  .card-content {
+    padding: 20px;
   }
 
-  h1 {
-    font-size: 1.5rem;
+  .input-group {
+    flex-direction: column;
   }
 
-  .custom-input,
-  .custom-select {
-    padding: 0.5rem 0.75rem;
+  .action-btn {
+    width: 100%;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 8px 6px;
     font-size: 0.85rem;
   }
 
-  .btn-primary,
-  .btn-outline-secondary {
-    padding: 0.5rem 1rem;
-    font-size: 0.85rem;
+  .section-title {
+    font-size: 1.1rem;
   }
 
-  .custom-table th,
-  .custom-table td {
-    padding: 0.5rem;
-    font-size: 0.8rem;
+  .submit-btn {
+    padding: 12px 16px;
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .form-label {
+    font-size: 0.9rem;
+  }
+
+  .form-input {
+    padding: 10px 12px;
+    font-size: 0.9rem;
+  }
+
+  .checkbox-label {
+    font-size: 0.9rem;
   }
 }
 </style>
+```
