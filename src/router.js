@@ -1,15 +1,15 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 
 // Main views
-import Dashboard from './views/Dashboard.vue'
+import ThongKe from './views/ThongKe.vue'
 import HoaDon from './views/HoaDon.vue'
 import PhieuGiamGia from './views/PhieuGiamGia.vue'
 import DotGiamGia from './views/DotGiamGia.vue'
 import BanTaiQuay from './views/BanTaiQuay.vue'
-import QuanLySanPham from './views/QuanLySanPham.vue'
+import SanPham from './views/SanPham.vue'
 import NhanVien from './views/NhanVien.vue'
 import KhachHang from './views/KhachHang.vue'
-import InvoiceDetail from './views/InvoiceDetail.vue'
+import HoaDonChiTiet from './views/HoaDonChiTiet.vue'
 
 // Attribute management views
 import HangPage from './views/attributes/Hang.vue'
@@ -23,29 +23,29 @@ import EditDotGiamGia from './views/DotGiamGia/EditDotGiamGia.vue'
 
 const routes = [
   // Main routes
-  { path: '/', name: 'Home', redirect: '/dashboard' },
-  { path: '/dashboard', name: 'Dashboard', component: Dashboard },
+  { path: '/', name: 'Home', redirect: '/thong-ke' },
+  { path: '/thong-ke', name: 'ThongKe', component: ThongKe },
   
   // Product management routes
   {
-    path: '/quan-ly-san-pham',
-    name: 'QuanLySanPham',
-    component: QuanLySanPham
+    path: '/san-pham',
+    name: 'SanPham',
+    component: SanPham
   },
   {
-    path: '/quan-ly-san-pham/chi-tiet-san-pham',
+    path: '/san-pham/chi-tiet-san-pham',
     name: 'SanPhamChiTiet',
     component: () => import('./views/products-manager/Products-Detail.vue')
   },
   {
-    path: '/quan-ly-san-pham/them-san-pham',
+    path: '/san-pham/them-san-pham',
     name: 'ThemSanPham',
     component: () => import('./views/products-manager/AddProductForm.vue')
   },
 
   // Invoice and order management
   { path: '/hoa-don', name: 'HoaDon', component: HoaDon },
-  { path: '/hoa-don/detail/:id', name: 'InvoiceDetail', component: InvoiceDetail },
+  { path: '/hoa-don/chi-tiet/:id', name: 'HoaDonChiTiet', component: HoaDonChiTiet },
   { path: '/phieu-giam-gia', name: 'PhieuGiamGia', component: PhieuGiamGia },
   { path: '/them-phieu-giam-gia', name: 'ThemPhieuGiamGia', component: ThemPhieuGiamGia },
   { path: '/dot-giam-gia', name: 'DotGiamGia', component: DotGiamGia },

@@ -18,8 +18,7 @@
           <iconify-icon icon="solar:filter-bold-duotone"></iconify-icon>
           Bộ Lọc Kích Cỡ
         </h3>
-        <button class="btn-reset" @click="resetFilters">
-          <iconify-icon icon="solar:refresh-bold-duotone"></iconify-icon>
+        <button class="reset-filter-btn" @click="resetFilters">
           Đặt lại bộ lọc
         </button>
       </div>
@@ -94,7 +93,7 @@
             <span class="product-count">{{ item.productCount }}</span>
           </template>
           <template #status="{ item }">
-            <span class="status-badge" :class="'status-' + item.status">
+            <span class="status-badge" :class="item.status">
               {{ getStatusLabel(item.status) }}
             </span>
           </template>
@@ -103,10 +102,10 @@
           </template>
           <template #actions="{ item }">
             <div class="actions">
-              <button @click="editSize(item)" class="action-btn btn-edit" title="Chỉnh sửa">
+              <button @click="editSize(item)" class="action-btn edit" title="Chỉnh sửa">
                 <iconify-icon icon="solar:pen-bold"></iconify-icon>
               </button>
-              <button @click="deleteSize(item)" class="action-btn btn-delete" title="Xóa">
+              <button @click="deleteSize(item)" class="action-btn delete" title="Xóa">
                 <iconify-icon icon="solar:trash-bin-trash-bold"></iconify-icon>
               </button>
             </div>
@@ -330,13 +329,11 @@ export default {
     const breadcrumbActions = ref([
       {
         label: 'Thêm kích cỡ',
-        icon: 'solar:add-circle-bold-duotone',
         type: 'primary',
         handler: () => showAddSizeModal.value = true
       },
       {
         label: 'Xuất Excel',
-        icon: 'solar:file-download-bold-duotone',
         type: 'default',
         handler: () => exportToExcel()
       }
@@ -583,28 +580,29 @@ export default {
   padding: 24px;
   background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   min-height: 100vh;
-  font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 /* ===== FILTER SECTION ===== */
 .filter-section {
   background: white;
-  border-radius: 16px;
-  padding: 24px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border-radius: 20px;
+  padding: 28px;
   margin-bottom: 24px;
-  border: 1px solid #e2e8f0;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
 }
 
 .filter-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
 }
 
 .filter-title {
-  font-size: 1.1rem;
+  font-size: 1.25rem;
   font-weight: 700;
   color: #1a202c;
   display: flex;
@@ -614,12 +612,14 @@ export default {
 }
 
 .filter-content {
-  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .filter-row {
   display: grid;
-  grid-template-columns: 2fr 1.5fr 1.5fr auto;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 20px;
   align-items: end;
 }
@@ -638,7 +638,7 @@ export default {
 
 .filter-input,
 .filter-select {
-  padding: 10px 14px;
+  padding: 12px 16px;
   border: 1px solid #d1d5db;
   border-radius: 8px;
   font-size: 0.95rem;
@@ -653,11 +653,8 @@ export default {
   box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
 }
 
-.filter-input::placeholder {
-  color: #9ca3af;
-}
 
-.btn-reset {
+.reset-filter-btn {
   padding: 10px 16px;
   background: #f1f5f9;
   color: #64748b;
@@ -672,30 +669,36 @@ export default {
   font-size: 0.9rem;
 }
 
-.btn-reset:hover {
-  background: #e2e8f0;
-  color: #374151;
+.reset-filter-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(107, 114, 128, 0.3);
 }
 
 /* ===== MAIN CONTENT ===== */
 .main-content {
-  background: white;
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
 .sizes-section {
-  padding: 24px;
+  background: white;
+  border-radius: 20px;
+  padding: 28px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
 }
 
 .section-header {
-  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
 }
 
 .section-title {
-  font-size: 1.1rem;
+  font-size: 1.25rem;
   font-weight: 700;
   color: #1a202c;
   display: flex;
@@ -712,16 +715,21 @@ export default {
 .table-size-name {
   font-weight: 600;
   color: #1a202c;
+  font-size: 0.95rem;
 }
 
 .description {
   color: #64748b;
   font-size: 0.9rem;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .product-count {
   font-weight: 600;
-  color: #1a202c;
+  color: #059669;
 }
 
 .date {
@@ -731,78 +739,62 @@ export default {
 
 .actions {
   display: flex;
-  gap: 4px;
+  gap: 8px;
 }
 
-/* ===== STATUS BADGES ===== */
 .status-badge {
-  padding: 4px 12px;
-  border-radius: 12px;
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 6px;
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
-.status-active {
-  background: #dcfdf4;
-  color: #065f46;
-  border: 1px solid #a7f3d0;
+.status-badge.active {
+  background: #dcfce7;
+  color: #166534;
 }
 
-.status-inactive {
-  background: #fef2f2;
-  color: #991b1b;
-  border: 1px solid #fca5a5;
+.status-badge.inactive {
+  background: #fef3c7;
+  color: #92400e;
 }
 
-/* ===== SIZE CODE STYLING ===== */
 .size-code {
-  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-family: 'Monaco', 'Menlo', monospace;
   background: #f1f5f9;
   padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #475569;
-  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  font-size: 0.85rem;
 }
 
 /* ===== ACTION BUTTONS ===== */
 .action-btn {
-  padding: 6px 10px;
+  width: 36px;
+  height: 36px;
   border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.75rem;
-  font-weight: 600;
-  transition: all 0.2s ease;
-  display: inline-flex;
+  border-radius: 8px;
+  display: flex;
   align-items: center;
-  gap: 4px;
-  margin: 0 2px;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
 }
 
-.btn-edit {
-  background: #dbeafe;
-  color: #1e40af;
-  border: 1px solid #93c5fd;
+.action-btn:hover {
+  transform: scale(1.1);
 }
 
-.btn-edit:hover {
-  background: #bfdbfe;
-  transform: translateY(-1px);
+.action-btn.edit {
+  background: #dcfce7;
+  color: #166534;
 }
 
-.btn-delete {
-  background: #fef2f2;
+.action-btn.delete {
+  background: #fee2e2;
   color: #dc2626;
-  border: 1px solid #fca5a5;
-}
-
-.btn-delete:hover {
-  background: #fecaca;
-  transform: translateY(-1px);
 }
 
 /* ===== MODAL STYLES ===== */
@@ -813,35 +805,44 @@ export default {
   right: 0;
   bottom: 0;
   background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 10000;
   padding: 20px;
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .modal-container {
   background: white;
-  border-radius: 16px;
-  width: 100%;
-  max-width: 500px;
+  border-radius: 20px;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
+  max-width: 90vw;
   max-height: 90vh;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-  border: 1px solid #e2e8f0;
-  animation: modalSlideIn 0.2s ease-out;
+  animation: slideUp 0.3s ease;
 }
 
-@keyframes modalSlideIn {
+@keyframes slideUp {
   from {
+    transform: translateY(30px);
     opacity: 0;
-    transform: translateY(-10px) scale(0.98);
   }
   to {
+    transform: translateY(0);
     opacity: 1;
-    transform: translateY(0) scale(1);
   }
 }
 
@@ -1061,8 +1062,9 @@ export default {
   }
 
   .action-btn {
-    padding: 4px 6px;
-    font-size: 0.7rem;
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
   }
 }
 </style>

@@ -6,7 +6,7 @@
       :show-page-info="true"
       page-title="Quản Lý Chất Liệu"
       page-description="Hệ thống quản lý chất liệu sản phẩm cho Shop Giày"
-      page-icon="solar:palette-2-bold-duotone"
+      page-icon="solar:layers-bold-duotone"
       :page-stats="pageStats"
       :actions="breadcrumbActions"
     />
@@ -19,7 +19,6 @@
           Bộ Lọc Chất Liệu
         </h3>
         <button class="reset-filter-btn" @click="resetFilters">
-          <iconify-icon icon="solar:refresh-bold-duotone"></iconify-icon>
           Đặt lại bộ lọc
         </button>
       </div>
@@ -63,7 +62,7 @@
       <div class="materials-section">
         <div class="section-header">
           <h3 class="section-title">
-            <iconify-icon icon="solar:palette-2-bold-duotone"></iconify-icon>
+            <iconify-icon icon="solar:layers-bold-duotone"></iconify-icon>
             Danh Sách Chất Liệu ({{ filteredMaterials.length }})
           </h3>
         </div>
@@ -233,13 +232,11 @@ export default {
     const breadcrumbActions = ref([
       {
         label: 'Thêm chất liệu',
-        icon: 'solar:add-circle-bold-duotone',
         type: 'primary',
         handler: () => showAddMaterialModal.value = true
       },
       {
         label: 'Xuất Excel',
-        icon: 'solar:file-download-bold-duotone',
         type: 'default',
         handler: () => exportToExcel()
       }
@@ -678,17 +675,18 @@ export default {
 }
 
 .reset-filter-btn {
+  padding: 10px 16px;
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
-  color: white;
-  border: none;
-  border-radius: 12px;
-  padding: 12px 20px;
-  font-weight: 600;
-  transition: all 0.3s ease;
-  cursor: pointer;
+  gap: 6px;
+  font-size: 0.9rem;
 }
 
 .reset-filter-btn:hover {
