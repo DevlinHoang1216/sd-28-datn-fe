@@ -777,13 +777,13 @@ watch(allInvoices, () => {
             :class="[
               'px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 flex items-center gap-2',
               activeTab === tab.id 
-                ? 'bg-white dark:bg-gray-600 text-blue-600 dark:text-blue-400 shadow-sm' 
+                ? 'bg-white dark:bg-gray-600 text-blue-800 dark:text-blue-400 shadow-sm' 
                 : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-gray-600/50'
             ]"
             @click="switchTab(tab.id)"
           >
             <span>{{ tab.label }}</span>
-            <span class="bg-gray-200 dark:bg-gray-500 text-xs px-2 py-0.5 rounded-full">{{ getTabCount(tab.id) }}</span>
+            <span class="bg-blue-200 dark:bg-blue-500 text-xs px-2 py-0.5 rounded-full">{{ getTabCount(tab.id) }}</span>
           </button>
         </div>
 
@@ -854,24 +854,24 @@ watch(allInvoices, () => {
               <div class="flex justify-center gap-2">
                 <router-link
                   :to="{ name: 'HoaDonChiTiet', params: { id: item.id } }"
-                  class="inline-flex items-center justify-center w-9 h-9 rounded-full bg-blue-100/70 dark:bg-blue-900/70 text-blue-600 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors duration-200 shadow-sm hover:shadow-md"
+                  class="action-btn view"
                   title="Xem chi tiết"
                 >
-                  <Icon icon="solar:eye-bold" class="text-xl" />
+                  <Icon icon="solar:eye-bold" />
                 </router-link>
                 <button
                   @click="printInvoicePDF(item)"
-                  class="inline-flex items-center justify-center w-9 h-9 rounded-full bg-green-100/70 dark:bg-green-900/70 text-green-600 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-800 transition-colors duration-200 shadow-sm hover:shadow-md"
+                  class="action-btn print"
                   title="In hóa đơn PDF"
                 >
-                  <Icon icon="solar:printer-bold" class="text-xl" />
+                  <Icon icon="solar:printer-bold" />
                 </button>
                 <button
                   @click="downloadQRCode(item)"
-                  class="inline-flex items-center justify-center w-9 h-9 rounded-full bg-purple-100/70 dark:bg-purple-900/70 text-purple-600 dark:text-purple-300 hover:bg-purple-200 dark:hover:bg-purple-800 transition-colors duration-200 shadow-sm hover:shadow-md"
+                  class="action-btn qr"
                   title="Tải mã QR hóa đơn"
                 >
-                  <Icon icon="solar:qr-code-bold" class="text-xl" />
+                  <Icon icon="solar:qr-code-bold" />
                 </button>
               </div>
             </template>
@@ -1301,6 +1301,43 @@ Xóa
   font-weight: 700;
   color: #1a202c;
   margin: 0;
+}
+
+.action-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+}
+
+.action-btn.view {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.action-btn.print {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.action-btn.qr {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.action-btn:hover {
+  transform: scale(1.1);
+}
+
+.action-btn:focus {
+  outline: 2px solid #007bff;
+  outline-offset: 2px;
 }
 
 @media (max-width: 640px) {

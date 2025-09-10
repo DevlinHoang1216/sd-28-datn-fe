@@ -1,28 +1,41 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
-import axios from 'axios'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useToast } from 'vue-toastification'
+import { Icon } from '@iconify/vue'
 import * as XLSX from 'xlsx'
-import {
-  CCard, CCardBody, CCol, CFormInput, CFormLabel, CFormSelect, CButton,
-  CModal, CModalHeader, CModalTitle, CModalBody, CModalFooter, CRow,
-  CTable, CTableHead, CTableBody, CTableRow, CTableHeaderCell, CTableDataCell,
-  CBadge
-} from '@coreui/vue'
+import Breadcrumb from '@/components/Breadcrumb.vue'
+import DataTable from '@/components/DataTable.vue'
 
 // --- State Management ---
 const toast = useToast()
-const employeeList = ref([])
+const allEmployees = ref([])
 const currentPage = ref(0)
-const totalPages = ref(0)
-const pageSize = 5
+const pageSize = ref(10)
 const showAddModal = ref(false)
 const showEditModal = ref(false)
 const showDetailModal = ref(false)
 const viewingEmployee = ref({})
 const editingEmployee = ref({})
-const filterStatus = ref('Tất cả')
-const searchId = ref('')
+const isUpdating = ref(false)
+const isDeleting = ref(false)
+const errorMessage = ref('')
+
+const filters = ref({
+  search: '',
+  trangThai: '',
+  gioiTinh: '',
+  sortBy: ''
+})
+
+const tempFilters = ref({
+  search: '',
+  trangThai: '',
+  gioiTinh: '',
+  sortBy: ''
+})
+
+const activeTab = ref('all')
+const highlightedEmployee = ref(null)
 
 const newEmployee = ref({
   chucVuID: null,
@@ -41,12 +54,294 @@ const newEmployee = ref({
   trangThai: true
 })
 
-// --- Computed Properties ---
-const isFirstPage = computed(() => currentPage.value === 0);
-const isLastPage = computed(() => currentPage.value >= totalPages.value - 1);
-const hasData = computed(() => employeeList.value.length > 0)
+// Tabs configuration
+const tabs = ref([
+  { id: 'all', label: 'Tất cả' },
+  { id: 'active', label: 'Hoạt động', status: true },
+  { id: 'inactive', label: 'Không hoạt động', status: false }
+])
 
-// --- Validation Functions ---
+// Generate fake employee data
+const generateFakeEmployees = () => {
+  const firstNames = ['Nguyễn', 'Trần', 'Lê', 'Phạm', 'Hoàng', 'Vũ', 'Đặng', 'Bùi', 'Ngô', 'Lý']
+  const middleNames = ['Văn', 'Thị', 'Minh', 'Hoàng', 'Công', 'Thanh', 'Quốc', 'Hữu', 'Đức', 'Xuân']
+  const lastNames = ['An', 'Bình', 'Cường', 'Dung', 'Em', 'Phương', 'Quân', 'Hoa', 'Tùng', 'Mai', 'Linh', 'Nam', 'Hương', 'Tuấn', 'Lan']
+  
+  const addresses = [
+    { soNha: '123 Nguyễn Văn Linh', phuongXa: 'Phường 1', quanHuyen: 'Quận 1', tinhThanh: 'TP Hồ Chí Minh' },
+    { soNha: '456 Lê Lợi', phuongXa: 'Phường 2', quanHuyen: 'Quận 2', tinhThanh: 'TP Hồ Chí Minh' },
+    { soNha: '789 Trần Hưng Đạo', phuongXa: 'Phường Ba Đình', quanHuyen: 'Quận Ba Đình', tinhThanh: 'Hà Nội' },
+    { soNha: '321 Hoàng Diệu', phuongXa: 'Phường Hoàn Kiếm', quanHuyen: 'Quận Hoàn Kiếm', tinhThanh: 'Hà Nội' },
+    { soNha: '654 Võ Thị Sáu', phuongXa: 'Phường 3', quanHuyen: 'Quận 3', tinhThanh: 'TP Hồ Chí Minh' }
+  ]
+
+  const fakeEmployees = []
+  
+  for (let i = 1; i <= 50; i++) {
+    const firstName = firstNames[Math.floor(Math.random() * firstNames.length)]
+    const middleName = middleNames[Math.floor(Math.random() * middleNames.length)]
+    const lastName = lastNames[Math.floor(Math.random() * lastNames.length)]
+    const fullName = `${firstName} ${middleName} ${lastName}`
+    
+    const address = addresses[Math.floor(Math.random() * addresses.length)]
+    const isActive = Math.random() > 0.2 // 80% active
+    const gender = Math.random() > 0.5
+    
+    // Generate birth date (22-60 years old)
+    const birthYear = new Date().getFullYear() - Math.floor(Math.random() * 38) - 22
+    const birthMonth = Math.floor(Math.random() * 12) + 1
+    const birthDay = Math.floor(Math.random() * 28) + 1
+    const birthDate = new Date(birthYear, birthMonth - 1, birthDay)
+    
+    // Generate creation date (last 2 years)
+    const creationDate = new Date()
+    creationDate.setDate(creationDate.getDate() - Math.floor(Math.random() * 730))
+    
+    fakeEmployees.push({
+      id: i,
+      maNhanVien: `NV${String(i).padStart(6, '0')}`,
+      tenNhanVien: fullName,
+      ngaySinh: birthDate.toISOString().split('T')[0],
+      gioiTinh: gender,
+      soDienThoai: `09${Math.floor(Math.random() * 100000000).toString().padStart(8, '0')}`,
+      cccd: Math.floor(Math.random() * 1000000000000).toString().padStart(12, '0'),
+      diaChiSoNhaTenDuong: address.soNha,
+      diaChiPhuongXa: address.phuongXa,
+      diaChiQuanHuyen: address.quanHuyen,
+      diaChiTinhThanh: address.tinhThanh,
+      ngayTao: creationDate.toISOString(),
+      ngayCapNhat: creationDate.toISOString(),
+      trangThai: isActive,
+      chucVu: Math.random() > 0.7 ? 'Quản lý' : 'Nhân viên',
+      luong: Math.floor(Math.random() * 20000000) + 8000000 // 8M - 28M VND
+    })
+  }
+  
+  return fakeEmployees
+}
+
+// Computed Properties
+const filteredEmployees = computed(() => {
+  let result = allEmployees.value
+
+  // Filter by active tab
+  const activeTabObj = tabs.value.find(tab => tab.id === activeTab.value)
+  if (activeTabObj?.status !== undefined) {
+    result = result.filter(emp => emp.trangThai === activeTabObj.status)
+  }
+
+  // Apply other filters
+  if (filters.value.search) {
+    result = result.filter(emp =>
+      emp.tenNhanVien?.toLowerCase().includes(filters.value.search.toLowerCase()) ||
+      emp.maNhanVien?.toLowerCase().includes(filters.value.search.toLowerCase()) ||
+      emp.soDienThoai?.includes(filters.value.search) ||
+      emp.cccd?.includes(filters.value.search)
+    )
+  }
+
+  if (filters.value.trangThai !== '') {
+    result = result.filter(emp => emp.trangThai === (filters.value.trangThai === 'true'))
+  }
+
+  if (filters.value.gioiTinh !== '') {
+    result = result.filter(emp => emp.gioiTinh === (filters.value.gioiTinh === 'true'))
+  }
+
+  // Apply sorting
+  if (filters.value.sortBy) {
+    result = [...result]
+    if (filters.value.sortBy === 'newest') {
+      result.sort((a, b) => new Date(b.ngayTao) - new Date(a.ngayTao))
+    } else if (filters.value.sortBy === 'oldest') {
+      result.sort((a, b) => new Date(a.ngayTao) - new Date(b.ngayTao))
+    } else if (filters.value.sortBy === 'name_asc') {
+      result.sort((a, b) => a.tenNhanVien.localeCompare(b.tenNhanVien))
+    } else if (filters.value.sortBy === 'name_desc') {
+      result.sort((a, b) => b.tenNhanVien.localeCompare(a.tenNhanVien))
+    }
+  }
+
+  return result
+})
+
+const totalPages = computed(() => Math.ceil(filteredEmployees.value.length / pageSize.value) || 1)
+
+const paginatedEmployees = computed(() => {
+  const start = currentPage.value * pageSize.value
+  const end = start + pageSize.value
+  return filteredEmployees.value.slice(start, end)
+})
+
+// DataTable columns configuration
+const tableColumns = ref([
+  { key: 'stt', label: 'STT', class: 'text-center' },
+  { key: 'maNhanVien', label: 'Mã NV', class: 'font-weight-bold' },
+  { key: 'tenNhanVien', label: 'Tên Nhân Viên' },
+  { key: 'ngaySinh', label: 'Ngày Sinh', class: 'text-center' },
+  { key: 'gioiTinh', label: 'Giới Tính', class: 'text-center' },
+  { key: 'soDienThoai', label: 'SĐT' },
+  { key: 'cccd', label: 'CCCD' },
+  { key: 'diaChi', label: 'Địa chỉ' },
+  { key: 'trangThai', label: 'Trạng Thái', class: 'text-center' },
+  { key: 'actions', label: 'Hành Động', class: 'text-center' }
+])
+
+// Breadcrumb configuration
+const breadcrumbItems = ref([
+  { label: 'Quản lý nhân sự', path: '/dashboard' },
+  { label: 'Nhân viên' }
+])
+
+const breadcrumbActions = ref([
+  {
+    label: 'Làm mới',
+    type: 'default',
+    handler: () => fetchAllEmployees()
+  },
+  {
+    label: 'Xuất Excel',
+    type: 'primary',
+    handler: () => exportToExcel()
+  },
+  {
+    label: 'Thêm nhân viên',
+    type: 'primary',
+    handler: () => openAddModal()
+  }
+])
+
+const pageStats = computed(() => [
+  {
+    icon: 'solar:users-group-two-rounded-bold',
+    value: allEmployees.value.length,
+    label: 'Tổng nhân viên'
+  },
+  {
+    icon: 'solar:check-circle-bold',
+    value: allEmployees.value.filter(emp => emp.trangThai).length,
+    label: 'Đang hoạt động'
+  },
+  {
+    icon: 'solar:close-circle-bold',
+    value: allEmployees.value.filter(emp => !emp.trangThai).length,
+    label: 'Không hoạt động'
+  }
+])
+
+// Functions
+const fetchAllEmployees = async () => {
+  console.log('Bắt đầu tải nhân viên...')
+  errorMessage.value = ''
+  
+  try {
+    // Use fake data instead of API
+    const fakeData = generateFakeEmployees()
+    allEmployees.value = fakeData
+
+    if (allEmployees.value.length === 0) {
+      toast.info('Không có nhân viên nào trong hệ thống.', { timeout: 4000 })
+    } else {
+      toast.success('Dữ liệu nhân viên đã được tải thành công!', { timeout: 3000 })
+    }
+  } catch (error) {
+    console.error('Lỗi khi lấy dữ liệu nhân viên:', error)
+    errorMessage.value = `Lỗi khi tải dữ liệu nhân viên: ${error.message}`
+    toast.error(errorMessage.value, { timeout: 5000 })
+  } finally {
+    if (currentPage.value >= totalPages.value) {
+      currentPage.value = Math.max(0, totalPages.value - 1)
+    }
+    console.log('Kết thúc tải nhân viên:', allEmployees.value)
+  }
+}
+
+const openAddModal = () => {
+  resetNewEmployeeForm()
+  showAddModal.value = true
+}
+
+const openEditModal = (employee) => {
+  editingEmployee.value = { ...employee }
+  showEditModal.value = true
+}
+
+const openDetailModal = (employee) => {
+  viewingEmployee.value = employee
+  showDetailModal.value = true
+}
+
+const handleAddEmployee = async () => {
+  if (!validateEmployee(newEmployee.value)) return
+  
+  isUpdating.value = true
+  try {
+    const now = new Date().toISOString()
+    const newEmp = {
+      ...newEmployee.value,
+      id: allEmployees.value.length + 1,
+      maNhanVien: `NV${String(allEmployees.value.length + 1).padStart(6, '0')}`,
+      ngayTao: now,
+      ngayCapNhat: now
+    }
+    
+    allEmployees.value.unshift(newEmp)
+    showAddModal.value = false
+    toast.success('Thêm nhân viên thành công!')
+    resetNewEmployeeForm()
+  } catch (error) {
+    console.error('Lỗi khi thêm nhân viên:', error)
+    toast.error('Lỗi khi thêm nhân viên.')
+  } finally {
+    isUpdating.value = false
+  }
+}
+
+const handleUpdateEmployee = async () => {
+  if (!validateEmployee(editingEmployee.value)) return
+  
+  isUpdating.value = true
+  try {
+    const index = allEmployees.value.findIndex(emp => emp.id === editingEmployee.value.id)
+    if (index !== -1) {
+      allEmployees.value[index] = {
+        ...editingEmployee.value,
+        ngayCapNhat: new Date().toISOString()
+      }
+    }
+    
+    showEditModal.value = false
+    toast.success('Cập nhật nhân viên thành công!')
+  } catch (error) {
+    console.error('Lỗi khi cập nhật nhân viên:', error)
+    toast.error('Lỗi khi cập nhật nhân viên.')
+  } finally {
+    isUpdating.value = false
+  }
+}
+
+const toggleEmployeeStatus = async (employee) => {
+  isUpdating.value = true
+  try {
+    const index = allEmployees.value.findIndex(emp => emp.id === employee.id)
+    if (index !== -1) {
+      allEmployees.value[index] = {
+        ...allEmployees.value[index],
+        trangThai: !allEmployees.value[index].trangThai,
+        ngayCapNhat: new Date().toISOString()
+      }
+    }
+    
+    const statusText = !employee.trangThai ? 'kích hoạt' : 'vô hiệu hóa'
+    toast.success(`Đã ${statusText} nhân viên ${employee.tenNhanVien}!`)
+  } catch (error) {
+    console.error('Lỗi khi cập nhật trạng thái nhân viên:', error)
+    toast.error('Lỗi khi cập nhật trạng thái nhân viên.')
+  } finally {
+    isUpdating.value = false
+  }
+}
+
 const validateEmployee = (employee) => {
   const requiredFields = [
     { field: employee.tenNhanVien, label: 'Tên nhân viên' },
@@ -56,8 +351,7 @@ const validateEmployee = (employee) => {
     { field: employee.diaChiSoNhaTenDuong, label: 'Số nhà, tên đường' },
     { field: employee.diaChiPhuongXa, label: 'Phường/Xã' },
     { field: employee.diaChiQuanHuyen, label: 'Quận/Huyện' },
-    { field: employee.diaChiTinhThanh, label: 'Tỉnh/Thành phố' },
-    { field: employee.ngayTao, label: 'Ngày tạo' },
+    { field: employee.diaChiTinhThanh, label: 'Tỉnh/Thành phố' }
   ]
 
   for (const item of requiredFields) {
@@ -84,174 +378,10 @@ const validateEmployee = (employee) => {
     toast.error('CCCD phải gồm đúng 12 chữ số.')
     return false
   }
+
   return true
 }
 
-// --- API Functions ---
-const fetchEmployees = async (page = 0) => {
-  try {
-    const res = await axios.get(`http://localhost:8080/api/nhan-vien/phan-trang?pageNo=${page}&pageSize=${pageSize}`);
-    console.log('API /phan-trang response:', res.data);
-    employeeList.value = res.data.content || [];
-    currentPage.value = res.data.number || 0;
-    totalPages.value = res.data.totalPages || 0;
-    console.log('totalPages:', totalPages.value, 'currentPage:', currentPage.value, 'employeeList:', employeeList.value);
-    toast.success('Tải danh sách nhân viên thành công.');
-  } catch (err) {
-    console.error('Lỗi khi tải danh sách nhân viên:', err.response?.data || err);
-    employeeList.value = [];
-    currentPage.value = 0;
-    totalPages.value = 0;
-    toast.error('Lỗi khi tải danh sách nhân viên.');
-  }
-};
-
-
-const goToPage = (page) => {
-  if (page >= 0 && page < totalPages.value) {
-    console.log('Chuyển đến trang:', page, 'totalPages:', totalPages.value);
-    fetchEmployees(page);
-  } else {
-    console.log('Trang không hợp lệ:', page, 'totalPages:', totalPages.value);
-  }
-};
-
-const searchEmployeeById = async () => {
-  const ma = searchId.value.trim()
-  if (!ma) {
-    fetchEmployees(0)
-    toast.info('Hiển thị tất cả nhân viên.')
-    return
-  }
-  try {
-    const res = await axios.get(`http://localhost:8080/api/nhan-vien/search/${ma}`)
-    employeeList.value = Array.isArray(res.data) ? res.data : [res.data]
-    currentPage.value = 0
-    totalPages.value = 1
-    toast.success(`Tìm thấy ${employeeList.value.length} nhân viên.`)
-  } catch (err) {
-    console.error('Không tìm thấy nhân viên:', err.response?.data || err)
-    employeeList.value = []
-    totalPages.value = 0
-    toast.error('Không tìm thấy nhân viên với mã này.')
-  }
-}
-
-const addEmployee = async () => {
-  const now = new Date().toISOString()
-  const payload = { ...newEmployee.value, ngayTao: now, ngayCapNhat: now }
-  if (!validateEmployee(payload)) return
-  try {
-    if (!payload.chucVuID) delete payload.chucVuID
-    if (!payload.taiKhoanID) delete payload.taiKhoanID
-    await axios.post('http://localhost:8080/api/nhan-vien/add', payload)
-    showAddModal.value = false
-    await fetchEmployees(currentPage.value)
-    toast.success('Thêm nhân viên thành công!')
-    resetNewEmployeeForm()
-  } catch (err) {
-    console.error('Lỗi khi thêm nhân viên:', err.response?.data || err)
-    toast.error('Lỗi khi thêm nhân viên.')
-  }
-}
-
-const updateEmployee = async () => {
-  const payload = { ...editingEmployee.value }
-  payload.ngayCapNhat = new Date().toISOString()
-  if (!validateEmployee(payload)) return
-  try {
-    if (!payload.chucVuID) delete payload.chucVuID
-    if (!payload.taiKhoanID) delete payload.taiKhoanID
-    await axios.put(`http://localhost:8080/api/nhan-vien/update/${payload.id}`, payload)
-    showEditModal.value = false
-    await fetchEmployees(currentPage.value)
-    toast.success('Cập nhật nhân viên thành công!')
-  } catch (err) {
-    console.error('Lỗi khi cập nhật nhân viên:', err.response?.data || err)
-    toast.error('Lỗi khi cập nhật nhân viên.')
-  }
-}
-
-const deleteEmployee = async (id) => {
-  if (confirm('Bạn có chắc chắn muốn xóa nhân viên này không?')) {
-    try {
-      await axios.delete(`http://localhost:8080/api/nhan-vien/delete/${id}`)
-      await fetchEmployees(currentPage.value)
-      toast.success('Xóa nhân viên thành công!')
-    } catch (err) {
-      console.error('Lỗi khi xóa:', err.response?.data || err)
-      toast.error('Lỗi khi xóa nhân viên.')
-    }
-  }
-}
-
-const filterByStatus = async () => {
-  try {
-    let res;
-    if (filterStatus.value === 'Tất cả') {
-      await fetchEmployees(0);
-      toast.success('Hiển thị tất cả nhân viên thành công.');
-      return;
-    } else {
-      // Đảo ngược logic để khớp với dữ liệu hiện tại
-      const status = filterStatus.value === 'Hoạt động' ? false : true;
-      res = await axios.get(`http://localhost:8080/api/nhan-vien/loc-trang-thai?trangThai=${status}`);
-    }
-
-    const data = res.data.content || res.data;
-    employeeList.value = Array.isArray(data) ? data : [data];
-    currentPage.value = 0;
-    totalPages.value = 1;
-    toast.success(`Lọc thành công: ${filterStatus.value}`);
-  } catch (err) {
-    console.error('Lỗi khi lọc trạng thái:', err.response?.data || err);
-    employeeList.value = [];
-    currentPage.value = 0;
-    totalPages.value = 0;
-    toast.error('Lỗi khi lọc trạng thái.');
-  }
-};
-
-
-
-// --- UI/Modal Handlers ---
-const openEditModal = (employee) => {
-  editingEmployee.value = { ...employee }
-  // Format date to 'YYYY-MM-DD' for date input
-  if (editingEmployee.value.ngaySinh) {
-    editingEmployee.value.ngaySinh = editingEmployee.value.ngaySinh.split('T')[0]
-  }
-  showEditModal.value = true
-}
-
-const openDetailModal = async (id) => {
-  try {
-    const res = await axios.get(`http://localhost:8080/api/nhan-vien/detail/${id}`)
-    viewingEmployee.value = res.data
-    showDetailModal.value = true
-  } catch (err) {
-    console.error('Lỗi khi xem chi tiết:', err.response?.data || err)
-    toast.error('Lỗi khi xem chi tiết.')
-  }
-}
-
-const goToNextPage = () => {
-  if (!isLastPage.value) {
-    console.log('Chuyển sang trang:', currentPage.value + 1);
-    fetchEmployees(currentPage.value + 1);
-  } else {
-    console.log('Đã ở trang cuối:', currentPage.value, 'totalPages:', totalPages.value);
-  }
-};
-
-const goToPrevPage = () => {
-  if (!isFirstPage.value) {
-    console.log('Chuyển về trang:', currentPage.value - 1);
-    fetchEmployees(currentPage.value - 1);
-  }
-};
-
-// --- Helper Functions ---
 const resetNewEmployeeForm = () => {
   newEmployee.value = {
     chucVuID: null,
@@ -271,375 +401,971 @@ const resetNewEmployeeForm = () => {
   }
 }
 
+const exportToExcel = () => {
+  if (filteredEmployees.value.length === 0) {
+    toast.info('Không có dữ liệu để xuất.')
+    return
+  }
+
+  const dataToExport = filteredEmployees.value.map((emp, index) => ({
+    'STT': index + 1,
+    'Mã NV': emp.maNhanVien,
+    'Tên Nhân Viên': emp.tenNhanVien,
+    'Ngày Sinh': formatDate(emp.ngaySinh),
+    'Giới Tính': emp.gioiTinh ? 'Nam' : 'Nữ',
+    'SĐT': emp.soDienThoai,
+    'CCCD': emp.cccd,
+    'Địa chỉ': `${emp.diaChiSoNhaTenDuong}, ${emp.diaChiPhuongXa}, ${emp.diaChiQuanHuyen}, ${emp.diaChiTinhThanh}`,
+    'Ngày Tạo': formatDate(emp.ngayTao),
+    'Trạng Thái': emp.trangThai ? 'Hoạt động' : 'Không hoạt động'
+  }))
+
+  const worksheet = XLSX.utils.json_to_sheet(dataToExport)
+  const workbook = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'DanhSachNhanVien')
+  XLSX.writeFile(workbook, `danh_sach_nhan_vien_${new Date().toISOString().split('T')[0]}.xlsx`)
+  toast.success('Xuất file Excel thành công!')
+}
+
 const formatDate = (dateString) => {
-  if (!dateString) return ''
-  const date = new Date(dateString)
-  return date.toLocaleDateString('vi-VN')
+  if (!dateString) return 'N/A'
+  try {
+    const date = new Date(dateString)
+    if (isNaN(date.getTime())) return 'Invalid Date'
+    return date.toLocaleDateString('vi-VN')
+  } catch (e) {
+    return 'Invalid Date'
+  }
 }
 
 const formatDateTime = (dateString) => {
-  if (!dateString) return ''
-  const date = new Date(dateString)
-  return date.toLocaleString('vi-VN', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
+  if (!dateString) return 'N/A'
+  try {
+    const date = new Date(dateString)
+    if (isNaN(date.getTime())) return 'Invalid Date'
+    return date.toLocaleString('vi-VN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  } catch (e) {
+    return 'Invalid Date'
+  }
 }
 
-const exportExcel = () => {
-  if (!hasData.value) {
-    toast.info('Không có dữ liệu để xuất.');
-    return;
+const getTabCount = (tabId) => {
+  if (!allEmployees.value.length) return 0
+  if (tabId === 'all') return allEmployees.value.length
+  const tab = tabs.value.find(t => t.id === tabId)
+  if (tab?.status === undefined) return 0
+  return allEmployees.value.filter(emp => emp.trangThai === tab.status).length
+}
+
+const switchTab = (tabId) => {
+  activeTab.value = tabId
+  const tab = tabs.value.find(t => t.id === tabId)
+  filters.value.trangThai = tab.status !== undefined ? String(tab.status) : ''
+  currentPage.value = 0
+  
+  if (tabId === 'all') {
+    toast.info('Đang hiển thị tất cả nhân viên.', { timeout: 2000 })
+  } else {
+    toast.info(`Đang hiển thị nhân viên trạng thái: ${tab.label}.`, { timeout: 2000 })
   }
-  const dataToExport = employeeList.value.map(nv => ({
-    'Mã NV': nv.maNhanVien,
-    'Tên Nhân Viên': nv.tenNhanVien,
-    'Ngày Sinh': formatDate(nv.ngaySinh),
-    'Giới Tính': nv.gioiTinh ? 'Nam' : 'Nữ',
-    'SĐT': nv.soDienThoai,
-    'CCCD': nv.cccd,
-    'Địa chỉ': `${nv.diaChiSoNhaTenDuong} - ${nv.diaChiPhuongXa} - ${nv.diaChiQuanHuyen} - ${nv.diaChiTinhThanh}`,
-    'Ngày Tạo': formatDate(nv.ngayTao),
-    'Trạng Thái': nv.trangThai ? 'Hoạt động' : 'Không hoạt động'
-  }));
+}
 
-  const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'DanhSachNhanVien');
-  XLSX.writeFile(workbook, 'danh_sach_nhan_vien.xlsx');
-  toast.success('Xuất file Excel thành công!');
-};
+const filterEmployees = () => {
+  filters.value.search = tempFilters.value.search
+  filters.value.trangThai = tempFilters.value.trangThai
+  filters.value.gioiTinh = tempFilters.value.gioiTinh
+  filters.value.sortBy = tempFilters.value.sortBy
+  currentPage.value = 0
+  
+  toast.success('Đã áp dụng bộ lọc!', { timeout: 2000 })
+}
 
-// --- Lifecycle Hook ---
+const resetFilters = () => {
+  filters.value = { search: '', trangThai: '', gioiTinh: '', sortBy: '' }
+  tempFilters.value = { search: '', trangThai: '', gioiTinh: '', sortBy: '' }
+  activeTab.value = 'all'
+  currentPage.value = 0
+  toast.info('Đã đặt lại tất cả bộ lọc!', { timeout: 2000 })
+}
+
+const changePage = (page) => {
+  if (page >= 0 && page < totalPages.value) {
+    currentPage.value = page
+  }
+}
+
+// Lifecycle Hook
 onMounted(() => {
-  fetchEmployees(0)
+  fetchAllEmployees()
 })
 </script>
 
 <template>
-  <div class="container-fluid py-4">
-    <h2 class="mb-4 text-dark text-start fw-bold">Quản Lý Nhân Viên 🧑‍💼</h2>
-    <CCard class="shadow-sm mb-4">
-      <CCardBody>
-        <CRow class="align-items-end g-3">
-          <CCol md="4" lg="3">
-            <CFormLabel class="fw-bold">Tìm theo mã nhân viên</CFormLabel>
-            <CFormInput
-              v-model="searchId"
-              placeholder="Nhập mã nhân viên..."
-              @keyup.enter="searchEmployeeById"
-            />
-          </CCol>
-          <CCol md="4" lg="2">
-            <CFormLabel class="fw-bold">Trạng thái</CFormLabel>
-            <CFormSelect v-model="filterStatus" @change="filterByStatus">
-  <option value="Tất cả">Tất cả</option>
-  <option value="Hoạt động">Hoạt động</option>
-  <option value="Không hoạt động">Không hoạt động</option>
-</CFormSelect>
-          </CCol>
-          <CCol md="4" lg="7" class="d-flex flex-wrap gap-2 justify-content-end">
-            <CButton color="secondary" class="fw-bold" @click="fetchEmployees(0)">Làm mới</CButton>
-            <CButton color="success" class="fw-bold" @click="showAddModal = true">Thêm mới</CButton>
-            <CButton color="danger" class="fw-bold" @click="exportExcel">Xuất Excel</CButton>
-          </CCol>
-        </CRow>
-      </CCardBody>
-    </CCard>
+  <div class="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900 p-4 md:p-6 font-roboto transition-colors duration-300">
+    <!-- Breadcrumb -->
+    <Breadcrumb 
+      :items="breadcrumbItems"
+      :actions="breadcrumbActions"
+      :show-page-info="true"
+      page-title="Quản lý Nhân Viên"
+      page-description="Quản lý và theo dõi tất cả nhân viên trong hệ thống"
+      page-icon="solar:users-group-two-rounded-bold-duotone"
+      :page-stats="pageStats"
+    />
 
-    <CModal :visible="showAddModal" @close="showAddModal = false" backdrop="static" size="lg">
-      <CModalHeader class="bg-success text-white">
-        <CModalTitle>Thêm Nhân Viên Mới</CModalTitle>
-      </CModalHeader>
-      <CModalBody>
-        <CRow class="g-3">
-          <CCol md="6">
-            <CFormLabel>Tên nhân viên <span class="text-danger">*</span></CFormLabel>
-            <CFormInput v-model="newEmployee.tenNhanVien" placeholder="Nguyễn Văn A" />
-          </CCol>
-          <CCol md="6">
-            <CFormLabel>Ngày sinh <span class="text-danger">*</span></CFormLabel>
-            <CFormInput v-model="newEmployee.ngaySinh" type="date" />
-          </CCol>
-          <CCol md="6">
-            <CFormLabel>Giới tính</CFormLabel>
-            <CFormSelect v-model="newEmployee.gioiTinh">
-              <option :value="true">Nam</option>
-              <option :value="false">Nữ</option>
-            </CFormSelect>
-          </CCol>
-          <CCol md="6">
-            <CFormLabel>Số điện thoại <span class="text-danger">*</span></CFormLabel>
-            <CFormInput v-model="newEmployee.soDienThoai" placeholder="0123456789" />
-          </CCol>
-          <CCol md="6">
-            <CFormLabel>CCCD <span class="text-danger">*</span></CFormLabel>
-            <CFormInput v-model="newEmployee.cccd" placeholder="123456789012" />
-          </CCol>
-          <CCol md="6">
-            <CFormLabel>Số nhà, tên đường <span class="text-danger">*</span></CFormLabel>
-            <CFormInput v-model="newEmployee.diaChiSoNhaTenDuong" placeholder="123 Nguyễn Văn Linh" />
-          </CCol>
-          <CCol md="6">
-            <CFormLabel>Phường/Xã <span class="text-danger">*</span></CFormLabel>
-            <CFormInput v-model="newEmployee.diaChiPhuongXa" placeholder="Phường ABC" />
-          </CCol>
-          <CCol md="6">
-            <CFormLabel>Quận/Huyện <span class="text-danger">*</span></CFormLabel>
-            <CFormInput v-model="newEmployee.diaChiQuanHuyen" placeholder="Quận XYZ" />
-          </CCol>
-          <CCol md="6">
-            <CFormLabel>Tỉnh/Thành phố <span class="text-danger">*</span></CFormLabel>
-            <CFormInput v-model="newEmployee.diaChiTinhThanh" placeholder="Hà Nội" />
-          </CCol>
-          <CCol md="6">
-            <CFormLabel>Trạng thái</CFormLabel>
-            <CFormSelect v-model="newEmployee.trangThai">
-              <option :value="true">Hoạt động</option>
-              <option :value="false">Không hoạt động</option>
-            </CFormSelect>
-          </CCol>
-        </CRow>
-      </CModalBody>
-      <CModalFooter>
-        <CButton color="secondary" @click="showAddModal = false">Hủy</CButton>
-        <CButton color="primary" @click="addEmployee">Lưu</CButton>
-      </CModalFooter>
-    </CModal>
+    <div v-if="errorMessage" class="card bg-red-50 dark:bg-red-950 p-4 mb-6 rounded-3xl shadow-lg animate__animated animate__fadeIn">
+      <p class="text-red-600 dark:text-red-300 font-medium flex items-center">
+        <Icon icon="solar:danger-triangle-bold-duotone" class="text-2xl mr-3" />
+        {{ errorMessage }}
+      </p>
+    </div>
 
-    <CModal :visible="showEditModal" @close="showEditModal = false" backdrop="static" size="lg">
-      <CModalHeader class="bg-warning text-dark">
-        <CModalTitle>Sửa Thông Tin Nhân Viên</CModalTitle>
-      </CModalHeader>
-      <CModalBody>
-        <CRow class="g-3">
-          <CCol md="6">
-            <CFormLabel>Tên nhân viên <span class="text-danger">*</span></CFormLabel>
-            <CFormInput v-model="editingEmployee.tenNhanVien" />
-          </CCol>
-          <CCol md="6">
-            <CFormLabel>Ngày sinh <span class="text-danger">*</span></CFormLabel>
-            <CFormInput v-model="editingEmployee.ngaySinh" type="date" />
-          </CCol>
-          <CCol md="6">
-            <CFormLabel>Giới tính</CFormLabel>
-            <CFormSelect v-model="editingEmployee.gioiTinh">
-              <option :value="true">Nam</option>
-              <option :value="false">Nữ</option>
-            </CFormSelect>
-          </CCol>
-          <CCol md="6">
-            <CFormLabel>Số điện thoại <span class="text-danger">*</span></CFormLabel>
-            <CFormInput v-model="editingEmployee.soDienThoai" />
-          </CCol>
-          <CCol md="6">
-            <CFormLabel>CCCD <span class="text-danger">*</span></CFormLabel>
-            <CFormInput v-model="editingEmployee.cccd" />
-          </CCol>
-          <CCol md="6">
-            <CFormLabel>Số nhà, tên đường <span class="text-danger">*</span></CFormLabel>
-            <CFormInput v-model="editingEmployee.diaChiSoNhaTenDuong" />
-          </CCol>
-          <CCol md="6">
-            <CFormLabel>Phường/Xã <span class="text-danger">*</span></CFormLabel>
-            <CFormInput v-model="editingEmployee.diaChiPhuongXa" />
-          </CCol>
-          <CCol md="6">
-            <CFormLabel>Quận/Huyện <span class="text-danger">*</span></CFormLabel>
-            <CFormInput v-model="editingEmployee.diaChiQuanHuyen" />
-          </CCol>
-          <CCol md="6">
-            <CFormLabel>Tỉnh/Thành phố <span class="text-danger">*</span></CFormLabel>
-            <CFormInput v-model="editingEmployee.diaChiTinhThanh" />
-          </CCol>
-          <CCol md="6">
-            <CFormLabel>Trạng thái</CFormLabel>
-            <CFormSelect v-model="editingEmployee.trangThai">
-              <option :value="true">Hoạt động</option>
-              <option :value="false">Không hoạt động</option>
-            </CFormSelect>
-          </CCol>
-        </CRow>
-      </CModalBody>
-      <CModalFooter>
-        <CButton color="secondary" @click="showEditModal = false">Hủy</CButton>
-        <CButton color="primary" @click="updateEmployee">Lưu thay đổi</CButton>
-      </CModalFooter>
-    </CModal>
-
-    <CModal :visible="showDetailModal" @close="showDetailModal = false" backdrop="static" size="lg">
-      <CModalHeader class="bg-info text-white">
-        <CModalTitle>Chi Tiết Nhân Viên</CModalTitle>
-      </CModalHeader>
-      <CModalBody v-if="viewingEmployee">
-        <CRow class="mb-2">
-          <CCol sm="4" class="fw-bold">Mã nhân viên:</CCol>
-          <CCol sm="8">{{ viewingEmployee.maNhanVien }}</CCol>
-        </CRow>
-        <CRow class="mb-2">
-          <CCol sm="4" class="fw-bold">Tên nhân viên:</CCol>
-          <CCol sm="8">{{ viewingEmployee.tenNhanVien }}</CCol>
-        </CRow>
-        <CRow class="mb-2">
-          <CCol sm="4" class="fw-bold">Ngày sinh:</CCol>
-          <CCol sm="8">{{ formatDate(viewingEmployee.ngaySinh) }}</CCol>
-        </CRow>
-        <CRow class="mb-2">
-          <CCol sm="4" class="fw-bold">Giới tính:</CCol>
-          <CCol sm="8">{{ viewingEmployee.gioiTinh ? 'Nam' : 'Nữ' }}</CCol>
-        </CRow>
-        <CRow class="mb-2">
-          <CCol sm="4" class="fw-bold">Số điện thoại:</CCol>
-          <CCol sm="8">{{ viewingEmployee.soDienThoai }}</CCol>
-        </CRow>
-        <CRow class="mb-2">
-          <CCol sm="4" class="fw-bold">CCCD:</CCol>
-          <CCol sm="8">{{ viewingEmployee.cccd }}</CCol>
-        </CRow>
-        <CRow class="mb-2">
-          <CCol sm="4" class="fw-bold">Địa chỉ:</CCol>
-          <CCol sm="8">{{ `${viewingEmployee.diaChiSoNhaTenDuong} - ${viewingEmployee.diaChiPhuongXa} - ${viewingEmployee.diaChiQuanHuyen} - ${viewingEmployee.diaChiTinhThanh}` }}</CCol>
-        </CRow>
-        <CRow class="mb-2">
-          <CCol sm="4" class="fw-bold">Ngày tạo:</CCol>
-          <CCol sm="8">{{ formatDateTime(viewingEmployee.ngayTao) }}</CCol>
-        </CRow>
-        <CRow class="mb-2">
-          <CCol sm="4" class="fw-bold">Ngày cập nhật:</CCol>
-          <CCol sm="8">{{ formatDateTime(viewingEmployee.ngayCapNhat) }}</CCol>
-        </CRow>
-     <CRow class="mb-2">
-  <CCol sm="4" class="fw-bold">Trạng thái:</CCol>
-  <CCol sm="8">
-    <CBadge :color="viewingEmployee.trangThai ? 'success' : 'secondary'">
-      {{ viewingEmployee.trangThai ? 'Hoạt động' : 'Không hoạt động' }}
-    </CBadge>
-  </CCol>
-</CRow>
-      </CModalBody>
-      <CModalFooter>
-        <CButton color="secondary" @click="showDetailModal = false">Đóng</CButton>
-      </CModalFooter>
-    </CModal>
-
-    <CCard class="shadow-sm">
-      <CCardBody>
-        <CTable striped hover responsive class="table-hover">
-          <CTableHead class="bg-light">
-            <CTableRow>
-              <CTableHeaderCell class="text-center text-nowrap fw-bold fs-6">STT</CTableHeaderCell>
-              <CTableHeaderCell class="text-nowrap fw-bold fs-6">Tên Nhân Viên</CTableHeaderCell>
-              <CTableHeaderCell class="text-center text-nowrap fw-bold fs-6">Ngày Sinh</CTableHeaderCell>
-              <CTableHeaderCell class="text-center text-nowrap fw-bold fs-6">Giới Tính</CTableHeaderCell>
-              <CTableHeaderCell class="text-nowrap fw-bold fs-6">SĐT</CTableHeaderCell>
-              <CTableHeaderCell class="text-nowrap fw-bold fs-6">Mã NV</CTableHeaderCell>
-              <CTableHeaderCell class="text-nowrap fw-bold fs-6">CCCD</CTableHeaderCell>
-              <CTableHeaderCell class="text-nowrap fw-bold fs-6">Địa chỉ</CTableHeaderCell>
-              <CTableHeaderCell class="text-center text-nowrap fw-bold fs-6">Trạng Thái</CTableHeaderCell>
-              <CTableHeaderCell class="text-center text-nowrap fw-bold fs-6">Hành động</CTableHeaderCell>
-            </CTableRow>
-          </CTableHead>
-        <CTableBody>
-  <CTableRow v-if="!hasData">
-    <CTableDataCell colspan="10" class="text-center text-danger">Không có dữ liệu nhân viên.</CTableDataCell>
-  </CTableRow>
-  <CTableRow v-for="(employee, index) in employeeList" :key="employee.id">
-    <CTableDataCell class="text-center">{{ (currentPage * pageSize) + index + 1 }}</CTableDataCell>
-    <CTableDataCell>{{ employee.tenNhanVien }}</CTableDataCell>
-    <CTableDataCell class="text-center">{{ formatDate(employee.ngaySinh) }}</CTableDataCell>
-    <CTableDataCell class="text-center">{{ employee.gioiTinh ? 'Nam' : 'Nữ' }}</CTableDataCell>
-    <CTableDataCell>{{ employee.soDienThoai }}</CTableDataCell>
-    <CTableDataCell>{{ employee.maNhanVien }}</CTableDataCell>
-    <CTableDataCell>{{ employee.cccd }}</CTableDataCell>
-    <CTableDataCell class="text-nowrap">
-      {{ `${employee.diaChiSoNhaTenDuong}, ${employee.diaChiPhuongXa}, ${employee.diaChiQuanHuyen}, ${employee.diaChiTinhThanh}` }}
-    </CTableDataCell>
-    <CTableDataCell class="text-center">
-      <CBadge :color="employee.trangThai ? 'success' : 'secondary'">
-        {{ employee.trangThai ? 'Hoạt động' : 'Không hoạt động' }}
-      </CBadge>
-    </CTableDataCell>
-    <CTableDataCell class="text-center">
-      <div class="d-flex justify-content-center gap-2">
-        <CButton size="sm" color="info" class="text-white" @click="openDetailModal(employee.id)" title="Xem chi tiết">
-          👁️
-        </CButton>
-        <CButton size="sm" color="warning" @click="openEditModal(employee)" title="Sửa">
-          ✏️
-        </CButton>
-        <CButton size="sm" color="danger" @click="deleteEmployee(employee.maNhanVien)" title="Xóa">
-          🗑️
-        </CButton>
+    <!-- Filter Section -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-6">
+      <div class="filter-header mb-4">
+        <h3 class="filter-title">
+          <Icon icon="solar:filter-bold-duotone" class="text-xl" />
+          Bộ Lọc Nhân Viên
+        </h3>
+        <button class="reset-filter-btn" @click="resetFilters">
+          Đặt lại bộ lọc
+        </button>
       </div>
-    </CTableDataCell>
-  </CTableRow>
-</CTableBody>
-        </CTable>
-   <div class="d-flex justify-content-center align-items-center mt-4">
-  <CButton color="primary" @click="goToPrevPage" :disabled="isFirstPage" class="mx-2">
-    <i class="fas fa-arrow-left"></i> Trang trước
-  </CButton>
-  <CButton v-for="page in totalPages" :key="page" color="primary" variant="outline" class="mx-1" @click="goToPage(page - 1)" :disabled="currentPage === page - 1">
-    {{ page }}
-  </CButton>
-  <CButton color="primary" @click="goToNextPage" :disabled="isLastPage" class="mx-2">
-    Trang sau <i class="fas fa-arrow-right"></i>
-  </CButton>
-</div>
-      </CCardBody>
-    </CCard>
+      
+      <div class="filter-content">
+        <!-- First Row: Search and Status -->
+        <div class="filter-row mb-4">
+          <div class="filter-group">
+            <label class="filter-label">Tìm kiếm</label>
+            <input
+              v-model="tempFilters.search"
+              type="text"
+              placeholder="Tìm kiếm mã NV, tên nhân viên, SĐT..."
+              class="filter-input"
+              @input="filterEmployees"
+            />
+          </div>
+          <div class="filter-group">
+            <label class="filter-label">Trạng thái</label>
+            <div class="radio-group">
+              <label class="radio-option">
+                <input
+                  type="radio"
+                  v-model="tempFilters.trangThai"
+                  value=""
+                  @change="filterEmployees"
+                  class="radio-input"
+                />
+                <span class="radio-label">Tất cả</span>
+              </label>
+              <label class="radio-option">
+                <input
+                  type="radio"
+                  v-model="tempFilters.trangThai"
+                  value="true"
+                  @change="filterEmployees"
+                  class="radio-input"
+                />
+                <span class="radio-label">Hoạt động</span>
+              </label>
+              <label class="radio-option">
+                <input
+                  type="radio"
+                  v-model="tempFilters.trangThai"
+                  value="false"
+                  @change="filterEmployees"
+                  class="radio-input"
+                />
+                <span class="radio-label">Không hoạt động</span>
+              </label>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Second Row: Gender and Sort -->
+        <div class="filter-row">
+          <div class="filter-group">
+            <label class="filter-label">Giới tính</label>
+            <select
+              v-model="tempFilters.gioiTinh"
+              class="filter-input"
+              @change="filterEmployees"
+            >
+              <option value="">Tất cả giới tính</option>
+              <option value="true">Nam</option>
+              <option value="false">Nữ</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label class="filter-label">Sắp xếp theo</label>
+            <select
+              v-model="tempFilters.sortBy"
+              class="filter-select"
+              @change="filterEmployees"
+            >
+              <option value="">Sắp xếp mặc định</option>
+              <option value="newest">Mới nhất</option>
+              <option value="oldest">Cũ nhất</option>
+              <option value="name_asc">Tên A-Z</option>
+              <option value="name_desc">Tên Z-A</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg">
+      <div class="p-6">
+
+        <!-- Employee List Section -->
+        <div class="employees-section">
+          <div class="section-header">
+            <h3 class="section-title">
+              <Icon icon="solar:users-group-two-rounded-bold-duotone" class="text-xl" />
+              Danh Sách Nhân Viên ({{ filteredEmployees.length }})
+            </h3>
+          </div>
+
+          <!-- DataTable Component -->
+          <DataTable
+            :data="filteredEmployees"
+            :columns="tableColumns"
+            item-label="nhân viên"
+            empty-message="Không có dữ liệu nhân viên nào được tìm thấy."
+            key-field="id"
+          >
+            <!-- Custom column templates -->
+            <template #stt="{ rowIndex }">
+              {{ rowIndex }}
+            </template>
+            
+            <template #maNhanVien="{ item }">
+              <span class="font-bold text-gray-800 dark:text-gray-100">{{ item.maNhanVien }}</span>
+            </template>
+            
+            <template #tenNhanVien="{ item }">
+              {{ item.tenNhanVien }}
+            </template>
+            
+            <template #ngaySinh="{ item }">
+              {{ formatDate(item.ngaySinh) }}
+            </template>
+            
+            <template #gioiTinh="{ item }">
+              <span :class="item.gioiTinh ? 'inline-flex items-center text-blue-700 bg-blue-100 px-2.5 py-1 rounded-full font-medium text-xs' : 'inline-flex items-center text-pink-700 bg-pink-100 px-2.5 py-1 rounded-full font-medium text-xs'">
+                <Icon :icon="item.gioiTinh ? 'solar:men-bold' : 'solar:women-bold'" class="w-3 h-3 mr-1" />
+                {{ item.gioiTinh ? 'Nam' : 'Nữ' }}
+              </span>
+            </template>
+            
+            <template #soDienThoai="{ item }">
+              {{ item.soDienThoai }}
+            </template>
+            
+            <template #cccd="{ item }">
+              {{ item.cccd }}
+            </template>
+            
+            <template #diaChi="{ item }">
+              {{ `${item.diaChiSoNhaTenDuong}, ${item.diaChiPhuongXa}, ${item.diaChiQuanHuyen}, ${item.diaChiTinhThanh}` }}
+            </template>
+            
+            <template #trangThai="{ item }">
+              <span :class="item.trangThai ? 'inline-flex items-center text-green-700 bg-green-100 px-2.5 py-1 rounded-full font-medium text-xs' : 'inline-flex items-center text-red-700 bg-red-100 px-2.5 py-1 rounded-full font-medium text-xs'">
+                <Icon :icon="item.trangThai ? 'solar:check-circle-bold' : 'solar:close-circle-bold'" class="w-3 h-3 mr-1" />
+                {{ item.trangThai ? 'Hoạt động' : 'Không hoạt động' }}
+              </span>
+            </template>
+            
+            <template #actions="{ item }">
+              <div class="flex justify-center items-center gap-3">
+                <button
+                  @click="openEditModal(item)"
+                  class="action-btn edit"
+                  title="Sửa"
+                >
+                  <Icon icon="solar:pen-bold" />
+                </button>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    :checked="item.trangThai"
+                    @change="toggleEmployeeStatus(item)"
+                    class="sr-only peer"
+                  />
+                  <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+            </template>
+          </DataTable>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add Employee Modal -->
+    <div v-if="showAddModal" class="fixed inset-0 bg-gray-900/60 flex items-center justify-center z-50 animate__animated animate__fadeIn">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-4xl shadow-2xl max-h-[90vh] overflow-y-auto">
+        <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
+          <Icon icon="solar:user-plus-bold" class="text-2xl mr-2 text-green-600" />
+          Thêm Nhân Viên Mới
+        </h3>
+        <form @submit.prevent="handleAddEmployee">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Tên nhân viên <span class="text-red-500">*</span></label>
+              <input
+                v-model="newEmployee.tenNhanVien"
+                type="text"
+                class="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-green-400 focus:border-green-400 transition duration-300"
+                placeholder="Nguyễn Văn A"
+                required
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Ngày sinh <span class="text-red-500">*</span></label>
+              <input
+                v-model="newEmployee.ngaySinh"
+                type="date"
+                class="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-green-400 focus:border-green-400 transition duration-300"
+                required
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Giới tính</label>
+              <select
+                v-model="newEmployee.gioiTinh"
+                class="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-green-400 focus:border-green-400 transition duration-300"
+              >
+                <option :value="true">Nam</option>
+                <option :value="false">Nữ</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Số điện thoại <span class="text-red-500">*</span></label>
+              <input
+                v-model="newEmployee.soDienThoai"
+                type="text"
+                class="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-green-400 focus:border-green-400 transition duration-300"
+                placeholder="0123456789"
+                required
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">CCCD <span class="text-red-500">*</span></label>
+              <input
+                v-model="newEmployee.cccd"
+                type="text"
+                class="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-green-400 focus:border-green-400 transition duration-300"
+                placeholder="123456789012"
+                required
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Số nhà, tên đường <span class="text-red-500">*</span></label>
+              <input
+                v-model="newEmployee.diaChiSoNhaTenDuong"
+                type="text"
+                class="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-green-400 focus:border-green-400 transition duration-300"
+                placeholder="123 Nguyễn Văn Linh"
+                required
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Phường/Xã <span class="text-red-500">*</span></label>
+              <input
+                v-model="newEmployee.diaChiPhuongXa"
+                type="text"
+                class="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-green-400 focus:border-green-400 transition duration-300"
+                placeholder="Phường ABC"
+                required
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Quận/Huyện <span class="text-red-500">*</span></label>
+              <input
+                v-model="newEmployee.diaChiQuanHuyen"
+                type="text"
+                class="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-green-400 focus:border-green-400 transition duration-300"
+                placeholder="Quận XYZ"
+                required
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Tỉnh/Thành phố <span class="text-red-500">*</span></label>
+              <input
+                v-model="newEmployee.diaChiTinhThanh"
+                type="text"
+                class="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-green-400 focus:border-green-400 transition duration-300"
+                placeholder="Hà Nội"
+                required
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Trạng thái</label>
+              <select
+                v-model="newEmployee.trangThai"
+                class="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-green-400 focus:border-green-400 transition duration-300"
+              >
+                <option :value="true">Hoạt động</option>
+                <option :value="false">Không hoạt động</option>
+              </select>
+            </div>
+          </div>
+          <div class="flex gap-3 mt-6">
+            <button
+              type="submit"
+              :disabled="isUpdating"
+              class="btn-primary px-6 py-3 rounded-xl bg-emerald-500 text-white hover:bg-emerald-600 transition duration-300 shadow-lg hover:shadow-xl flex-1 flex items-center justify-center"
+            >
+              <Icon v-if="isUpdating" icon="solar:loading-bold" class="animate-spin mr-2" />
+              Lưu
+            </button>
+            <button
+              type="button"
+              @click="showAddModal = false"
+              :disabled="isUpdating"
+              class="btn-secondary px-6 py-3 rounded-xl bg-rose-500 text-white hover:bg-rose-600 transition duration-300 shadow-lg hover:shadow-xl flex-1"
+            >
+              Hủy
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Edit Employee Modal -->
+    <div v-if="showEditModal" class="fixed inset-0 bg-gray-900/60 flex items-center justify-center z-50 animate__animated animate__fadeIn">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-4xl shadow-2xl max-h-[90vh] overflow-y-auto">
+        <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
+          <Icon icon="solar:pen-bold" class="text-2xl mr-2 text-yellow-600" />
+          Sửa Thông Tin Nhân Viên
+        </h3>
+        <form @submit.prevent="handleUpdateEmployee">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Tên nhân viên <span class="text-red-500">*</span></label>
+              <input
+                v-model="editingEmployee.tenNhanVien"
+                type="text"
+                class="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition duration-300"
+                required
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Ngày sinh <span class="text-red-500">*</span></label>
+              <input
+                v-model="editingEmployee.ngaySinh"
+                type="date"
+                class="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition duration-300"
+                required
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Giới tính</label>
+              <select
+                v-model="editingEmployee.gioiTinh"
+                class="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition duration-300"
+              >
+                <option :value="true">Nam</option>
+                <option :value="false">Nữ</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Số điện thoại <span class="text-red-500">*</span></label>
+              <input
+                v-model="editingEmployee.soDienThoai"
+                type="text"
+                class="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition duration-300"
+                required
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">CCCD <span class="text-red-500">*</span></label>
+              <input
+                v-model="editingEmployee.cccd"
+                type="text"
+                class="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition duration-300"
+                required
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Số nhà, tên đường <span class="text-red-500">*</span></label>
+              <input
+                v-model="editingEmployee.diaChiSoNhaTenDuong"
+                type="text"
+                class="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition duration-300"
+                required
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Phường/Xã <span class="text-red-500">*</span></label>
+              <input
+                v-model="editingEmployee.diaChiPhuongXa"
+                type="text"
+                class="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition duration-300"
+                required
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Quận/Huyện <span class="text-red-500">*</span></label>
+              <input
+                v-model="editingEmployee.diaChiQuanHuyen"
+                type="text"
+                class="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition duration-300"
+                required
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Tỉnh/Thành phố <span class="text-red-500">*</span></label>
+              <input
+                v-model="editingEmployee.diaChiTinhThanh"
+                type="text"
+                class="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition duration-300"
+                required
+              />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Trạng thái</label>
+              <select
+                v-model="editingEmployee.trangThai"
+                class="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition duration-300"
+              >
+                <option :value="true">Hoạt động</option>
+                <option :value="false">Không hoạt động</option>
+              </select>
+            </div>
+          </div>
+          <div class="flex gap-3 mt-6">
+            <button
+              type="submit"
+              :disabled="isUpdating"
+              class="btn-primary px-6 py-3 rounded-xl bg-emerald-500 text-white hover:bg-emerald-600 transition duration-300 shadow-lg hover:shadow-xl flex-1 flex items-center justify-center"
+            >
+              <Icon v-if="isUpdating" icon="solar:loading-bold" class="animate-spin mr-2" />
+              Lưu thay đổi
+            </button>
+            <button
+              type="button"
+              @click="showEditModal = false"
+              :disabled="isUpdating"
+              class="btn-secondary px-6 py-3 rounded-xl bg-rose-500 text-white hover:bg-rose-600 transition duration-300 shadow-lg hover:shadow-xl flex-1"
+            >
+              Hủy
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Detail Employee Modal -->
+    <div v-if="showDetailModal" class="fixed inset-0 bg-gray-900/60 flex items-center justify-center z-50 animate__animated animate__fadeIn">
+      <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-2xl shadow-2xl">
+        <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
+          <Icon icon="solar:eye-bold" class="text-2xl mr-2 text-blue-600" />
+          Chi Tiết Nhân Viên
+        </h3>
+        <div v-if="viewingEmployee" class="space-y-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Mã nhân viên:</span>
+              <p class="font-semibold text-gray-900 dark:text-gray-100">{{ viewingEmployee.maNhanVien }}</p>
+            </div>
+            <div>
+              <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Tên nhân viên:</span>
+              <p class="font-semibold text-gray-900 dark:text-gray-100">{{ viewingEmployee.tenNhanVien }}</p>
+            </div>
+            <div>
+              <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Ngày sinh:</span>
+              <p class="font-semibold text-gray-900 dark:text-gray-100">{{ formatDate(viewingEmployee.ngaySinh) }}</p>
+            </div>
+            <div>
+              <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Giới tính:</span>
+              <p class="font-semibold text-gray-900 dark:text-gray-100">{{ viewingEmployee.gioiTinh ? 'Nam' : 'Nữ' }}</p>
+            </div>
+            <div>
+              <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Số điện thoại:</span>
+              <p class="font-semibold text-gray-900 dark:text-gray-100">{{ viewingEmployee.soDienThoai }}</p>
+            </div>
+            <div>
+              <span class="text-sm font-medium text-gray-500 dark:text-gray-400">CCCD:</span>
+              <p class="font-semibold text-gray-900 dark:text-gray-100">{{ viewingEmployee.cccd }}</p>
+            </div>
+            <div class="md:col-span-2">
+              <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Địa chỉ:</span>
+              <p class="font-semibold text-gray-900 dark:text-gray-100">
+                {{ `${viewingEmployee.diaChiSoNhaTenDuong}, ${viewingEmployee.diaChiPhuongXa}, ${viewingEmployee.diaChiQuanHuyen}, ${viewingEmployee.diaChiTinhThanh}` }}
+              </p>
+            </div>
+            <div>
+              <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Ngày tạo:</span>
+              <p class="font-semibold text-gray-900 dark:text-gray-100">{{ formatDateTime(viewingEmployee.ngayTao) }}</p>
+            </div>
+            <div>
+              <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Ngày cập nhật:</span>
+              <p class="font-semibold text-gray-900 dark:text-gray-100">{{ formatDateTime(viewingEmployee.ngayCapNhat) }}</p>
+            </div>
+            <div class="md:col-span-2">
+              <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Trạng thái:</span>
+              <span :class="viewingEmployee.trangThai ? 'status-badge active' : 'status-badge inactive'">
+                <Icon :icon="viewingEmployee.trangThai ? 'solar:check-circle-bold' : 'solar:close-circle-bold'" class="w-3 h-3 mr-1" />
+                {{ viewingEmployee.trangThai ? 'Hoạt động' : 'Không hoạt động' }}
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="flex justify-end mt-6">
+          <button
+            @click="showDetailModal = false"
+            class="btn-secondary px-6 py-3 rounded-xl bg-gray-500 text-white hover:bg-gray-600 transition duration-300 shadow-lg hover:shadow-xl"
+          >
+            Đóng
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
-.container-fluid {
-  font-family: 'Arial', sans-serif;
-  font-size: 16px;
+@import 'vue-toastification/dist/index.css';
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap');
+
+:root {
+  --primary-blue: #3b82f6;
+  --primary-blue-dark: #2563eb;
+  --card-bg-light: #ffffff;
+  --card-bg-dark: #1f2937;
+  --text-color-light: #1f2937;
+  --text-color-dark: #e5e7eb;
 }
-.shadow-sm {
-  box-shadow: 0 .125rem .25rem rgba(0,0,0,.075) !important;
+
+.font-roboto {
+  font-family: 'Roboto', sans-serif;
 }
-.table-hover tbody tr:hover {
-  background-color: #f5f5f5;
-  transition: background-color 0.3s ease;
+
+.card {
+  border-radius: 24px;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.08);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  background: var(--card-bg-light);
 }
-.c-table-header-cell {
-  background-color: #f8f9fa;
-  font-weight: bold;
-  padding: 1rem;
-  white-space: nowrap;
+
+.dark .card {
+  background: var(--card-bg-dark);
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.3);
 }
-.c-table-data-cell {
-  font-size: 1rem;
-  font-weight: 500;
-  padding: 1rem;
-  vertical-align: middle;
+
+.btn-primary {
+  background: #10b981;
+  color: white;
+  font-weight: 600;
+  transition: background 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.form-label {
-  font-weight: bold;
-  color: #333;
-  font-size: 1rem;
+
+.btn-primary:hover:not(:disabled) {
+  background: #059669;
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(16, 185, 129, 0.45);
 }
-.c-modal-header {
-  border-bottom: 1px solid #dee2e6;
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
 }
-.c-modal-title {
-  font-weight: bold;
-  font-size: 1.5rem;
+
+.btn-secondary {
+  background: #ef4444;
+  color: white;
+  font-weight: 600;
+  transition: background 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.c-button {
-  transition: all 0.2s ease-in-out;
-  font-weight: bold;
+
+.btn-secondary:hover:not(:disabled) {
+  background: #dc2626;
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(239, 68, 68, 0.45);
 }
-.c-button:hover {
+
+.btn-secondary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+/* Filter Section Styling */
+.filter-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.filter-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+.reset-filter-btn {
+  padding: 10px 16px;
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+}
+
+.reset-filter-btn:hover {
   transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(107, 114, 128, 0.3);
 }
-.text-nowrap {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+
+.filter-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.filter-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.filter-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 0.25rem;
+}
+
+.filter-input,
+.filter-select {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #1f2937;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.filter-input:focus,
+.filter-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Radio Button Styles */
+.radio-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 0.375rem 0.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: #ffffff;
+  transition: all 0.2s ease;
+  min-width: fit-content;
+  font-size: 0.875rem;
+}
+
+.radio-option:hover {
+  border-color: #3b82f6;
+  background: #f8fafc;
+}
+
+.radio-option:has(.radio-input:checked) {
+  border-color: #3b82f6;
+  background: #eff6ff;
+  color: #1e40af;
+}
+
+.radio-input {
+  margin: 0;
+  margin-right: 0.5rem;
+  accent-color: #3b82f6;
+  cursor: pointer;
+}
+
+.radio-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+}
+
+.dark .radio-option {
+  background: #374151;
+  border-color: #4b5563;
+  color: #e5e7eb;
+}
+
+.dark .radio-option:hover {
+  border-color: #60a5fa;
+  background: #4b5563;
+}
+
+.dark .radio-option:has(.radio-input:checked) {
+  border-color: #60a5fa;
+  background: #1e3a8a;
+  color: #bfdbfe;
+}
+
+.action-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+}
+
+.action-btn.edit {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.action-btn:hover {
+  transform: scale(1.1);
+}
+
+.action-btn:focus {
+  outline: 2px solid #007bff;
+  outline-offset: 2px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.dark .section-header {
+  border-bottom-color: #4b5563;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1a202c;
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .filter-row {
+    grid-template-columns: 1fr;
+  }
+  .table th,
+  .table td {
+    padding: 10px;
+    font-size: 0.8rem;
+  }
+  .tabs {
+    gap: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+  .tab {
+    padding: 0.5rem 0.8rem;
+    font-size: 0.75rem;
+  }
+  .pagination {
+    flex-direction: column;
+    align-items: center;
+  }
+  .pagination button {
+    width: 100%;
+    margin-bottom: 8px;
+  }
+}
+
+/* Order Type Badge Styles */
+.order-type-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.online-order {
+  background: #dbeafe;
+  color: #1e40af;
+  border: 1px solid #93c5fd;
+}
+
+.online-order:hover {
+  background: #bfdbfe;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+}
+
+.offline-order {
+  background: #d1fae5;
+  color: #065f46;
+  border: 1px solid #86efac;
+}
+
+.offline-order:hover {
+  background: #bbf7d0;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
 }
 </style>
