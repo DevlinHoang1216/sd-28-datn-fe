@@ -1,23 +1,23 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
 
 // Main views
-import ThongKe from './views/ThongKe.vue'
-import HoaDon from './views/HoaDon.vue'
-import PhieuGiamGia from './views/PhieuGiamGia.vue'
-import DotGiamGia from './views/DotGiamGia.vue'
-import BanTaiQuay from './views/BanTaiQuay.vue'
-import SanPham from './views/SanPham.vue'
-import NhanVien from './views/NhanVien.vue'
-import KhachHang from './views/KhachHang.vue'
-import HoaDonChiTiet from './views/HoaDonChiTiet.vue'
+import ThongKe from './views/tongKet/ThongKe.vue'
+import HoaDon from './views/hoaDon/HoaDon.vue'
+import PhieuGiamGia from './views/khuyenMai/PhieuGiamGia.vue'
+import DotGiamGia from './views/khuyenMai/DotGiamGia.vue'
+import BanTaiQuay from './views/banHang/BanTaiQuay.vue'
+import SanPham from './views/sanPham/SanPham.vue'
+import NhanVien from './views/taiKhoan/NhanVien.vue'
+import KhachHang from './views/taiKhoan/KhachHang.vue'
+import HoaDonChiTiet from './views/hoaDon/HoaDonChiTiet.vue'
 
 // Attribute management views
-import HangPage from './views/attributes/Hang.vue'
-import MauSacPage from './views/attributes/MauSac.vue'
-import KichCoPage from './views/attributes/KichCo.vue'
-import ChatLieuPage from './views/attributes/ChatLieu.vue'
-import DanhMucPage from './views/attributes/DanhMuc.vue'
-import ThemPhieuGiamGia from './views/PhieuGiamGia/ThemPhieuGiamGia.vue'
+import HangPage from './views/thuocTinhSanPham/Hang.vue'
+import MauSacPage from './views/thuocTinhSanPham/MauSac.vue'
+import KichCoPage from './views/thuocTinhSanPham/KichCo.vue'
+import ChatLieuPage from './views/thuocTinhSanPham/ChatLieu.vue'
+import DanhMucPage from './views/thuocTinhSanPham/DanhMuc.vue'
+import ThemPhieuGiamGia from './views/phieugiamgia/ThemPhieuGiamGia.vue'
 import ThemDotGiamGia from './views/DotGiamGia/ThemDotGiamGia.vue'
 import EditDotGiamGia from './views/DotGiamGia/EditDotGiamGia.vue'
 
@@ -25,7 +25,7 @@ const routes = [
   // Main routes
   { path: '/', name: 'Home', redirect: '/thong-ke' },
   { path: '/thong-ke', name: 'ThongKe', component: ThongKe },
-  
+
   // Product management routes
   {
     path: '/san-pham',

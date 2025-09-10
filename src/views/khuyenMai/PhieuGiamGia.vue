@@ -166,7 +166,7 @@
                 <p><strong>Loại phiếu:</strong> {{ mapLoaiApDungText(viewingCoupon.loaiApDung) }}</p>
                 <p><strong>Loại giảm giá:</strong> {{ mapLoaiGiamGiaText(viewingCoupon.loaiGiamGia) }}</p>
                 <p><strong>Giá trị giảm:</strong> {{ formatCurrency(viewingCoupon.giaTriGiam, viewingCoupon.loaiGiamGia)
-                  }}</p>
+                }}</p>
               </div>
               <div class="col-md-6">
                 <p><strong>Giá trị đơn hàng tối thiểu:</strong> {{ formatCurrency(viewingCoupon.hoaDonToiThieu,
@@ -212,7 +212,7 @@ import { useRouter } from "vue-router";       // để điều hướng
 import { useToast } from "vue-toastification"; // để hiển thị toast
 import axios from 'axios';
 import Breadcrumb from '@/components/Breadcrumb.vue';
-import EditCouponModal from './phieugiamgia/EditCouponModal.vue';
+import EditCouponModal from '../phieugiamgia/EditCouponModal.vue';
 
 export default {
   name: 'PhieuGiamGia',
