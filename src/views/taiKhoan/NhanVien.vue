@@ -1237,23 +1237,6 @@ onMounted(() => {
   user-select: none;
 }
 
-.dark .radio-option {
-  background: #374151;
-  border-color: #4b5563;
-  color: #e5e7eb;
-}
-
-.dark .radio-option:hover {
-  border-color: #60a5fa;
-  background: #4b5563;
-}
-
-.dark .radio-option:has(.radio-input:checked) {
-  border-color: #60a5fa;
-  background: #1e3a8a;
-  color: #bfdbfe;
-}
-
 .action-btn {
   width: 36px;
   height: 36px;
