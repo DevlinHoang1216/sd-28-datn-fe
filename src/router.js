@@ -17,7 +17,9 @@ import MauSacPage from './views/attributes/MauSac.vue'
 import KichCoPage from './views/attributes/KichCo.vue'
 import ChatLieuPage from './views/attributes/ChatLieu.vue'
 import DanhMucPage from './views/attributes/DanhMuc.vue'
-
+import ThemPhieuGiamGia from './views/PhieuGiamGia/ThemPhieuGiamGia.vue'
+import ThemDotGiamGia from './views/DotGiamGia/ThemDotGiamGia.vue'
+import EditDotGiamGia from './views/DotGiamGia/EditDotGiamGia.vue'
 
 const routes = [
   // Main routes
@@ -45,7 +47,10 @@ const routes = [
   { path: '/hoa-don', name: 'HoaDon', component: HoaDon },
   { path: '/hoa-don/chi-tiet/:id', name: 'HoaDonChiTiet', component: HoaDonChiTiet },
   { path: '/phieu-giam-gia', name: 'PhieuGiamGia', component: PhieuGiamGia },
+  { path: '/them-phieu-giam-gia', name: 'ThemPhieuGiamGia', component: ThemPhieuGiamGia },
   { path: '/dot-giam-gia', name: 'DotGiamGia', component: DotGiamGia },
+  { path: '/edit-dot-giam-gia', name: 'EditDotGiamGia', component: EditDotGiamGia },
+  { path: '/them-dot-giam-gia', name: 'ThemDotGiamGia', component: ThemDotGiamGia },
   { path: '/ban-tai-quay', name: 'BanTaiQuay', component: BanTaiQuay },
 
   // User management
