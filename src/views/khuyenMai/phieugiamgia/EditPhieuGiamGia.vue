@@ -1,13 +1,12 @@
-```vue
 <template>
-  <div class="coupon-add-container">
+  <div class="coupon-edit-container">
     <!-- Breadcrumb -->
     <Breadcrumb
       :items="breadcrumbItems"
       :show-page-info="true"
-      page-title="Thêm Phiếu Giảm Giá Mới"
-      page-description="Tạo phiếu giảm giá mới cho hệ thống bán hàng"
-      page-icon="solar:ticket-bold-duotone"
+      page-title="Sửa Phiếu Giảm Giá"
+      page-description="Chỉnh sửa thông tin phiếu giảm giá trong hệ thống"
+      page-icon="solar:pen-bold-duotone"
       :page-stats="pageStats"
       :actions="breadcrumbActions"
     />
@@ -131,10 +130,14 @@
             </div>
 
             <!-- Submit Button -->
-            <button class="submit-btn primary" @click="submitForm">
-              <iconify-icon icon="solar:check-circle-bold-duotone"></iconify-icon>
-              Thêm Phiếu Giảm Giá
-            </button>
+            <div class="button-group">
+              <button class="submit-btn secondary" @click="cancelEdit">
+                Hủy bỏ
+              </button>
+              <button class="submit-btn primary" @click="submitForm">
+                Cập nhật Phiếu Giảm Giá
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -147,36 +150,34 @@
               <iconify-icon icon="solar:users-group-rounded-bold-duotone"></iconify-icon>
               Chọn khách hàng áp dụng
             </h3>
-            <div class="table-container">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th style="width: 60px;">Chọn</th>
-                    <th>Tên khách hàng</th>
-                    <th>Email</th>
-                    <th>SĐT</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-if="customers.length === 0">
-                    <td colspan="4" class="empty-message">Không có khách hàng nào để hiển thị.</td>
-                  </tr>
-                  <tr v-for="kh in customers" :key="kh.id">
-                    <td class="text-center">
-                      <input
-                        type="checkbox"
-                        v-model="selectedCustomers"
-                        :value="kh.id"
-                        :disabled="!coupon.isPrivate"
-                      />
-                    </td>
-                    <td>{{ kh.ten || 'N/A' }}</td>
-                    <td>{{ kh.taiKhoan?.email || 'N/A' }}</td>
-                    <td>{{ kh.taiKhoan?.soDienThoai || 'N/A' }}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            <DataTable
+              :data="customers"
+              :columns="customerColumns"
+              item-label="khách hàng"
+              empty-message="Không có khách hàng nào để hiển thị."
+              key-field="id"
+            >
+              <template #checkbox="{ item }">
+                <div class="text-center">
+                  <input
+                    type="checkbox"
+                    v-model="selectedCustomers"
+                    :value="item.id"
+                    :disabled="!coupon.isPrivate"
+                    class="customer-checkbox"
+                  />
+                </div>
+              </template>
+              <template #ten="{ item }">
+                {{ item.ten || 'N/A' }}
+              </template>
+              <template #email="{ item }">
+                {{ item.taiKhoan?.email || 'N/A' }}
+              </template>
+              <template #soDienThoai="{ item }">
+                {{ item.taiKhoan?.soDienThoai || 'N/A' }}
+              </template>
+            </DataTable>
           </div>
         </div>
       </div>
@@ -188,36 +189,37 @@
 import { ref, computed } from 'vue';
 import axios from 'axios';
 import { useToast } from 'vue-toastification';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import Breadcrumb from '@/components/Breadcrumb.vue';
+import DataTable from '@/components/DataTable.vue';
 
 export default {
-  name: 'CouponAdditionForm',
+  name: 'EditPhieuGiamGia',
   components: {
     Breadcrumb,
+    DataTable,
   },
   setup() {
     const toast = useToast();
     const router = useRouter();
+    const route = useRoute();
 
     // Breadcrumb data
     const breadcrumbItems = ref([
       { label: 'Phiếu giảm giá', path: '/phieu-giam-gia' },
-      { label: 'Thêm mới', path: '/phieu-giam-gia/them-moi' },
+      { label: 'Chỉnh sửa', path: `/phieu-giam-gia/edit/${route.params.id}` },
     ]);
 
     const breadcrumbActions = ref([
       {
         label: 'Danh sách phiếu',
-        icon: 'solar:list-bold-duotone',
         type: 'default',
         handler: () => router.push('/phieu-giam-gia'),
       },
       {
-        label: 'Làm mới',
-        icon: 'solar:refresh-bold-duotone',
-        type: 'default',
-        handler: () => window.location.reload(),
+        label: 'Thêm mới',
+        type: 'primary',
+        handler: () => router.push('/phieu-giam-gia/them-moi'),
       },
     ]);
 
@@ -234,11 +236,12 @@ export default {
       },
     ]);
 
-    return { toast, router, breadcrumbItems, breadcrumbActions, pageStats };
+    return { toast, router, route, breadcrumbItems, breadcrumbActions, pageStats };
   },
   data() {
     return {
       coupon: {
+        id: null,
         maPhieuGiamGia: '',
         tenPhieuGiamGia: '',
         giaTriGiam: null,
@@ -252,6 +255,25 @@ export default {
       customers: [],
       selectedCustomers: [],
       loading: false,
+      customerColumns: [
+        {
+          key: 'checkbox',
+          label: 'Chọn',
+          class: 'text-center',
+        },
+        {
+          key: 'ten',
+          label: 'Tên khách hàng',
+        },
+        {
+          key: 'email',
+          label: 'Email',
+        },
+        {
+          key: 'soDienThoai',
+          label: 'SĐT',
+        },
+      ],
     };
   },
   computed: {
@@ -261,10 +283,49 @@ export default {
         : 'Giá trị giảm (%)';
     },
   },
-  mounted() {
-    this.fetchCustomers();
+  async mounted() {
+    await this.fetchCouponData();
+    await this.fetchCustomers();
   },
   methods: {
+    async fetchCouponData() {
+      this.loading = true;
+      try {
+        const couponId = this.route.params.id;
+        const res = await axios.get(`/api/phieu-giam-gia/${couponId}`);
+        const data = res.data;
+        
+        this.coupon = {
+          id: data.id,
+          maPhieuGiamGia: data.maPhieuGiamGia || data.ma,
+          tenPhieuGiamGia: data.tenPhieuGiamGia,
+          giaTriGiam: data.giaTriGiam || data.phanTramGiamGia || data.soTienGiamGia,
+          hoaDonToiThieu: data.hoaDonToiThieu,
+          soTienGiamToiDa: data.soTienGiamToiDa,
+          ngayBatDau: this.formatDateTimeForInput(data.ngayBatDau),
+          ngayKetThuc: this.formatDateTimeForInput(data.ngayKetThuc),
+          loaiGiamGia: data.loaiGiamGia || (data.loaiPhieuGiamGia === 'PHANTRAM' ? 'PHAN_TRAM' : 'SO_TIEN_CO_DINH'),
+          isPrivate: data.riengTu || false,
+        };
+
+        this.selectedCustomers = data.customerIds || [];
+        
+        this.toast.success('Tải thông tin phiếu giảm giá thành công!');
+      } catch (err) {
+        console.error('Lỗi tải phiếu giảm giá:', err);
+        this.toast.error(`Không thể tải thông tin phiếu giảm giá: ${err.message || 'Lỗi không xác định'}`);
+        this.router.push('/phieu-giam-gia');
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    formatDateTimeForInput(dateTime) {
+      if (!dateTime) return '';
+      const date = new Date(dateTime);
+      return date.toISOString().slice(0, 16);
+    },
+
     generateCode() {
       this.coupon.maPhieuGiamGia =
         'PGG-' + Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -284,16 +345,12 @@ export default {
     },
 
     async fetchCustomers() {
-      this.loading = true;
       try {
         const res = await axios.get('/api/khach-hang');
         this.customers = Array.isArray(res.data) ? res.data : res.data.content || [];
-        this.toast.success(`Tải danh sách khách hàng thành công! (${this.customers.length} khách hàng)`);
       } catch (err) {
         console.error('Lỗi tải khách hàng:', err);
         this.toast.error(`Không thể tải danh sách khách hàng: ${err.message || 'Lỗi không xác định'}`);
-      } finally {
-        this.loading = false;
       }
     },
 
@@ -358,21 +415,25 @@ export default {
           customerIds: this.coupon.isPrivate ? this.selectedCustomers : [],
         };
 
-        const res = await axios.post('/api/phieu-giam-gia/create', dataToSend);
-        if (res.status === 201) {
-          this.toast.success('Thêm phiếu giảm giá thành công!');
+        const res = await axios.put(`/api/phieu-giam-gia/${this.coupon.id}`, dataToSend);
+        if (res.status === 200 || res.status === 204) {
+          this.toast.success('Cập nhật phiếu giảm giá thành công!');
           this.router.push({ name: 'PhieuGiamGia' });
         }
       } catch (err) {
-        let errorMessage = 'Đã xảy ra lỗi khi thêm phiếu giảm giá.';
+        let errorMessage = 'Đã xảy ra lỗi khi cập nhật phiếu giảm giá.';
         if (err.response && err.response.data && err.response.data.message) {
           errorMessage = err.response.data.message;
         }
         this.toast.error(errorMessage);
-        console.error('Lỗi thêm phiếu:', err.response || err);
+        console.error('Lỗi cập nhật phiếu:', err.response || err);
       } finally {
         this.loading = false;
       }
+    },
+
+    cancelEdit() {
+      this.router.push({ name: 'PhieuGiamGia' });
     },
   },
 };
@@ -380,7 +441,7 @@ export default {
 
 <style scoped>
 /* ===== GENERAL STYLES ===== */
-.coupon-add-container {
+.coupon-edit-container {
   padding: 24px;
   background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   min-height: 100vh;
@@ -390,7 +451,7 @@ export default {
 /* ===== MAIN CONTENT ===== */
 .main-content {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: 1.5fr 1fr;
   gap: 24px;
 }
 
@@ -524,42 +585,24 @@ input[type="checkbox"]:disabled {
   margin-bottom: 20px;
 }
 
-.table-container {
-  overflow-x: auto;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
+/* ===== CUSTOMER CHECKBOX STYLES ===== */
+.customer-checkbox {
+  width: 20px;
+  height: 20px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  cursor: pointer;
 }
 
-.data-table {
-  width: 100%;
-  border-collapse: collapse;
+.customer-checkbox:checked {
+  background: #007bff;
+  border-color: #007bff;
 }
 
-.data-table th {
-  background: #f8fafc;
-  padding: 16px 12px;
-  text-align: left;
-  font-weight: 600;
-  color: #64748b;
-  font-size: 0.875rem;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.data-table td {
-  padding: 16px 12px;
-  border-bottom: 1px solid #f1f5f9;
-  vertical-align: middle;
-}
-
-.data-table tbody tr:hover {
-  background: #f8fafc;
-}
-
-.empty-message {
-  text-align: center;
-  color: #64748b;
-  font-style: italic;
-  padding: 40px 20px;
+.customer-checkbox:disabled {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+  cursor: not-allowed;
 }
 
 /* ===== DISABLED OVERLAY ===== */
@@ -568,27 +611,48 @@ input[type="checkbox"]:disabled {
   pointer-events: none;
 }
 
+/* ===== BUTTON GROUP ===== */
+.button-group {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+}
+
 /* ===== SUBMIT BUTTON ===== */
 .submit-btn {
-  width: 100%;
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
-  color: white;
   border: none;
   border-radius: 12px;
-  padding: 16px 24px;
+  padding: 14px 22px;
   font-weight: 700;
   font-size: 1.05rem;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
-.submit-btn:hover {
+.submit-btn.primary {
+  background: #007bff;
+  color: white;
+}
+
+.submit-btn.primary:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 20px rgba(0, 123, 255, 0.3);
+}
+
+.submit-btn.secondary {
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+
+.submit-btn.secondary:hover {
+  background: #e2e8f0;
+  color: #374151;
 }
 
 /* ===== LOADING STYLES ===== */
@@ -632,7 +696,7 @@ input[type="checkbox"]:disabled {
 }
 
 @media (max-width: 768px) {
-  .coupon-add-container {
+  .coupon-edit-container {
     padding: 16px;
   }
 
@@ -648,10 +712,8 @@ input[type="checkbox"]:disabled {
     width: 100%;
   }
 
-  .data-table th,
-  .data-table td {
-    padding: 8px 6px;
-    font-size: 0.85rem;
+  .button-group {
+    flex-direction: column;
   }
 
   .section-title {
@@ -679,4 +741,3 @@ input[type="checkbox"]:disabled {
   }
 }
 </style>
-```

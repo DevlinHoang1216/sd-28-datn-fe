@@ -317,15 +317,17 @@ export default {
   padding: 24px;
   background: #f8fafc;
   border-radius: 16px;
-  gap: 20px;
+  gap: 16px;
   flex-wrap: wrap;
+  min-height: 80px;
 }
 
 .pagination-info-left {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  min-width: 200px;
+  min-width: 160px;
+  flex-shrink: 1;
 }
 
 .pagination-summary {
@@ -360,7 +362,9 @@ export default {
 .pagination {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  flex-shrink: 1;
+  min-width: 0;
 }
 
 .pagination-btn {
@@ -437,7 +441,8 @@ export default {
   flex-direction: column;
   gap: 12px;
   align-items: flex-end;
-  min-width: 200px;
+  min-width: 160px;
+  flex-shrink: 1;
 }
 
 .pagination-current {
@@ -504,6 +509,37 @@ export default {
 }
 
 /* ===== RESPONSIVE DESIGN ===== */
+/* When sidebar is open or container is narrow */
+@media (max-width: 1200px) {
+  .pagination-container {
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 20px 16px;
+  }
+  
+  .pagination-info-left,
+  .pagination-info-right {
+    min-width: 140px;
+  }
+  
+  .pagination {
+    gap: 4px;
+  }
+  
+  .pagination-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 14px;
+  }
+  
+  .page-number-btn {
+    min-width: 32px;
+    height: 32px;
+    font-size: 0.85rem;
+  }
+}
+
+/* Tablet and smaller screens */
 @media (max-width: 768px) {
   .pagination-container {
     flex-direction: column;
@@ -519,10 +555,58 @@ export default {
     text-align: center;
   }
   
+  .pagination {
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  
+  .page-size-selector,
+  .goto-page {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  
   .data-table th,
   .data-table td {
     padding: 12px 8px;
     font-size: 0.85rem;
+  }
+}
+
+/* Mobile phones */
+@media (max-width: 480px) {
+  .pagination-container {
+    padding: 12px;
+    gap: 12px;
+  }
+  
+  .pagination-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 12px;
+  }
+  
+  .page-number-btn {
+    min-width: 28px;
+    height: 28px;
+    font-size: 0.75rem;
+  }
+  
+  .page-numbers {
+    gap: 2px;
+  }
+  
+  /* Hide first/last buttons on very small screens */
+  .pagination-btn:first-child,
+  .pagination-btn:last-child {
+    display: none;
+  }
+  
+  .data-table th,
+  .data-table td {
+    padding: 8px 4px;
+    font-size: 0.8rem;
   }
 }
 </style>
