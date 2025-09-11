@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useToast } from 'vue-toastification'
+import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import * as XLSX from 'xlsx'
 import axios from 'axios'
@@ -9,6 +10,7 @@ import DataTable from '@/components/DataTable.vue'
 
 // --- State Management ---
 const toast = useToast()
+const router = useRouter()
 const allCustomers = ref([])
 const currentPage = ref(0)
 const pageSize = ref(10)
@@ -186,7 +188,7 @@ const breadcrumbActions = ref([
   {
     label: 'Thêm khách hàng',
     type: 'primary',
-    handler: () => openAddModal()
+    handler: () => router.push('/them-khach-hang')
   }
 ])
 
@@ -648,7 +650,7 @@ onMounted(() => {
             <template #actions="{ item }">
               <div class="flex justify-center items-center gap-3">
                 <button
-                  @click="openEditModal(item)"
+                  @click="router.push(`/khach-hang/edit/${item.id}`)"
                   class="action-btn edit"
                   title="Sửa"
                 >

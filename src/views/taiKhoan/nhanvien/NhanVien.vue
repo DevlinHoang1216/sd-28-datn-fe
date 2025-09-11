@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useToast } from 'vue-toastification'
+import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import * as XLSX from 'xlsx'
 import Breadcrumb from '@/components/Breadcrumb.vue'
@@ -8,6 +9,7 @@ import DataTable from '@/components/DataTable.vue'
 
 // --- State Management ---
 const toast = useToast()
+const router = useRouter()
 const allEmployees = ref([])
 const currentPage = ref(0)
 const pageSize = ref(10)
@@ -207,7 +209,7 @@ const breadcrumbActions = ref([
   {
     label: 'Thêm nhân viên',
     type: 'primary',
-    handler: () => openAddModal()
+    handler: () => navigateToAddEmployee()
   }
 ])
 
@@ -254,6 +256,10 @@ const fetchAllEmployees = async () => {
     }
     console.log('Kết thúc tải nhân viên:', allEmployees.value)
   }
+}
+
+const navigateToAddEmployee = () => {
+  router.push('/them-nhan-vien')
 }
 
 const openAddModal = () => {
