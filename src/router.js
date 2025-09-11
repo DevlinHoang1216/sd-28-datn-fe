@@ -7,8 +7,8 @@ import PhieuGiamGia from './views/khuyenMai/phieugiamgia/PhieuGiamGia.vue'
 import DotGiamGia from './views/khuyenMai/dotgiamgia/DotGiamGia.vue'
 import BanTaiQuay from './views/banHang/BanTaiQuay.vue'
 import SanPham from './views/sanPham/SanPham.vue'
-import NhanVien from './views/taiKhoan/NhanVien.vue'
-import KhachHang from './views/taiKhoan/KhachHang.vue'
+import NhanVien from './views/taiKhoan/nhanvien/NhanVien.vue'
+import KhachHang from './views/taiKhoan/khachhang/KhachHang.vue'
 import HoaDonChiTiet from './views/hoaDon/HoaDonChiTiet.vue'
 
 // Attribute management views
@@ -23,6 +23,10 @@ import ThemPhieuGiamGia from './views/khuyenMai/phieugiamgia/ThemPhieuGiamGia.vu
 import EditPhieuGiamGia from './views/khuyenMai/phieugiamgia/EditPhieuGiamGia.vue'
 import ThemDotGiamGia from './views/khuyenMai/dotgiamgia/ThemDotGiamGia.vue'
 import EditDotGiamGia from './views/khuyenMai/dotgiamgia/EditDotGiamGia.vue'
+import ThemNhanVien from './views/taiKhoan/nhanvien/ThemNhanVien.vue'
+import EditNhanVien from './views/taiKhoan/nhanvien/EditNhanVien.vue'
+import ThemKhachHang from './views/taiKhoan/khachhang/ThemKhachHang.vue'
+import EditKhachHang from './views/taiKhoan/khachhang/EditKhachHang.vue'
 
 const routes = [
   // Main routes
@@ -49,7 +53,11 @@ const routes = [
 
   // User management
   { path: '/nhan-vien', name: 'NhanVien', component: NhanVien },
+  { path: '/them-nhan-vien', name: 'ThemNhanVien', component: ThemNhanVien },
+  { path: '/nhan-vien/edit/:id', name: 'EditNhanVien', component: EditNhanVien },
   { path: '/khach-hang', name: 'KhachHang', component: KhachHang },
+  { path: '/them-khach-hang', name: 'ThemKhachHang', component: ThemKhachHang },
+  { path: '/khach-hang/edit/:id', name: 'EditKhachHang', component: EditKhachHang },
 
   // Attribute management routes
   { path: '/thuoc-tinh/hang', name: 'Hang', component: HangPage },
