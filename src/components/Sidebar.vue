@@ -142,6 +142,7 @@ export default {
             { path: '/thuoc-tinh/kich-co', label: 'Kích Cỡ', icon: 'solar:ruler-outline' },
             { path: '/thuoc-tinh/chat-lieu', label: 'Chất Liệu', icon: 'mdi:tshirt-crew-outline' }, // Đã thay đổi icon cho Chất liệu
             { path: '/thuoc-tinh/danh-muc', label: 'Danh Mục', icon: 'solar:folder-outline' },
+            { path: '/thuoc-tinh/de-giay', label: 'Đế Giày', icon: 'solar:layers-bold-duotone' },
           ],
         },
         { path: '/phieu-giam-gia', label: 'Quản Lý Phiếu Giảm Giá', icon: 'solar:tag-horizontal-outline' },

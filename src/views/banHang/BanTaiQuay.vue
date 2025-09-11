@@ -167,6 +167,19 @@
             </h3>
           </div>
           <div class="card-content">
+            <!-- Delivery Toggle -->
+            <div class="delivery-toggle-section">
+              <div class="toggle-container">
+                <label class="toggle-label">
+                  Giao hàng
+                </label>
+                <div class="toggle-switch" @click="toggleDelivery">
+                  <input type="checkbox" v-model="isDelivery" class="toggle-input" />
+                  <span class="toggle-slider" :class="{ active: isDelivery }"></span>
+                </div>
+              </div>
+            </div>
+
             <div class="form-group">
               <label class="form-label">Tên Khách Hàng</label>
               <input 
@@ -185,9 +198,121 @@
                 placeholder="Nhập số điện thoại"
               />
             </div>
+
             <button class="customer-select-btn" @click="showModal = true">
               Chọn Khách Hàng
             </button>
+
+            <!-- Delivery Information (shown when delivery is enabled) -->
+            <div v-if="isDelivery" class="delivery-info-section">
+              <div class="delivery-header">
+                <h4 class="delivery-title">
+                  <iconify-icon icon="solar:map-point-bold-duotone"></iconify-icon>
+                  Thông Tin Giao Hàng
+                </h4>
+              </div>
+              
+              <div class="address-selection">
+                <div class="address-tabs">
+                  <button 
+                    class="address-tab" 
+                    :class="{ active: addressMode === 'select' }"
+                    @click="addressMode = 'select'"
+                  >
+                    Chọn địa chỉ có sẵn
+                  </button>
+                  <button 
+                    class="address-tab" 
+                    :class="{ active: addressMode === 'input' }"
+                    @click="addressMode = 'input'"
+                  >
+                    Nhập địa chỉ mới
+                  </button>
+                </div>
+
+                <!-- Select existing address -->
+                <div v-if="addressMode === 'select'" class="address-select-section">
+                  <div class="form-group">
+                    <label class="form-label">Địa chỉ khách hàng</label>
+                    <select v-model="selectedAddress" class="form-select">
+                      <option value="">-- Chọn địa chỉ --</option>
+                      <option 
+                        v-for="address in customerAddresses" 
+                        :key="address.id" 
+                        :value="address"
+                      >
+                        {{ address.label }} - {{ address.fullAddress }}
+                      </option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Input new address -->
+                <div v-if="addressMode === 'input'" class="address-input-section">
+                  <div class="form-group">
+                    <label class="form-label">Địa chỉ cụ thể</label>
+                    <input 
+                      type="text" 
+                      v-model="deliveryInfo.diaChi" 
+                      class="form-input"
+                      placeholder="Số nhà, tên đường..."
+                    />
+                  </div>
+                  <div class="form-row">
+                    <div class="form-group">
+                      <label class="form-label">Phường/Xã</label>
+                      <input 
+                        type="text" 
+                        v-model="deliveryInfo.phuongXa" 
+                        class="form-input"
+                        placeholder="Phường/Xã"
+                      />
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Quận/Huyện</label>
+                      <input 
+                        type="text" 
+                        v-model="deliveryInfo.quanHuyen" 
+                        class="form-input"
+                        placeholder="Quận/Huyện"
+                      />
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Tỉnh/Thành phố</label>
+                    <input 
+                      type="text" 
+                      v-model="deliveryInfo.tinhThanh" 
+                      class="form-input"
+                      placeholder="Tỉnh/Thành phố"
+                    />
+                  </div>
+                </div>
+
+                <!-- Delivery notes -->
+                <div class="form-group">
+                  <label class="form-label">Ghi chú giao hàng</label>
+                  <textarea 
+                    v-model="deliveryInfo.ghiChu" 
+                    class="form-textarea"
+                    placeholder="Ghi chú cho shipper (tầng, cổng, thời gian giao...)"
+                    rows="3"
+                  ></textarea>
+                </div>
+
+                <!-- Delivery fee info -->
+                <div class="delivery-fee-info">
+                  <div class="fee-item">
+                    <span class="fee-label">Phí giao hàng:</span>
+                    <span class="fee-value">{{ formatCurrency(phiGiaoHang) }}</span>
+                  </div>
+                  <div class="fee-item">
+                    <span class="fee-label">Thời gian giao:</span>
+                    <span class="fee-value">30-60 phút</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -224,6 +349,10 @@
               <div class="summary-line">
                 <span>Tổng tiền hàng:</span>
                 <strong>{{ formatCurrency(tongTien) }}</strong>
+              </div>
+              <div v-if="isDelivery" class="summary-line delivery-line">
+                <span>Phí giao hàng:</span>
+                <strong class="delivery-amount">+ {{ formatCurrency(phiGiaoHang) }}</strong>
               </div>
               <div class="summary-line discount-line">
                 <span>Giảm giá:</span>
@@ -572,6 +701,38 @@ export default {
     const giamGia = ref(0);
     const khachThanhToan = ref(0);
 
+    // Delivery
+    const isDelivery = ref(false);
+    const addressMode = ref('select');
+    const selectedAddress = ref('');
+    const phiGiaoHang = ref(30000); // Default delivery fee
+    const deliveryInfo = ref({
+      diaChi: '',
+      phuongXa: '',
+      quanHuyen: '',
+      tinhThanh: '',
+      ghiChu: ''
+    });
+
+    // Sample customer addresses
+    const customerAddresses = ref([
+      {
+        id: 1,
+        label: 'Nhà riêng',
+        fullAddress: '123 Nguyễn Văn Cừ, Phường 4, Quận 5, TP.HCM'
+      },
+      {
+        id: 2,
+        label: 'Công ty',
+        fullAddress: '456 Lê Văn Sỹ, Phường 12, Quận 3, TP.HCM'
+      },
+      {
+        id: 3,
+        label: 'Nhà bạn bè',
+        fullAddress: '789 Trần Hưng Đạo, Phường 1, Quận 1, TP.HCM'
+      }
+    ]);
+
     // Fake data
     const danhSachKhachHang = ref([
       {
@@ -690,7 +851,10 @@ export default {
       return currentHoaDon.value.items.reduce((sum, item) => sum + item.soLuong * item.giaBan, 0);
     });
 
-    const khachCanTra = computed(() => Math.max(0, tongTien.value - giamGia.value));
+    const khachCanTra = computed(() => {
+      const subtotal = tongTien.value + (isDelivery.value ? phiGiaoHang.value : 0);
+      return Math.max(0, subtotal - giamGia.value);
+    });
     const tienThua = computed(() => Math.max(0, khachThanhToan.value - khachCanTra.value));
 
     const tongSoLuong = computed(() => {
@@ -886,6 +1050,25 @@ export default {
       toast.success(`Đã áp dụng mã ${giam.ma} thành công!`);
     };
 
+    // Delivery management
+    const toggleDelivery = () => {
+      isDelivery.value = !isDelivery.value;
+      if (isDelivery.value) {
+        toast.info('Đã bật chế độ giao hàng');
+      } else {
+        toast.info('Đã tắt chế độ giao hàng');
+        // Reset delivery info when disabled
+        selectedAddress.value = '';
+        deliveryInfo.value = {
+          diaChi: '',
+          phuongXa: '',
+          quanHuyen: '',
+          tinhThanh: '',
+          ghiChu: ''
+        };
+      }
+    };
+
     // Payment management
     const chonPhuongThuc = (phuongThuc) => {
       phuongThucThanhToan.value = phuongThuc;
@@ -903,15 +1086,35 @@ export default {
         return;
       }
 
+      // Validate delivery information if delivery is enabled
+      if (isDelivery.value) {
+        const hasAddress = selectedAddress.value || 
+          (deliveryInfo.value.diaChi && deliveryInfo.value.phuongXa && 
+           deliveryInfo.value.quanHuyen && deliveryInfo.value.tinhThanh);
+        
+        if (!hasAddress) {
+          toast.error('Vui lòng nhập đầy đủ thông tin địa chỉ giao hàng!');
+          return;
+        }
+      }
+
       const hoaDonInfo = {
         id: tabActive.value,
         khachHang: khachHangHienTai.value,
         tongTienHang: tongTien.value,
+        phiGiaoHang: isDelivery.value ? phiGiaoHang.value : 0,
         giamGia: giamGia.value,
         khachCanTra: khachCanTra.value,
         khachThanhToan: khachThanhToan.value,
         tienThua: tienThua.value,
         phuongThucThanhToan: phuongThucThanhToan.value,
+        isDelivery: isDelivery.value,
+        deliveryInfo: isDelivery.value ? {
+          addressMode: addressMode.value,
+          selectedAddress: selectedAddress.value,
+          customAddress: deliveryInfo.value,
+          ghiChu: deliveryInfo.value.ghiChu
+        } : null,
         items: currentHoaDon.value.items
       };
 
@@ -988,6 +1191,15 @@ export default {
       tongTien,
       khachCanTra,
       tienThua,
+      
+      // Delivery
+      isDelivery,
+      addressMode,
+      selectedAddress,
+      phiGiaoHang,
+      deliveryInfo,
+      customerAddresses,
+      toggleDelivery,
       
       // Stats
       tongSoLuong,
@@ -1236,12 +1448,17 @@ export default {
 .empty-state {
   text-align: center;
   padding: 60px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .empty-icon {
   font-size: 4rem;
   color: #94a3b8;
   margin-bottom: 16px;
+  display: block;
 }
 
 .empty-state h4 {
@@ -1615,6 +1832,14 @@ export default {
   color: #dc2626 !important;
 }
 
+.delivery-line {
+  color: #059669;
+}
+
+.delivery-amount {
+  color: #059669 !important;
+}
+
 .total-line {
   font-size: 1.1rem;
   font-weight: 700;
@@ -1656,6 +1881,224 @@ export default {
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
+}
+
+/* ===== DELIVERY STYLES ===== */
+.delivery-toggle-section {
+  margin-bottom: 20px;
+  padding: 16px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.toggle-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: #374151;
+  font-size: 1rem;
+}
+
+.toggle-label iconify-icon {
+  font-size: 1.2rem;
+  color: #007bff;
+}
+
+.toggle-switch {
+  position: relative;
+  width: 50px;
+  height: 24px;
+  cursor: pointer;
+}
+
+.toggle-input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #cbd5e1;
+  border-radius: 24px;
+  transition: all 0.3s ease;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.toggle-slider.active {
+  background-color: #007bff;
+}
+
+.toggle-slider.active:before {
+  transform: translateX(26px);
+}
+
+.delivery-info-section {
+  margin-top: 20px;
+  padding: 20px;
+  background: #f0f9ff;
+  border-radius: 12px;
+  border: 1px solid #0ea5e9;
+}
+
+.delivery-header {
+  margin-bottom: 16px;
+}
+
+.delivery-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #0c4a6e;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.address-selection {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.address-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.address-tab {
+  flex: 1;
+  padding: 10px 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  background: white;
+  color: #64748b;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.address-tab:hover {
+  border-color: #007bff;
+  color: #007bff;
+}
+
+.address-tab.active {
+  border-color: #007bff;
+  background: #007bff;
+  color: white;
+}
+
+.form-select {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+  background: white;
+  cursor: pointer;
+}
+
+.form-select:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.form-textarea {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+  background: white;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.form-textarea:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.delivery-fee-info {
+  background: white;
+  border-radius: 8px;
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  margin-top: 16px;
+}
+
+.fee-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.fee-item:not(:last-child) {
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.fee-label {
+  font-weight: 500;
+  color: #64748b;
+}
+
+.fee-value {
+  font-weight: 600;
+  color: #1a202c;
+}
+
+@media (max-width: 768px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .address-tabs {
+    flex-direction: column;
+  }
+  
+  .toggle-container {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
 }
 
 /* ===== MODAL STYLES ===== */
