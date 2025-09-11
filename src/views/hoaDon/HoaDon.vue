@@ -2,7 +2,8 @@
 import { Icon } from '@iconify/vue';
 import Breadcrumb from '@/components/Breadcrumb.vue';
 import DataTable from '@/components/DataTable.vue';
-import { useHoaDonLogic } from '@/services/hoaDonService/hoaDonGetAll.js';
+import QRScannerModal from '@/components/QRScannerModal.vue';
+import { useHoaDonLogic } from '@/services/hoaDonService/hoaDonComposable.js';
 
 // Use the composable to get all reactive state and functions
 const {
@@ -22,20 +23,20 @@ const {
   isUpdating,
   isDeleting,
   highlightedInvoice,
-  
+
   // Configuration
   tabs,
   tableColumns,
   breadcrumbItems,
   breadcrumbActions,
-  
+
   // Computed
   filteredInvoices,
   pageStats,
   paginatedInvoices,
   totalPages,
   displayedPages,
-  
+
   // Functions
   loadInvoices,
   editInvoice,
@@ -48,7 +49,7 @@ const {
   resetFiltersLocal,
   changePageLocal,
   navigateToSalesCounter,
-  
+
   // Service functions
   formatDate,
   formatCurrency,
@@ -57,24 +58,40 @@ const {
   printInvoicePDF,
   downloadQRCode,
   exportToExcel,
-  scanQRInvoice
+  scanQRInvoice,
+
+  // Status counts
+  statusCounts,
+  isLoadingStatusCounts,
+  getStatusCount,
+  statusOptions,
+
+  // Price range
+  priceRange,
+  isLoadingPriceRange,
+  loadPriceRange,
+
+  // Search debounce
+  isSearching,
+
+  // QR Scanner modal
+  showQRScannerModal,
+  openQRScannerModal,
+  closeQRScannerModal,
+  handleInvoiceFound
 } = useHoaDonLogic();
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900 p-4 md:p-6 font-roboto transition-colors duration-300">
+  <div
+    class="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900 p-4 md:p-6 font-roboto transition-colors duration-300">
     <!-- Breadcrumb -->
-    <Breadcrumb 
-      :items="breadcrumbItems"
-      :actions="breadcrumbActions"
-      :show-page-info="true"
-      page-title="Quản lý Hóa đơn"
-      page-description="Quản lý và theo dõi tất cả hóa đơn bán hàng trong hệ thống"
-      page-icon="solar:bill-list-bold-duotone"
-      :page-stats="pageStats"
-    />
+    <Breadcrumb :items="breadcrumbItems" :actions="breadcrumbActions" :show-page-info="true"
+      page-title="Quản lý Hóa đơn" page-description="Quản lý và theo dõi tất cả hóa đơn bán hàng trong hệ thống"
+      page-icon="solar:bill-list-bold-duotone" :page-stats="pageStats" />
 
-    <div v-if="errorMessage" class="card bg-red-50 dark:bg-red-950 p-4 mb-6 rounded-3xl shadow-lg animate__animated animate__fadeIn">
+    <div v-if="errorMessage"
+      class="card bg-red-50 dark:bg-red-950 p-4 mb-6 rounded-3xl shadow-lg animate__animated animate__fadeIn">
       <p class="text-red-600 dark:text-red-300 font-medium flex items-center">
         <Icon icon="solar:danger-triangle-bold-duotone" class="text-2xl mr-3" />
         {{ errorMessage }}
@@ -92,93 +109,59 @@ const {
           Đặt lại bộ lọc
         </button>
       </div>
-      
+
       <div class="filter-content">
         <div class="filter-row mb-4">
           <div class="filter-group">
-            <label class="filter-label">Tìm kiếm</label>
-            <input
-              v-model="tempFilters.search"
-              type="text"
-              placeholder="Tìm kiếm mã hóa đơn, tên khách hàng..."
-              class="filter-input"
-              @input="filterInvoicesLocal"
-            />
+            <label class="filter-label">
+              Tìm kiếm
+              <span v-if="isSearching" class="text-xs text-blue-500 ml-1">(Đang tìm...)</span>
+            </label>
+            <input v-model="tempFilters.search" type="text" placeholder="Tìm kiếm mã hóa đơn, tên khách hàng..."
+              class="filter-input" @input="filterInvoicesLocal(true)" />
           </div>
           <div class="filter-group">
-            <label class="filter-label">Giá từ</label>
-            <input
-              v-model="tempFilters.minPrice"
-              type="number"
-              placeholder="0"
-              class="filter-input"
-              @input="filterInvoicesLocal"
-            />
+            <label class="filter-label">
+              Giá từ
+              <span v-if="isLoadingPriceRange" class="text-xs text-gray-500 ml-1">(Đang tải...)</span>
+            </label>
+            <input v-model="tempFilters.minPrice" type="number"
+              :placeholder="isLoadingPriceRange ? 'Đang tải...' : `Từ ${formatCurrency(priceRange.minPrice || 0)}`"
+              class="filter-input" @input="filterInvoicesLocal" />
           </div>
           <div class="filter-group">
-            <label class="filter-label">Giá đến</label>
-            <input
-              v-model="tempFilters.maxPrice"
-              type="number"
-              placeholder="10,000,000"
-              class="filter-input"
-              @input="filterInvoicesLocal"
-            />
+            <label class="filter-label">
+              Giá đến
+              <span v-if="isLoadingPriceRange" class="text-xs text-gray-500 ml-1">(Đang tải...)</span>
+            </label>
+            <input v-model="tempFilters.maxPrice" type="number"
+              :placeholder="isLoadingPriceRange ? 'Đang tải...' : `Đến ${formatCurrency(priceRange.maxPrice || 0)}`"
+              class="filter-input" @input="filterInvoicesLocal" />
           </div>
         </div>
-      
+
         <div class="filter-row">
           <div class="filter-group">
-            <label class="filter-label">Trạng thái</label>
-            <select
-              v-model="tempFilters.trangThaiId"
-              class="filter-input"
-            >
-              <option value="">Tất cả trạng thái</option>
-              <option value="6">Chờ xác nhận</option>
-              <option value="7">Chờ xử lý</option>
-              <option value="8">Chờ vận chuyển</option>
-              <option value="9">Đang vận chuyển</option>
-              <option value="21">Đã hoàn thành</option>
-              <option value="22">Đã hủy</option>
-            </select>
-          </div>
-          <div class="filter-group">
             <label class="filter-label">Loại đơn</label>
-            <select
-              v-model="tempFilters.loaiDon"
-              class="filter-input"
-            >
+            <select v-model="tempFilters.loaiDon" class="filter-input" @change="filterInvoicesLocal(false)">
               <option value="">Tất cả loại đơn</option>
-              <option value="online">Online</option>
-              <option value="trực tiếp">Trực tiếp</option>
+              <option value="Online">Online</option>
+              <option value="Tại quầy">Tại quầy</option>
             </select>
           </div>
           <div class="filter-group">
             <label class="filter-label">Từ ngày</label>
-            <input
-              v-model="tempFilters.startDate"
-              type="date"
-              class="filter-input"
-              @change="filterInvoicesLocal"
-            />
+            <input v-model="tempFilters.startDate" type="date" class="filter-input"
+              @change="filterInvoicesLocal(false)" />
           </div>
           <div class="filter-group">
             <label class="filter-label">Đến ngày</label>
-            <input
-              v-model="tempFilters.endDate"
-              type="date"
-              class="filter-input"
-              @change="filterInvoicesLocal"
-            />
+            <input v-model="tempFilters.endDate" type="date" class="filter-input"
+              @change="filterInvoicesLocal(false)" />
           </div>
           <div class="filter-group">
             <label class="filter-label">Sắp xếp theo</label>
-            <select
-              v-model="tempFilters.sortBy"
-              class="filter-select"
-              @change="filterInvoicesLocal"
-            >
+            <select v-model="tempFilters.sortBy" class="filter-select" @change="filterInvoicesLocal(false)">
               <option value="">Sắp xếp mặc định</option>
               <option value="newest">Mới nhất</option>
               <option value="most_expensive">Đắt nhất</option>
@@ -194,19 +177,15 @@ const {
       <div class="p-6">
         <!-- Status Filter Tabs -->
         <div class="flex flex-wrap gap-2 mb-6 p-1 bg-gray-100 dark:bg-gray-700 rounded-lg">
-          <button
-            v-for="tab in tabs"
-            :key="tab.id"
-            :class="[
-              'px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 flex items-center gap-2',
-              activeTab === tab.id 
-                ? 'bg-white dark:bg-gray-600 text-blue-800 dark:text-blue-400 shadow-sm' 
-                : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-gray-600/50'
-            ]"
-            @click="switchTabLocal(tab.id)"
-          >
+          <button v-for="tab in tabs" :key="tab.id" :class="[
+            'px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 flex items-center gap-2',
+            activeTab === tab.id
+              ? 'bg-white dark:bg-gray-600 text-blue-800 dark:text-blue-400 shadow-sm'
+              : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-gray-600/50'
+          ]" @click="switchTabLocal(tab.id)">
             <span>{{ tab.label }}</span>
-            <span class="bg-blue-200 dark:bg-blue-500 text-xs px-2 py-0.5 rounded-full">{{ getTabCountLocal(tab.id) }}</span>
+            <span class="bg-blue-200 dark:bg-blue-500 text-xs px-2 py-0.5 rounded-full">{{ getTabCountLocal(tab.id)
+            }}</span>
           </button>
         </div>
 
@@ -220,80 +199,69 @@ const {
           </div>
 
           <!-- DataTable Component -->
-          <DataTable
-            :data="filteredInvoices"
-            :columns="tableColumns"
-            item-label="hóa đơn"
-            empty-message="Không có dữ liệu hóa đơn nào được tìm thấy."
-            key-field="id"
-          >
+          <DataTable :data="filteredInvoices" :columns="tableColumns" item-label="hóa đơn"
+            empty-message="Không có dữ liệu hóa đơn nào được tìm thấy." key-field="id">
             <!-- Custom column templates -->
             <template #stt="{ rowIndex }">
               {{ rowIndex }}
             </template>
-            
+
             <template #maHoaDon="{ item }">
               <span class="font-bold text-gray-800 dark:text-gray-100">{{ item.maHoaDon }}</span>
             </template>
-            
+
+            <template #nhanVien="{ item }">
+              {{ item.nhanVien?.maNhanVien || 'N/A' }}
+            </template>
+
             <template #khachHang="{ item }">
               {{ item.khachHang?.tenKhachHang || 'Khách lẻ' }}
             </template>
-            
+
             <template #soDienThoai="{ item }">
               {{ item.khachHang?.soDienThoai || 'N/A' }}
             </template>
-            
+
             <template #loaiDon="{ item }">
-              <span v-if="item.loaiDon === 'online'" class="order-type-badge online-order">
+              <span v-if="item.loaiDon === 'Online'" class="order-type-badge online-order">
                 <Icon icon="solar:global-bold-duotone" class="w-3 h-3 mr-1" />
                 Online
               </span>
               <span v-else class="order-type-badge offline-order">
                 <Icon icon="solar:shop-bold-duotone" class="w-3 h-3 mr-1" />
-                Trực tiếp
+                Tại quầy
               </span>
             </template>
-            
+
             <template #phiVanChuyen="{ item }">
               <span class="font-medium text-gray-800 dark:text-gray-100">{{ formatCurrency(item.phiVanChuyen) }}</span>
             </template>
-            
+
             <template #ngayTao="{ item }">
               {{ formatDate(item.ngayTao) }}
             </template>
-            
+
             <template #tongTien="{ item }">
-              <span class="font-bold text-gray-800 dark:text-gray-100">{{ formatCurrency(item.tongTienThanhToan) }}</span>
+              <span class="font-bold text-gray-800 dark:text-gray-100">{{ formatCurrency(item.tongTienThanhToan)
+              }}</span>
             </template>
-            
+
             <template #trangThai="{ item }">
               <span :class="getStatusColor(item.trangThai?.id)">
                 {{ getStatusText(item.trangThai?.id) }}
               </span>
             </template>
-            
+
             <template #actions="{ item }">
               <div class="flex justify-center gap-2">
-                <router-link
-                  :to="{ name: 'HoaDonChiTiet', params: { id: item.id } }"
-                  class="action-btn view"
-                  title="Xem chi tiết"
-                >
+                <router-link :to="{ name: 'HoaDonChiTiet', params: { id: item.id } }" class="action-btn view"
+                  title="Xem chi tiết">
                   <Icon icon="solar:eye-bold" />
                 </router-link>
-                <button
-                  @click="printInvoicePDF(item)"
-                  class="action-btn print"
-                  title="In hóa đơn PDF"
-                >
+                <button @click="printInvoicePDF(item)" class="action-btn print" title="In hóa đơn PDF">
                   <Icon icon="solar:printer-bold" />
                 </button>
-                <button
-                  @click="downloadQRCode(item)"
-                  class="action-btn qr"
-                  title="Tải mã QR hóa đơn"
-                >
+                <button @click="downloadQRCode(item)" class="action-btn qr" title="Tải mã QR hóa đơn">
                   <Icon icon="solar:qr-code-bold" />
                 </button>
               </div>
@@ -303,7 +271,8 @@ const {
       </div>
     </div>
 
-    <div v-if="showEditModal" class="fixed inset-0 bg-gray-900/60 flex items-center justify-center z-50 animate__animated animate__fadeIn">
+    <div v-if="showEditModal"
+      class="fixed inset-0 bg-gray-900/60 flex items-center justify-center z-50 animate__animated animate__fadeIn">
       <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-lg shadow-2xl">
         <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
           <Icon icon="solar:pencil-bold" class="text-2xl mr-2 text-yellow-600" />
@@ -312,57 +281,40 @@ const {
         <form @submit.prevent="handleUpdateInvoice">
           <div class="mb-4">
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Mã Hóa Đơn</label>
-            <input
-              v-model="editInvoiceData.maHoaDon"
-              type="text"
+            <input v-model="editInvoiceData.maHoaDon" type="text"
               class="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition duration-300"
-              required
-            />
+              required />
           </div>
           <div class="mb-4">
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Tên Khách Hàng</label>
-            <input
-              v-model="editInvoiceData.khachHang.tenKhachHang"
-              type="text"
-              class="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition duration-300"
-            />
+            <input v-model="editInvoiceData.khachHang.tenKhachHang" type="text"
+              class="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition duration-300" />
           </div>
           <div class="mb-4">
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Số Điện Thoại</label>
-            <input
-              v-model="editInvoiceData.khachHang.soDienThoai"
-              type="text"
-              class="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition duration-300"
-            />
+            <input v-model="editInvoiceData.khachHang.soDienThoai" type="text"
+              class="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition duration-300" />
           </div>
           <div class="mb-4">
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Trạng Thái</label>
-            <select
-              v-model="editInvoiceData.trangThai.id"
-              class="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition duration-300"
-            >
-              <option value="6">Chờ xác nhận</option>
-              <option value="7">Chờ xử lý</option>
-              <option value="8">Chờ vận chuyển</option>
-              <option value="9">Đang vận chuyển</option>
-              <option value="21">Đã hoàn thành</option>
-              <option value="22">Đã hủy</option>
+            <select v-model="editInvoiceData.trangThai.id"
+              class="w-full border border-gray-300 dark:border-gray-600 rounded-xl p-3 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400 transition duration-300">
+              <option value="0">Hóa đơn chờ</option>
+              <option value="1">Chờ xác nhận</option>
+              <option value="2">Chờ xử lý</option>
+              <option value="3">Chờ vận chuyển</option>
+              <option value="4">Đang vận chuyển</option>
+              <option value="5">Đã hoàn thành</option>
+              <option value="6">Đã hủy</option>
             </select>
           </div>
           <div class="flex gap-3 mt-6">
-            <button
-              type="submit"
-              :disabled="isUpdating"
-              class="btn-primary px-6 py-3 rounded-xl bg-emerald-500 text-white hover:bg-emerald-600 transition duration-300 shadow-lg hover:shadow-xl flex-1 flex items-center justify-center"
-            >
-  Lưu
+            <button type="submit" :disabled="isUpdating"
+              class="btn-primary px-6 py-3 rounded-xl bg-emerald-500 text-white hover:bg-emerald-600 transition duration-300 shadow-lg hover:shadow-xl flex-1 flex items-center justify-center">
+              Lưu
             </button>
-            <button
-              type="button"
-              @click="showEditModal = false"
-              :disabled="isUpdating"
-              class="btn-secondary px-6 py-3 rounded-xl bg-rose-500 text-white hover:bg-rose-600 transition duration-300 shadow-lg hover:shadow-xl flex-1"
-            >
+            <button type="button" @click="showEditModal = false" :disabled="isUpdating"
+              class="btn-secondary px-6 py-3 rounded-xl bg-rose-500 text-white hover:bg-rose-600 transition duration-300 shadow-lg hover:shadow-xl flex-1">
               Hủy
             </button>
           </div>
@@ -370,32 +322,35 @@ const {
       </div>
     </div>
 
-    <div v-if="showDeleteModal" class="fixed inset-0 bg-gray-900/60 flex items-center justify-center z-50 animate__animated animate__fadeIn">
+    <div v-if="showDeleteModal"
+      class="fixed inset-0 bg-gray-900/60 flex items-center justify-center z-50 animate__animated animate__fadeIn">
       <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-md shadow-2xl">
         <h3 class="text-xl font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center">
-          <Icon icon="solar:trash-bin-bold" class="text-2xl mr-2 text-red-600" />
+          <Icon icon="solar:danger-triangle-bold" class="text-2xl mr-2 text-red-600" />
           Xác Nhận Xóa
         </h3>
-        <p class="text-gray-700 dark:text-gray-200 mb-6">Bạn có chắc chắn muốn xóa hóa đơn này? Hành động này không thể hoàn tác.</p>
+        <p class="text-gray-600 dark:text-gray-300 mb-6">
+          Bạn có chắc chắn muốn xóa hóa đơn này? Hành động này không thể hoàn tác.
+        </p>
         <div class="flex gap-3">
-          <button
-            @click="handleDeleteInvoice"
-            :disabled="isDeleting"
-            class="btn-primary px-6 py-3 rounded-xl bg-red-500 text-white hover:bg-red-600 transition duration-300 shadow-lg hover:shadow-xl flex-1 flex items-center justify-center"
-          >
-Xóa
+          <button @click="handleDeleteInvoice" :disabled="isDeleting"
+            class="btn-danger px-6 py-3 rounded-xl bg-red-500 text-white hover:bg-red-600 transition duration-300 shadow-lg hover:shadow-xl flex-1 flex items-center justify-center">
+            <Icon v-if="isDeleting" icon="solar:refresh-bold" class="animate-spin mr-2" />
+            Xóa
           </button>
-          <button
-            type="button"
-            @click="showDeleteModal = false"
-            :disabled="isDeleting"
-            class="btn-secondary px-6 py-3 rounded-xl bg-gray-500 text-white hover:bg-gray-600 transition duration-300 shadow-lg hover:shadow-xl flex-1"
-          >
+          <button @click="showDeleteModal = false" :disabled="isDeleting"
+            class="btn-secondary px-6 py-3 rounded-xl bg-gray-500 text-white hover:bg-gray-600 transition duration-300 shadow-lg hover:shadow-xl flex-1">
             Hủy
           </button>
         </div>
       </div>
     </div>
+
+    <QRScannerModal 
+      :is-visible="showQRScannerModal" 
+      @close="closeQRScannerModal"
+      @invoice-found="handleInvoiceFound"
+    />
   </div>
 </template>
 
@@ -612,9 +567,11 @@ Xóa
   .p-6 {
     padding: 1.25rem;
   }
+
   .md\:p-8 {
     padding: 1.5rem;
   }
+
   .table th,
   .table td {
     padding: 14px;
@@ -767,23 +724,28 @@ Xóa
   .filter-row {
     grid-template-columns: 1fr;
   }
+
   .table th,
   .table td {
     padding: 10px;
     font-size: 0.8rem;
   }
+
   .tabs {
     gap: 0.5rem;
     padding-bottom: 0.5rem;
   }
+
   .tab {
     padding: 0.5rem 0.8rem;
     font-size: 0.75rem;
   }
+
   .pagination {
     flex-direction: column;
     align-items: center;
   }
+
   .pagination button {
     width: 100%;
     margin-bottom: 8px;

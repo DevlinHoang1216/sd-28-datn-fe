@@ -64,6 +64,7 @@ export const applyFilters = (tempFilters, filters, toast, getStatusText, formatD
   filters.endDate = tempFilters.endDate;
   filters.minPrice = tempFilters.minPrice;
   filters.maxPrice = tempFilters.maxPrice;
+  filters.loaiDon = tempFilters.loaiDon;
   filters.sortBy = tempFilters.sortBy;
 
   let message = 'Đã áp dụng bộ lọc: ';
@@ -84,6 +85,10 @@ export const applyFilters = (tempFilters, filters, toast, getStatusText, formatD
   }
   if (filters.endDate) {
     message += `Đến ngày: "${formatDate(filters.endDate)}". `;
+    filterApplied = true;
+  }
+  if (filters.loaiDon) {
+    message += `Loại đơn: "${filters.loaiDon}". `;
     filterApplied = true;
   }
   if (filters.sortBy) {
