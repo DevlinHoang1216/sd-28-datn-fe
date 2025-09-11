@@ -5,18 +5,19 @@
 // Tab configuration
 export const getTabsConfig = () => [
   { id: 'all', label: 'Tất cả' },
-  { id: 'cho_xac_nhan', label: 'Chờ xác nhận', statusId: 6 },
-  { id: 'pending', label: 'Chờ xử lý', statusId: 7 },
-  { id: 'cho_van_chuyen', label: 'Chờ vận chuyển', statusId: 8 },
-  { id: 'dang_van_chuyen', label: 'Đang vận chuyển', statusId: 9 },
-  { id: 'completed', label: 'Đã hoàn thành', statusId: 21 },
-  { id: 'canceled', label: 'Đã hủy', statusId: 22 },
+  { id: 'cho_xac_nhan', label: 'Chờ xác nhận', statusId: 1 },
+  { id: 'pending', label: 'Chờ xử lý', statusId: 2 },
+  { id: 'cho_van_chuyen', label: 'Chờ vận chuyển', statusId: 3 },
+  { id: 'dang_van_chuyen', label: 'Đang vận chuyển', statusId: 4 },
+  { id: 'completed', label: 'Đã hoàn thành', statusId: 5 },
+  { id: 'canceled', label: 'Đã hủy', statusId: 6 },
 ];
 
 // DataTable columns configuration
 export const getTableColumns = () => [
   { key: 'stt', label: 'STT', class: 'text-center' },
   { key: 'maHoaDon', label: 'Mã Hóa Đơn', class: 'font-weight-bold' },
+  { key: 'nhanVien', label: 'Nhân viên' },
   { key: 'khachHang', label: 'Khách Hàng' },
   { key: 'soDienThoai', label: 'Số Điện Thoại' },
   { key: 'loaiDon', label: 'Loại Đơn', class: 'text-center' },
@@ -83,7 +84,7 @@ export const getPageStats = (allInvoices, totalRevenue, formatCurrency) => [
   },
   {
     icon: 'solar:check-circle-bold',
-    value: allInvoices.filter(inv => inv.trangThai?.id === 21).length,
+    value: allInvoices.filter(inv => inv.trangThai?.id === 5).length,
     label: 'Đã hoàn thành'
   }
 ];
