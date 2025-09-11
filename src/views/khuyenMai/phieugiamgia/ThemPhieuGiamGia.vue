@@ -23,7 +23,7 @@
               <label class="form-label">Mã phiếu giảm giá</label>
               <div class="input-group">
                 <input
-                  v-model="coupon.maPhieuGiamGia"
+                  v-model="coupon.ma"
                   type="text"
                   class="form-input"
                   placeholder="Nhập mã phiếu giảm giá"
@@ -50,7 +50,7 @@
             <div class="form-group">
               <label class="form-label">Loại giảm giá</label>
               <select
-                v-model="coupon.loaiGiamGia"
+                v-model="coupon.loaiPhieuGiamGia"
                 class="form-input"
                 @change="handleLoaiGiamGiaChange"
               >
@@ -64,7 +64,7 @@
             <div class="form-group">
               <label class="form-label">{{ labelGiaTriGiam }}</label>
               <input
-                v-model.number="coupon.giaTriGiam"
+                v-model.number="coupon.phanTramGiamGia"
                 type="number"
                 class="form-input"
                 placeholder="Nhập giá trị giảm"
@@ -72,7 +72,7 @@
             </div>
 
             <!-- Maximum Discount (for Percentage) -->
-            <div class="form-group" v-if="coupon.loaiGiamGia === 'PHAN_TRAM'">
+            <div class="form-group" v-if="coupon.loaiPhieuGiamGia === 'PHAN_TRAM'">
               <label class="form-label">Số tiền giảm tối đa</label>
               <input
                 v-model.number="coupon.soTienGiamToiDa"
@@ -90,6 +90,17 @@
                 type="number"
                 class="form-input"
                 placeholder="Nhập giá trị hóa đơn tối thiểu"
+              />
+            </div>
+
+            <!-- Usage Quantity -->
+            <div class="form-group">
+              <label class="form-label">Số lượng sử dụng</label>
+              <input
+                v-model.number="coupon.soLuongDung"
+                type="number"
+                class="form-input"
+                placeholder="Nhập số lượng sử dụng"
               />
             </div>
 
@@ -113,13 +124,24 @@
               />
             </div>
 
+            <!-- Description -->
+            <div class="form-group">
+              <label class="form-label">Mô tả</label>
+              <textarea
+                v-model="coupon.moTa"
+                class="form-input"
+                placeholder="Nhập mô tả phiếu giảm giá"
+                rows="4"
+              ></textarea>
+            </div>
+
             <!-- Private Coupon Checkbox -->
             <div class="form-group">
               <label class="form-label">Riêng tư</label>
               <div class="checkbox-group">
                 <input
                   type="checkbox"
-                  v-model="coupon.isPrivate"
+                  v-model="coupon.riengTu"
                   id="private-coupon"
                   @change="handlePrivateCouponChange"
                 />
@@ -137,10 +159,11 @@
         </div>
       </div>
 
-      <!-- Right Panel - Customer Table -->
+      <!-- Right Panel - Customer Tables -->
       <div class="right-panel">
+        <!-- Customer Selection Table -->
         <div class="card shadow-sm">
-          <div class="card-content" :class="{ 'disabled-overlay': !coupon.isPrivate }">
+          <div class="card-content" :class="{ 'disabled-overlay': !coupon.riengTu }">
             <h3 class="section-title">
               <iconify-icon icon="solar:users-group-rounded-bold-duotone"></iconify-icon>
               Chọn khách hàng áp dụng
@@ -158,7 +181,44 @@
                     type="checkbox"
                     v-model="selectedCustomers"
                     :value="item.id"
-                    :disabled="!coupon.isPrivate"
+                    :disabled="!coupon.riengTu"
+                    class="customer-checkbox"
+                  />
+                </div>
+              </template>
+              <template #ten="{ item }">
+                {{ item.ten || 'N/A' }}
+              </template>
+              <template #email="{ item }">
+                {{ item.taiKhoan?.email || 'N/A' }}
+              </template>
+              <template #soDienThoai="{ item }">
+                {{ item.taiKhoan?.soDienThoai || 'N/A' }}
+              </template>
+            </DataTable>
+          </div>
+        </div>
+
+        <!-- Selected Customers Table -->
+        <div class="card shadow-sm" v-if="selectedCustomers.length > 0">
+          <div class="card-content">
+            <h3 class="section-title">
+              <iconify-icon icon="solar:check-circle-bold-duotone"></iconify-icon>
+              Khách hàng đã chọn ({{ selectedCustomers.length }})
+            </h3>
+            <DataTable
+              :data="selectedCustomersData"
+              :columns="selectedCustomerColumns"
+              item-label="khách hàng đã chọn"
+              empty-message="Không có khách hàng nào được chọn."
+              key-field="id"
+            >
+              <template #checkbox="{ item }">
+                <div class="text-center">
+                  <input
+                    type="checkbox"
+                    v-model="selectedCustomers"
+                    :value="item.id"
                     class="customer-checkbox"
                   />
                 </div>
@@ -188,6 +248,7 @@ import { useRouter } from 'vue-router';
 import Breadcrumb from '@/components/Breadcrumb.vue';
 import DataTable from '@/components/DataTable.vue';
 
+
 export default {
   name: 'CouponAdditionForm',
   components: {
@@ -198,7 +259,6 @@ export default {
     const toast = useToast();
     const router = useRouter();
 
-    // Breadcrumb data
     const breadcrumbItems = ref([
       { label: 'Phiếu giảm giá', path: '/phieu-giam-gia' },
       { label: 'Thêm mới', path: '/phieu-giam-gia/them-moi' },
@@ -235,15 +295,17 @@ export default {
   data() {
     return {
       coupon: {
-        maPhieuGiamGia: '',
+        ma: '',
         tenPhieuGiamGia: '',
-        giaTriGiam: null,
-        hoaDonToiThieu: null,
+        loaiPhieuGiamGia: '',
+        phanTramGiamGia: null,
         soTienGiamToiDa: null,
+        hoaDonToiThieu: null,
+        soLuongDung: null,
         ngayBatDau: '',
         ngayKetThuc: '',
-        loaiGiamGia: '',
-        isPrivate: false,
+        riengTu: false,
+        moTa: '',
       },
       customers: [],
       selectedCustomers: [],
@@ -267,13 +329,35 @@ export default {
           label: 'SĐT',
         },
       ],
+      selectedCustomerColumns: [
+        {
+          key: 'checkbox',
+          label: 'Bỏ chọn',
+          class: 'text-center',
+        },
+        {
+          key: 'ten',
+          label: 'Tên khách hàng',
+        },
+        {
+          key: 'email',
+          label: 'Email',
+        },
+        {
+          key: 'soDienThoai',
+          label: 'SĐT',
+        },
+      ],
     };
   },
   computed: {
     labelGiaTriGiam() {
-      return this.coupon.loaiGiamGia === 'SO_TIEN_CO_DINH'
+      return this.coupon.loaiPhieuGiamGia === 'SO_TIEN_CO_DINH'
         ? 'Giá trị giảm (VND)'
         : 'Giá trị giảm (%)';
+    },
+    selectedCustomersData() {
+      return this.customers.filter(customer => this.selectedCustomers.includes(customer.id));
     },
   },
   mounted() {
@@ -281,19 +365,18 @@ export default {
   },
   methods: {
     generateCode() {
-      this.coupon.maPhieuGiamGia =
-        'PGG-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+      this.coupon.ma = 'PGG-' + Math.random().toString(36).substring(2, 8).toUpperCase();
       this.toast.info('Đã tạo mã phiếu giảm giá mới!');
     },
 
     handleLoaiGiamGiaChange() {
-      if (this.coupon.loaiGiamGia === 'SO_TIEN_CO_DINH') {
+      if (this.coupon.loaiPhieuGiamGia === 'SO_TIEN_CO_DINH') {
         this.coupon.soTienGiamToiDa = null;
       }
     },
 
     handlePrivateCouponChange() {
-      if (!this.coupon.isPrivate) {
+      if (!this.coupon.riengTu) {
         this.selectedCustomers = [];
       }
     },
@@ -313,7 +396,7 @@ export default {
     },
 
     validateForm() {
-      if (!this.coupon.maPhieuGiamGia.trim()) {
+      if (!this.coupon.ma.trim()) {
         this.toast.error('Mã phiếu giảm giá không được để trống!');
         return false;
       }
@@ -321,12 +404,12 @@ export default {
         this.toast.error('Tên phiếu giảm giá không được để trống!');
         return false;
       }
-      if (!this.coupon.loaiGiamGia) {
+      if (!this.coupon.loaiPhieuGiamGia) {
         this.toast.error('Vui lòng chọn loại giảm giá!');
         return false;
       }
-      if (this.coupon.loaiGiamGia === 'PHAN_TRAM') {
-        if (!this.coupon.giaTriGiam || this.coupon.giaTriGiam <= 0 || this.coupon.giaTriGiam > 100) {
+      if (this.coupon.loaiPhieuGiamGia === 'PHAN_TRAM') {
+        if (!this.coupon.phanTramGiamGia || this.coupon.phanTramGiamGia <= 0 || this.coupon.phanTramGiamGia > 100) {
           this.toast.error('Giá trị giảm phải từ 1 đến 100 (%)!');
           return false;
         }
@@ -335,14 +418,18 @@ export default {
           return false;
         }
       }
-      if (this.coupon.loaiGiamGia === 'SO_TIEN_CO_DINH') {
-        if (!this.coupon.giaTriGiam || this.coupon.giaTriGiam <= 0) {
+      if (this.coupon.loaiPhieuGiamGia === 'SO_TIEN_CO_DINH') {
+        if (!this.coupon.phanTramGiamGia || this.coupon.phanTramGiamGia <= 0) {
           this.toast.error('Giá trị giảm (VND) phải lớn hơn 0!');
           return false;
         }
       }
       if (this.coupon.hoaDonToiThieu !== null && this.coupon.hoaDonToiThieu < 0) {
         this.toast.error('Hóa đơn tối thiểu không được nhỏ hơn 0!');
+        return false;
+      }
+      if (!this.coupon.soLuongDung || this.coupon.soLuongDung <= 0) {
+        this.toast.error('Số lượng sử dụng phải lớn hơn 0!');
         return false;
       }
       if (!this.coupon.ngayBatDau || !this.coupon.ngayKetThuc) {
@@ -353,7 +440,7 @@ export default {
         this.toast.error('Ngày bắt đầu phải nhỏ hơn ngày kết thúc!');
         return false;
       }
-      if (this.coupon.isPrivate && this.selectedCustomers.length === 0) {
+      if (this.coupon.riengTu && this.selectedCustomers.length === 0) {
         this.toast.error('Vui lòng chọn ít nhất một khách hàng khi phiếu giảm giá là riêng tư!');
         return false;
       }
@@ -361,34 +448,69 @@ export default {
     },
 
     async submitForm() {
-      if (!this.validateForm()) return;
+  if (!this.validateForm()) return;
 
-      this.loading = true;
-      try {
-        const formatDateTime = (dt) => (dt ? dt + ':00' : null);
-        const dataToSend = {
-          ...this.coupon,
-          ngayBatDau: formatDateTime(this.coupon.ngayBatDau),
-          ngayKetThuc: formatDateTime(this.coupon.ngayKetThuc),
-          customerIds: this.coupon.isPrivate ? this.selectedCustomers : [],
-        };
+  this.loading = true;
+  try {
+    const formatDateTime = (dt) => {
+      if (!dt) return null;
+      if (dt.endsWith('Z') || dt.match(/[+-]\d{2}:\d{2}$/)) return dt;
+      return dt + ':00Z';
+    };
+    const dataToSend = {
+      ma: this.coupon.ma,
+      tenPhieuGiamGia: this.coupon.tenPhieuGiamGia,
+      loaiPhieuGiamGia: this.coupon.loaiPhieuGiamGia,
+      phanTramGiamGia: this.coupon.phanTramGiamGia,
+      soTienGiamToiDa: this.coupon.loaiPhieuGiamGia === 'PHAN_TRAM' ? this.coupon.soTienGiamToiDa : null,
+      hoaDonToiThieu: this.coupon.hoaDonToiThieu,
+      soLuongDung: this.coupon.soLuongDung,
+      ngayBatDau: formatDateTime(this.coupon.ngayBatDau),
+      ngayKetThuc: formatDateTime(this.coupon.ngayKetThuc),
+      riengTu: this.coupon.riengTu,
+      moTa: this.coupon.moTa,
+      khachHangIds: this.coupon.riengTu ? this.selectedCustomers : [],
+    };
 
-        const res = await axios.post('/api/phieu-giam-gia/create', dataToSend);
-        if (res.status === 201) {
-          this.toast.success('Thêm phiếu giảm giá thành công!');
-          this.router.push({ name: 'PhieuGiamGia' });
-        }
-      } catch (err) {
-        let errorMessage = 'Đã xảy ra lỗi khi thêm phiếu giảm giá.';
-        if (err.response && err.response.data && err.response.data.message) {
-          errorMessage = err.response.data.message;
-        }
-        this.toast.error(errorMessage);
-        console.error('Lỗi thêm phiếu:', err.response || err);
-      } finally {
-        this.loading = false;
-      }
-    },
+    console.log('Dữ liệu gửi đi:', dataToSend); // Gỡ lỗi: kiểm tra dữ liệu gửi
+    const res = await axios.post('/api/phieu-giam-gia/add', dataToSend);
+    console.log('Phản hồi API:', res); // Gỡ lỗi: kiểm tra phản hồi
+
+    if (res.status === 200 || res.status === 201) { // Chấp nhận cả 200 và 201
+      this.toast.success('Thêm phiếu giảm giá thành công!', {
+        timeout: 3000,
+        position: 'top-right',
+      });
+      setTimeout(() => {
+        console.log('Bắt đầu chuyển hướng đến PhieuGiamGia'); // Gỡ lỗi
+        this.router.push({ path: '/phieu-giam-gia' }).catch(err => {
+          console.error('Lỗi chuyển hướng:', err);
+          this.toast.error('Không thể chuyển hướng đến trang danh sách phiếu giảm giá.', {
+            timeout: 5000,
+            position: 'top-right',
+          });
+        });
+      }, 1500);
+    } else {
+      this.toast.error(`Thêm phiếu thất bại, mã trạng thái: ${res.status}`, {
+        timeout: 5000,
+        position: 'top-right',
+      });
+    }
+  } catch (err) {
+    console.error('Lỗi khi thêm phiếu:', err.response || err); // Gỡ lỗi
+    let errorMessage = 'Đã xảy ra lỗi khi thêm phiếu giảm giá.';
+    if (err.response?.data?.message) {
+      errorMessage = err.response.data.message;
+    }
+    this.toast.error(errorMessage, {
+      timeout: 5000,
+      position: 'top-right',
+    });
+  } finally {
+    this.loading = false;
+  }
+},
   },
 };
 </script>
@@ -462,6 +584,11 @@ export default {
   outline: none;
   border-color: #007bff;
   box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+textarea.form-input {
+  resize: vertical;
+  min-height: 100px;
 }
 
 .input-group {
@@ -644,7 +771,6 @@ input[type="checkbox"]:disabled {
   .action-btn {
     width: 100%;
   }
-
 
   .section-title {
     font-size: 1.1rem;

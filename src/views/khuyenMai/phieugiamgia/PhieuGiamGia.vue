@@ -243,7 +243,6 @@
         </div>
       </div>
     </div>
-
   </div>
 </template>
 
@@ -428,7 +427,7 @@ export default {
         } else if (this.filters.sortBy === 'name_asc') {
           result.sort((a, b) => a.tenPhieuGiamGia.localeCompare(b.tenPhieuGiamGia));
         } else if (this.filters.sortBy === 'name_desc') {
-          result.sort((a, b) => b.tenPhieuGiamGia.localeCompare(a.tenPhieuGiamGia));
+          result.sort((a, b) => b.tenPhieuGiamGia.localeCompare(b.tenPhieuGiamGia));
         }
       }
 
@@ -474,21 +473,34 @@ export default {
           params: { page: 0, size: 1000, sort: 'ngayTao,desc' },
         });
         
+        console.log('Raw API response:', response.data); // Debug: Log the entire API response
         const rawCoupons = response.data.content || response.data;
-        this.allCoupons = rawCoupons.map(coupon => ({
-          id: coupon.id,
-          maPhieuGiamGia: coupon.ma,
-          tenPhieuGiamGia: coupon.tenPhieuGiamGia,
-          loaiApDung: coupon.riengTu ? 'KH_CU_THE' : 'TOAN_BO',
-          loaiGiamGia: coupon.loaiPhieuGiamGia === 'PHANTRAM' ? 'PHAN_TRAM' : 'SO_TIEN_CO_DINH',
-          giaTriGiam: coupon.phanTramGiamGia || coupon.soTienGiamGia,
-          hoaDonToiThieu: coupon.hoaDonToiThieu,
-          soTienGiamToiDa: coupon.soTienGiamToiDa,
-          ngayBatDau: coupon.ngayBatDau,
-          ngayKetThuc: coupon.ngayKetThuc,
-          tenTrangThai: coupon.trangThai ? 'DANG_DIEN_RA' : 'DA_KET_THUC',
-          customerIds: coupon.customerIds || [],
-        }));
+        console.log('Raw coupons:', rawCoupons); // Debug: Log the coupons array
+
+        this.allCoupons = rawCoupons.map(coupon => {
+          console.log('Coupon loaiPhieuGiamGia:', coupon.loaiPhieuGiamGia); // Debug: Log the specific field
+          // Map loaiPhieuGiamGia to frontend values, handling both PHAN_TRAM and PHANTRAM
+          const loaiGiamGia = coupon.loaiPhieuGiamGia === 'PHAN_TRAM' || coupon.loaiPhieuGiamGia === 'PHANTRAM'
+            ? 'PHAN_TRAM'
+            : coupon.loaiPhieuGiamGia === 'SO_TIEN_CO_DINH'
+              ? 'SO_TIEN_CO_DINH'
+              : 'UNKNOWN'; // Fallback for unexpected values
+
+          return {
+            id: coupon.id,
+            maPhieuGiamGia: coupon.ma,
+            tenPhieuGiamGia: coupon.tenPhieuGiamGia,
+            loaiApDung: coupon.riengTu ? 'KH_CU_THE' : 'TOAN_BO',
+            loaiGiamGia: loaiGiamGia,
+            giaTriGiam: coupon.phanTramGiamGia || coupon.soTienGiamGia,
+            hoaDonToiThieu: coupon.hoaDonToiThieu,
+            soTienGiamToiDa: coupon.soTienGiamToiDa,
+            ngayBatDau: coupon.ngayBatDau,
+            ngayKetThuc: coupon.ngayKetThuc,
+            tenTrangThai: coupon.trangThai ? 'DANG_DIEN_RA' : 'DA_KET_THUC',
+            customerIds: coupon.customerIds || [],
+          };
+        });
 
         if (this.allCoupons.length === 0) {
           this.toast.info('Không có phiếu giảm giá nào trong hệ thống.', { timeout: 4000 });
@@ -594,6 +606,7 @@ export default {
     },
 
     mapLoaiGiamGiaText(value) {
+      if (value === 'UNKNOWN') return 'Không xác định';
       const type = this.discountTypes.find((t) => t.value === value);
       return type ? type.text : value;
     },
