@@ -6,7 +6,12 @@
         <thead>
           <tr>
             <th v-for="column in columns" :key="column.key" :class="column.class">
-              {{ column.label }}
+              <slot 
+                :name="`header-${column.key}`"
+                :column="column"
+              >
+                {{ column.label }}
+              </slot>
             </th>
           </tr>
         </thead>

@@ -88,18 +88,9 @@
           </template>
           <template #hex="{ item }">
             <div class="hex-display">
-              <span 
-                class="color-preview" 
-                :style="{ backgroundColor: item.hex }"
-              ></span>
+              <div class="color-preview" :style="{ backgroundColor: item.hex }"></div>
               <span class="hex-code">{{ item.hex }}</span>
             </div>
-          </template>
-          <template #description="{ item }">
-            <span class="description">{{ item.description }}</span>
-          </template>
-          <template #productCount="{ item }">
-            <span class="product-count">{{ item.productCount }}</span>
           </template>
           <template #status="{ item }">
             <span class="status-badge" :class="item.status">
@@ -114,9 +105,15 @@
               <button @click="editColor(item)" class="action-btn edit" title="Chỉnh sửa">
                 <iconify-icon icon="solar:pen-bold"></iconify-icon>
               </button>
-              <button @click="deleteColor(item)" class="action-btn delete" title="Xóa">
-                <iconify-icon icon="solar:trash-bin-trash-bold"></iconify-icon>
-              </button>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  :checked="item.status === 'active'"
+                  @change="toggleColorStatus(item)"
+                  class="sr-only peer"
+                />
+                <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+              </label>
             </div>
           </template>
         </DataTable>
@@ -238,6 +235,7 @@ import { useToast } from 'vue-toastification';
 import { useRouter } from 'vue-router';
 import Breadcrumb from '@/components/Breadcrumb.vue';
 import DataTable from '@/components/DataTable.vue';
+import { productService } from '@/services/api/productAPI.js';
 
 export default {
   name: 'MauSac',
@@ -271,8 +269,18 @@ export default {
       description: ''
     });
 
-    // Sample data
-    const colors = ref([
+    // API data
+    const colors = ref([]);
+    const loading = ref(false);
+    const pagination = ref({
+      page: 0,
+      size: 10,
+      totalElements: 0,
+      totalPages: 0
+    });
+
+    // Sample data - will be replaced
+    const sampleColors = ref([
       {
         id: 1,
         code: 'MS001',
@@ -374,11 +382,9 @@ export default {
       { key: 'code', label: 'Mã màu sắc' },
       { key: 'name', label: 'Tên màu sắc' },
       { key: 'hex', label: 'Mã Hex' },
-      { key: 'description', label: 'Mô tả' },
-      { key: 'productCount', label: 'Số lượng sản phẩm' },
       { key: 'status', label: 'Trạng thái' },
       { key: 'createdAt', label: 'Ngày tạo' },
-      { key: 'actions', label: 'Thao tác' }
+      { key: 'actions', label: 'Hành động' }
     ]);
 
     // Computed
@@ -482,6 +488,22 @@ export default {
       showEditColorModal.value = true;
     };
 
+    const toggleColorStatus = async (color) => {
+      try {
+        loading.value = true;
+        await productService.toggleColorStatus(color.id);
+        
+        const statusText = color.status === 'active' ? 'vô hiệu hóa' : 'kích hoạt';
+        toast.success(`Đã ${statusText} màu sắc "${color.name}" thành công!`);
+        await loadColors();
+      } catch (error) {
+        toast.error('Lỗi khi cập nhật trạng thái màu sắc: ' + (error.response?.data || error.message));
+        console.error('Error toggling color status:', error);
+      } finally {
+        loading.value = false;
+      }
+    };
+
     const deleteColor = (color) => {
       colorToDelete.value = color;
       showDeleteModal.value = true;
@@ -489,47 +511,46 @@ export default {
 
     const saveColor = async () => {
       try {
+        loading.value = true;
         if (showAddColorModal.value) {
-          // Add new color
-          const newColor = {
-            id: Date.now(),
-            code: colorForm.value.code || generateColorCode(),
-            name: colorForm.value.name,
-            hex: colorForm.value.hex,
-            description: colorForm.value.description,
-            productCount: 0,
-            status: colorForm.value.status,
-            createdAt: new Date().toISOString()
+          const colorData = {
+            tenMauSac: colorForm.value.name,
+            maMauSac: colorForm.value.code,
+            hex: colorForm.value.hex
           };
-          colors.value.unshift(newColor);
+          await productService.createColor(colorData);
           toast.success('Thêm màu sắc mới thành công!');
         } else {
-          // Edit existing color
-          const index = colors.value.findIndex(c => c.id === colorForm.value.id);
-          if (index !== -1) {
-            colors.value[index] = {
-              ...colors.value[index],
-              name: colorForm.value.name,
-              hex: colorForm.value.hex,
-              description: colorForm.value.description,
-              status: colorForm.value.status
-            };
-            toast.success('Cập nhật màu sắc thành công!');
-          }
+          const colorData = {
+            tenMauSac: colorForm.value.name,
+            maMauSac: colorForm.value.code,
+            hex: colorForm.value.hex
+          };
+          await productService.updateColor(colorForm.value.id, colorData);
+          toast.success('Cập nhật màu sắc thành công!');
         }
         closeColorForm();
+        await loadColors();
       } catch (error) {
-        toast.error('Lỗi khi lưu màu sắc. Vui lòng thử lại.');
+        toast.error('Lỗi khi lưu màu sắc: ' + (error.response?.data || error.message));
         console.error('Error saving color:', error);
+      } finally {
+        loading.value = false;
       }
     };
 
-    const confirmDelete = () => {
+    const confirmDelete = async () => {
       if (colorToDelete.value) {
-        const index = colors.value.findIndex(c => c.id === colorToDelete.value.id);
-        if (index !== -1) {
-          colors.value.splice(index, 1);
+        try {
+          loading.value = true;
+          await productService.deleteColor(colorToDelete.value.id);
           toast.success(`Đã xóa màu sắc "${colorToDelete.value.name}" thành công!`);
+          await loadColors();
+        } catch (error) {
+          toast.error('Lỗi khi xóa màu sắc: ' + (error.response?.data || error.message));
+          console.error('Error deleting color:', error);
+        } finally {
+          loading.value = false;
         }
         showDeleteModal.value = false;
         colorToDelete.value = null;
@@ -548,9 +569,79 @@ export default {
       };
     };
 
+    // API Methods
+    const loadColors = async () => {
+      try {
+        loading.value = true;
+        const params = {
+          keyword: filters.value.search,
+          page: pagination.value.page,
+          size: pagination.value.size,
+          sortBy: getSortBy(),
+          sortDirection: getSortDirection()
+        };
+        const response = await productService.getColorsPaged(params);
+        colors.value = response.data.content.map(item => ({
+          id: item.id,
+          code: item.maMauSac,
+          name: item.tenMauSac,
+          hex: item.hex,
+          description: item.description || '',
+          status: item.deleted ? 'inactive' : 'active',
+          createdAt: item.ngayTao
+        }));
+        pagination.value = {
+          page: response.data.number,
+          size: response.data.size,
+          totalElements: response.data.totalElements,
+          totalPages: response.data.totalPages
+        };
+      } catch (error) {
+        toast.error('Lỗi khi tải dữ liệu màu sắc');
+        console.error('Error loading colors:', error);
+      } finally {
+        loading.value = false;
+      }
+    };
+
+    const getSortBy = () => {
+      switch (filters.value.sortBy) {
+        case 'name_asc':
+        case 'name_desc':
+          return 'tenMauSac';
+        case 'code_asc':
+        case 'code_desc':
+          return 'maMauSac';
+        case 'oldest':
+        case 'newest':
+        default:
+          return 'id';
+      }
+    };
+
+    const getSortDirection = () => {
+      return filters.value.sortBy.includes('asc') || filters.value.sortBy === 'oldest' ? 'asc' : 'desc';
+    };
+
     const exportToExcel = () => {
       toast.info('Tính năng xuất Excel đang được phát triển');
     };
+
+    // Watchers
+    watch(() => filters.value.search, () => {
+      pagination.value.page = 0;
+      loadColors();
+    }, { debounce: 500 });
+
+    watch(() => filters.value.sortBy, () => {
+      pagination.value.page = 0;
+      loadColors();
+    });
+
+    // Load data on component mount
+    onMounted(() => {
+      loadColors();
+    });
 
     return {
       // Data
@@ -569,17 +660,22 @@ export default {
       // Computed
       filteredColors,
       
+      // State
+      loading,
+      pagination,
+      
       // Methods
       resetFilters,
-      openAddColorModal,
       getStatusLabel,
       formatDate,
       editColor,
+      toggleColorStatus,
       deleteColor,
       saveColor,
       confirmDelete,
       closeColorForm,
-      exportToExcel
+      exportToExcel,
+      loadColors
     };
   }
 };

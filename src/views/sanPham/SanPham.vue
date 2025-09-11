@@ -94,67 +94,22 @@
 
     <!-- Main Content -->
     <div class="main-content">
-      <!-- Products Grid -->
+      <!-- Products List -->
       <div class="products-section">
         <div class="section-header">
           <h3 class="section-title">
             <iconify-icon icon="solar:box-bold-duotone"></iconify-icon>
-            Danh Sách Sản Phẩm ({{ filteredProducts.length }})
+            Danh Sách Sản Phẩm ({{ totalElements }})
           </h3>
-          <div class="section-actions">
-            <div class="view-toggle">
-              <button class="view-btn" :class="{ active: viewMode === 'grid' }" @click="viewMode = 'grid'">
-                <iconify-icon icon="solar:widget-4-bold-duotone"></iconify-icon>
-              </button>
-              <button class="view-btn" :class="{ active: viewMode === 'list' }" @click="viewMode = 'list'">
-                <iconify-icon icon="solar:list-bold-duotone"></iconify-icon>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Grid View -->
-        <div v-if="viewMode === 'grid'" class="products-grid">
-          <div v-for="product in paginatedProducts" :key="product.id" class="product-card"
-            @click="selectProduct(product)">
-            <div class="product-image">
-              <img :src="product.image" :alt="product.name" />
-              <div class="product-overlay">
-                <button class="action-btn edit" @click.stop="editProduct(product)">
-                  <iconify-icon icon="solar:pen-bold"></iconify-icon>
-                </button>
-                <button class="action-btn delete" @click.stop="deleteProduct(product)">
-                  <iconify-icon icon="solar:trash-bin-trash-bold"></iconify-icon>
-                </button>
-              </div>
-              <div class="product-status" :class="product.status">
-                {{ getStatusLabel(product.status) }}
-              </div>
-            </div>
-            <div class="product-info">
-              <div class="product-code">{{ product.code }}</div>
-              <h4 class="product-name">{{ product.name }}</h4>
-              <div class="product-brand">{{ getBrandName(product.brandId) }}</div>
-              <div class="product-price">{{ formatCurrency(product.price) }}</div>
-              <div class="product-stock" :class="getStockClass(product.stock)">
-                Tồn: {{ product.stock }}
-              </div>
-            </div>
-          </div>
-
-          <div v-if="filteredProducts.length === 0" class="empty-state">
-            <iconify-icon icon="solar:box-bold-duotone" class="empty-icon"></iconify-icon>
-            <h4>Không tìm thấy sản phẩm</h4>
-            <p>Thử điều chỉnh bộ lọc hoặc thêm sản phẩm mới</p>
-            <button class="empty-action-btn" @click="showAddProductModal = true">
-              Thêm Sản Phẩm Đầu Tiên
-            </button>
-          </div>
         </div>
 
         <!-- List View -->
-        <div v-if="viewMode === 'list'">
-          <DataTable :data="filteredProducts" :columns="tableColumns" item-label="sản phẩm"
+        <div>
+          <div v-if="loading" class="loading-container">
+            <div class="loading-spinner"></div>
+            <p>Đang tải dữ liệu...</p>
+          </div>
+          <DataTable v-else :data="filteredProducts" :columns="tableColumns" item-label="sản phẩm"
             empty-message="Không tìm thấy sản phẩm nào." key-field="id">
             <!-- STT Column -->
             <template #stt="{ rowIndex }">
@@ -177,23 +132,28 @@
             <template #name="{ item }">
               <div class="table-product-info">
                 <span class="table-product-name">{{ item.name }}</span>
-                <span class="table-product-category">{{ getCategoryName(item.categoryId) }}</span>
+                <span class="table-product-category">{{ item.categoryName || getCategoryName(item.categoryId) }}</span>
               </div>
+            </template>
+
+            <!-- Category Column -->
+            <template #category="{ item }">
+              <span class="category-badge">{{ item.categoryName || getCategoryName(item.categoryId) }}</span>
             </template>
 
             <!-- Brand Column -->
             <template #brand="{ item }">
-              {{ getBrandName(item.brandId) }}
+              <span class="brand-badge">{{ item.brandName || getBrandName(item.brandId) }}</span>
             </template>
 
-            <!-- Price Column -->
-            <template #price="{ item }">
-              <span class="price">{{ formatCurrency(item.price) }}</span>
+            <!-- Country Column -->
+            <template #country="{ item }">
+              <span class="country-info">{{ item.country || 'Không xác định' }}</span>
             </template>
 
-            <!-- Stock Column -->
-            <template #stock="{ item }">
-              <span class="stock" :class="getStockClass(item.stock)">{{ item.stock }}</span>
+            <!-- Created Date Column -->
+            <template #createdDate="{ item }">
+              <span class="created-date">{{ formatDate(item.createdDate) }}</span>
             </template>
 
             <!-- Status Column -->
@@ -206,77 +166,80 @@
             <!-- Actions Column -->
             <template #actions="{ item }">
               <div class="actions">
-                <button @click="viewProduct(item)" class="action-btn view" title="Xem chi tiết">
+                <button @click="viewProduct(item)" class="action-btn view" title="Xem chi tiết sản phẩm">
                   <iconify-icon icon="solar:eye-bold"></iconify-icon>
                 </button>
                 <button @click="editProduct(item)" class="action-btn edit" title="Chỉnh sửa">
                   <iconify-icon icon="solar:pen-bold"></iconify-icon>
                 </button>
-                <button @click="deleteProduct(item)" class="action-btn delete" title="Xóa">
-                  <iconify-icon icon="solar:trash-bin-trash-bold"></iconify-icon>
-                </button>
+                <label class="toggle-switch" :title="item.status === 'active' ? 'Tạm ngưng bán' : 'Tiếp tục bán'">
+                  <input
+                    type="checkbox"
+                    :checked="item.status === 'active'"
+                    @change="toggleProductStatus(item)"
+                    class="sr-only peer"
+                  />
+                  <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                </label>
               </div>
             </template>
           </DataTable>
-        </div>
-        <!-- Grid Pagination Footer -->
-        <div v-if="viewMode === 'grid' && filteredProducts.length > 0" class="pagination-footer">
-          <div class="pagination-container">
-            <div class="pagination-info-left">
-              <span class="pagination-summary">
-                Hiển thị {{ startItem }} - {{ endItem }} của {{ filteredProducts.length }} sản phẩm
-              </span>
-              <div class="page-size-selector">
-                <label>Hiển thị:</label>
-                <select v-model="itemsPerPage" @change="currentPage = 1" class="page-size-select">
-                  <option :value="6">6</option>
-                  <option :value="12">12</option>
-                  <option :value="24">24</option>
-                  <option :value="48">48</option>
-                </select>
-                <span>sản phẩm/trang</span>
-              </div>
+          
+          <!-- Pagination Controls -->
+          <div v-if="!loading && totalPages > 1" class="pagination-container">
+            <div class="pagination-info">
+              <span>Hiển thị {{ (currentPage * pageSize) + 1 }} - {{ Math.min((currentPage + 1) * pageSize, totalElements) }} của {{ totalElements }} sản phẩm</span>
             </div>
-
-            <div v-if="totalPages > 1" class="pagination">
-              <button class="pagination-btn" @click="currentPage = 1" :disabled="currentPage === 1" title="Trang đầu">
+            <div class="pagination-controls">
+              <button 
+                @click="goToPage(0)" 
+                :disabled="currentPage === 0"
+                class="pagination-btn"
+                title="Trang đầu">
                 <iconify-icon icon="solar:double-alt-arrow-left-bold"></iconify-icon>
               </button>
-              <button class="pagination-btn" @click="currentPage--" :disabled="currentPage === 1" title="Trang trước">
+              <button 
+                @click="goToPage(currentPage - 1)" 
+                :disabled="currentPage === 0"
+                class="pagination-btn"
+                title="Trang trước">
                 <iconify-icon icon="solar:alt-arrow-left-bold"></iconify-icon>
               </button>
-
-              <!-- Page Numbers -->
+              
               <div class="page-numbers">
-                <button v-for="page in visiblePages" :key="page" class="page-number-btn"
-                  :class="{ active: page === currentPage, ellipsis: page === '...' }"
-                  @click="page !== '...' && (currentPage = page)" :disabled="page === '...'">
+                <button 
+                  v-for="page in getVisiblePages()" 
+                  :key="page"
+                  @click="goToPage(page - 1)"
+                  :class="['page-number', { active: page - 1 === currentPage }]">
                   {{ page }}
                 </button>
               </div>
-
-              <button class="pagination-btn" @click="currentPage++" :disabled="currentPage === totalPages"
+              
+              <button 
+                @click="goToPage(currentPage + 1)" 
+                :disabled="currentPage >= totalPages - 1"
+                class="pagination-btn"
                 title="Trang sau">
                 <iconify-icon icon="solar:alt-arrow-right-bold"></iconify-icon>
               </button>
-              <button class="pagination-btn" @click="currentPage = totalPages" :disabled="currentPage === totalPages"
+              <button 
+                @click="goToPage(totalPages - 1)" 
+                :disabled="currentPage >= totalPages - 1"
+                class="pagination-btn"
                 title="Trang cuối">
                 <iconify-icon icon="solar:double-alt-arrow-right-bold"></iconify-icon>
               </button>
             </div>
-
-            <div class="pagination-info-right">
-              <span class="pagination-current">
-                Trang {{ currentPage }} / {{ totalPages }}
-              </span>
-              <div class="goto-page">
-                <label>Đi tới:</label>
-                <input type="number" v-model.number="gotoPage" @keyup.enter="goToPage" :min="1" :max="totalPages"
-                  class="goto-input" placeholder="Trang" />
-                <button @click="goToPage" class="goto-btn" :disabled="!isValidGotoPage">
-                  <iconify-icon icon="solar:arrow-right-bold"></iconify-icon>
-                </button>
-              </div>
+            <div class="page-size-selector">
+              <label>Hiển thị:</label>
+              <select v-model="pageSize" @change="changePageSize" class="page-size-select">
+                <option value="5">5</option>
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+              </select>
+              <span>/ trang</span>
             </div>
           </div>
         </div>
@@ -444,6 +407,100 @@
       </div>
     </div>
 
+    <!-- Product Details Modal -->
+    <div v-if="showProductDetailsModal" class="modal-overlay" @click="closeProductDetailsModal">
+      <div class="modal-container extra-large" @click.stop>
+        <div class="modal-header">
+          <h3 class="modal-title">
+            <iconify-icon icon="solar:box-bold-duotone"></iconify-icon>
+            Chi Tiết Biến Thể - {{ selectedProductForDetails?.name }}
+          </h3>
+          <button class="modal-close" @click="closeProductDetailsModal">
+            <iconify-icon icon="solar:close-circle-bold"></iconify-icon>
+          </button>
+        </div>
+        <div class="modal-content">
+          <div v-if="detailsLoading" class="loading-container">
+            <div class="loading-spinner"></div>
+            <p>Đang tải chi tiết sản phẩm...</p>
+          </div>
+          <div v-else>
+            <div class="details-table-container">
+              <table class="details-table">
+                <thead>
+                  <tr>
+                    <th>STT</th>
+                    <th>Chất liệu</th>
+                    <th>Màu sắc</th>
+                    <th>Kích cỡ</th>
+                    <th>Giá bán</th>
+                    <th>Tồn kho</th>
+                    <th>Trạng thái</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="(detail, index) in productDetails" :key="detail.id">
+                    <td>{{ (detailsCurrentPage * detailsPageSize) + index + 1 }}</td>
+                    <td>{{ detail.material }}</td>
+                    <td>{{ detail.color }}</td>
+                    <td>{{ detail.size }}</td>
+                    <td class="price">{{ formatCurrency(detail.price) }}</td>
+                    <td class="stock" :class="getStockClass(detail.stock)">{{ detail.stock }}</td>
+                    <td>
+                      <span class="status-badge" :class="detail.status">
+                        {{ getStatusLabel(detail.status) }}
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              
+              <!-- Details Pagination -->
+              <div v-if="detailsTotalPages > 1" class="pagination-container">
+                <div class="pagination-info">
+                  <span>Hiển thị {{ (detailsCurrentPage * detailsPageSize) + 1 }} - {{ Math.min((detailsCurrentPage + 1) * detailsPageSize, detailsTotalElements) }} của {{ detailsTotalElements }} biến thể</span>
+                </div>
+                <div class="pagination-controls">
+                  <button @click="goToDetailsPage(0)" :disabled="detailsCurrentPage === 0" class="pagination-btn">
+                    <iconify-icon icon="solar:double-alt-arrow-left-bold"></iconify-icon>
+                  </button>
+                  <button @click="goToDetailsPage(detailsCurrentPage - 1)" :disabled="detailsCurrentPage === 0" class="pagination-btn">
+                    <iconify-icon icon="solar:alt-arrow-left-bold"></iconify-icon>
+                  </button>
+                  
+                  <div class="page-numbers">
+                    <button v-for="page in getDetailsVisiblePages()" :key="page" @click="goToDetailsPage(page - 1)" :class="['page-number', { active: page - 1 === detailsCurrentPage }]">
+                      {{ page }}
+                    </button>
+                  </div>
+                  
+                  <button @click="goToDetailsPage(detailsCurrentPage + 1)" :disabled="detailsCurrentPage >= detailsTotalPages - 1" class="pagination-btn">
+                    <iconify-icon icon="solar:alt-arrow-right-bold"></iconify-icon>
+                  </button>
+                  <button @click="goToDetailsPage(detailsTotalPages - 1)" :disabled="detailsCurrentPage >= detailsTotalPages - 1" class="pagination-btn">
+                    <iconify-icon icon="solar:double-alt-arrow-right-bold"></iconify-icon>
+                  </button>
+                </div>
+                <div class="page-size-selector">
+                  <label>Hiển thị:</label>
+                  <select v-model="detailsPageSize" @change="changeDetailsPageSize" class="page-size-select">
+                    <option value="5">5</option>
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                  </select>
+                  <span>/ trang</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn secondary" @click="closeProductDetailsModal">Đóng</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Delete Confirmation Modal -->
     <div v-if="showDeleteModal" class="modal-overlay" @click="showDeleteModal = false">
       <div class="modal-container small" @click.stop>
@@ -475,6 +532,7 @@ import { useToast } from 'vue-toastification';
 import { useRouter } from 'vue-router';
 import Breadcrumb from '@/components/Breadcrumb.vue';
 import DataTable from '@/components/DataTable.vue';
+import { productService } from '@/services/api/productAPI.js';
 
 export default {
   name: 'QuanLySanPham',
@@ -505,34 +563,36 @@ export default {
       }
     ]);
 
-    const pageStats = ref([
+    const pageStats = computed(() => [
       {
-        value: '284',
+        value: totalElements.value.toString(),
         label: 'Tổng sản phẩm',
         icon: 'solar:box-bold-duotone'
       },
       {
-        value: '45',
-        label: 'Sản phẩm mới',
+        value: products.value.filter(p => p.status === 'active').length.toString(),
+        label: 'Đang bán',
         icon: 'solar:add-circle-bold-duotone'
       },
       {
-        value: '12',
-        label: 'Sắp hết hàng',
+        value: products.value.filter(p => p.status === 'inactive').length.toString(),
+        label: 'Ngừng bán',
         icon: 'solar:danger-bold-duotone'
       },
       {
-        value: '98%',
-        label: 'Tỷ lệ còn hàng',
+        value: currentPage.value + 1 + '/' + totalPages.value,
+        label: 'Trang hiện tại',
         icon: 'solar:chart-square-bold-duotone'
       }
     ]);
 
     // State management
-    const viewMode = ref('grid');
-    const currentPage = ref(1);
-    const itemsPerPage = ref(12);
-    const gotoPage = ref('');
+    const loading = ref(false);
+    const products = ref([]);
+    const totalElements = ref(0);
+    const totalPages = ref(0);
+    const currentPage = ref(0);
+    const pageSize = ref(10);
 
     // Modals
     const showDetailModal = ref(false);
@@ -587,153 +647,91 @@ export default {
       { id: 6, name: 'Puma' }
     ]);
 
-    // Table columns configuration
+    // Table columns configuration - Updated to match API data
     const tableColumns = ref([
       { key: 'stt', label: 'STT', class: 'text-center' },
       { key: 'image', label: 'Hình ảnh', class: 'text-center' },
       { key: 'code', label: 'Mã SP' },
       { key: 'name', label: 'Tên sản phẩm' },
+      { key: 'category', label: 'Danh mục' },
       { key: 'brand', label: 'Thương hiệu' },
-      { key: 'price', label: 'Giá bán', class: 'text-right' },
-      { key: 'stock', label: 'Tồn kho', class: 'text-center' },
+      { key: 'country', label: 'Quốc gia SX' },
+      { key: 'createdDate', label: 'Ngày tạo' },
       { key: 'status', label: 'Trạng thái', class: 'text-center' },
-      { key: 'actions', label: 'Thao tác', class: 'text-center' }
+      { key: 'actions', label: 'Hành động', class: 'text-center' }
     ]);
 
-    const products = ref([
-      {
-        id: 1,
-        code: 'SP001',
-        name: 'Nike Air Max 270',
-        categoryId: 1,
-        brandId: 1,
-        price: 2890000,
-        stock: 15,
-        status: 'active',
-        image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=300&h=300&fit=crop&crop=center',
-        description: 'Giày thể thao Nike Air Max 270 với thiết kế hiện đại và đệm khí thoải mái.',
-        createdAt: '2024-01-15T10:30:00'
-      },
-      {
-        id: 2,
-        code: 'SP002',
-        name: 'Adidas Ultraboost 22',
-        categoryId: 1,
-        brandId: 2,
-        price: 3200000,
-        stock: 8,
-        status: 'active',
-        image: 'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=300&h=300&fit=crop&crop=center',
-        description: 'Giày chạy bộ Adidas Ultraboost 22 với công nghệ Boost Energy Return.',
-        createdAt: '2024-01-14T11:15:00'
-      },
-      {
-        id: 3,
-        code: 'SP003',
-        name: 'Converse Chuck Taylor All Star',
-        categoryId: 1,
-        brandId: 3,
-        price: 1590000,
-        stock: 22,
-        status: 'active',
-        image: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=300&h=300&fit=crop&crop=center',
-        description: 'Giày Converse Chuck Taylor All Star cổ điển, biểu tượng thời trang.',
-        createdAt: '2024-01-13T09:20:00'
-      },
-      {
-        id: 4,
-        code: 'SP004',
-        name: 'Vans Old Skool',
-        categoryId: 1,
-        brandId: 4,
-        price: 1890000,
-        stock: 0,
-        status: 'out_of_stock',
-        image: 'https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?w=300&h=300&fit=crop&crop=center',
-        description: 'Giày Vans Old Skool với stripe màu trắng đặc trưng.',
-        createdAt: '2024-01-12T14:45:00'
-      },
-      {
-        id: 5,
-        code: 'SP005',
-        name: 'New Balance 990v5',
-        categoryId: 1,
-        brandId: 5,
-        price: 4200000,
-        stock: 5,
-        status: 'active',
-        image: 'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=300&h=300&fit=crop&crop=center',
-        description: 'New Balance 990v5 - Made in USA, chất lượng cao cấp.',
-        createdAt: '2024-01-11T16:30:00'
-      },
-      {
-        id: 6,
-        code: 'SP006',
-        name: 'Puma RS-X3',
-        categoryId: 1,
-        brandId: 6,
-        price: 2650000,
-        stock: 12,
-        status: 'active',
-        image: 'https://images.unsplash.com/photo-1551107696-a4b0c5a0d9a2?w=300&h=300&fit=crop&crop=center',
-        description: 'Giày Puma RS-X3 với thiết kế chunky sneaker độc đáo.',
-        createdAt: '2024-01-10T08:15:00'
-      },
-      {
-        id: 7,
-        code: 'SP007',
-        name: 'Nike Air Force 1',
-        categoryId: 1,
-        brandId: 1,
-        price: 2490000,
-        stock: 25,
-        status: 'active',
-        image: 'https://images.unsplash.com/photo-1600269452121-4f2416e55c28?w=300&h=300&fit=crop&crop=center',
-        description: 'Nike Air Force 1 Low trắng cổ điển, không bao giờ lỗi thời.',
-        createdAt: '2024-01-09T14:20:00'
-      },
-      {
-        id: 8,
-        code: 'SP008',
-        name: 'Adidas Stan Smith',
-        categoryId: 2,
-        brandId: 2,
-        price: 2190000,
-        stock: 18,
-        status: 'active',
-        image: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=300&h=300&fit=crop&crop=center',
-        description: 'Adidas Stan Smith - biểu tượng giày tennis cổ điển.',
-        createdAt: '2024-01-08T12:45:00'
-      },
-      {
-        id: 9,
-        code: 'SP009',
-        name: 'Converse Chuck 70',
-        categoryId: 1,
-        brandId: 3,
-        price: 1890000,
-        stock: 3,
-        status: 'active',
-        image: 'https://images.unsplash.com/photo-1606894570864-3f2a1e0cbdbe?w=300&h=300&fit=crop&crop=center',
-        description: 'Converse Chuck 70 cao cấp với chất liệu premium.',
-        createdAt: '2024-01-07T16:30:00'
-      },
-      {
-        id: 10,
-        code: 'SP010',
-        name: 'Vans Authentic',
-        categoryId: 1,
-        brandId: 4,
-        price: 1590000,
-        stock: 14,
-        status: 'inactive',
-        image: 'https://images.unsplash.com/photo-1628253747716-0c4f5c90fdda?w=300&h=300&fit=crop&crop=center',
-        description: 'Vans Authentic - thiết kế đơn giản, năng động.',
-        createdAt: '2024-01-06T10:15:00'
+    // API functions
+    const fetchProducts = async () => {
+      try {
+        loading.value = true;
+        const sortBy = getSortField();
+        const sortDir = getSortDirection();
+        
+        const response = await productService.getProductsWithDetailsPaged({
+          page: currentPage.value,
+          size: pageSize.value,
+          sortBy,
+          sortDir
+        });
+        
+        products.value = response.data.content.map(product => ({
+          id: product.id,
+          code: product.ma,
+          name: product.tenSanPham,
+          categoryId: product.idDanhMuc?.id,
+          brandId: product.idThuongHieu?.id,
+          categoryName: product.idDanhMuc?.tenDanhMuc,
+          brandName: product.idThuongHieu?.tenThuongHieu,
+          country: product.quocGiaSanXuat,
+          status: product.deleted ? 'inactive' : 'active',
+          image: product.urlAnhDaiDien || 'https://via.placeholder.com/300x300?text=No+Image',
+          description: product.moTaSanPham,
+          createdAt: product.ngayTao,
+          createdDate: product.ngayTao
+        }));
+        
+        totalElements.value = response.data.totalElements;
+        totalPages.value = response.data.totalPages;
+        
+      } catch (error) {
+        console.error('Error fetching products:', error);
+        toast.error('Lỗi khi tải danh sách sản phẩm');
+        products.value = [];
+      } finally {
+        loading.value = false;
       }
-    ]);
+    };
 
-    // Computed properties
+    const getSortField = () => {
+      const sortMap = {
+        'newest': 'ngayTao',
+        'oldest': 'ngayTao',
+        'name_asc': 'tenSanPham',
+        'name_desc': 'tenSanPham',
+        'price_asc': 'id', // Default to id since price not in main entity
+        'price_desc': 'id',
+        'stock_asc': 'id',
+        'stock_desc': 'id'
+      };
+      return sortMap[filters.value.sortBy] || 'id';
+    };
+
+    const getSortDirection = () => {
+      const dirMap = {
+        'newest': 'desc',
+        'oldest': 'asc',
+        'name_asc': 'asc',
+        'name_desc': 'desc',
+        'price_asc': 'asc',
+        'price_desc': 'desc',
+        'stock_asc': 'asc',
+        'stock_desc': 'desc'
+      };
+      return dirMap[filters.value.sortBy] || 'asc';
+    };
+
+    // Computed properties - Updated for API data
     const filteredProducts = computed(() => {
       let result = [...products.value];
 
@@ -742,7 +740,8 @@ export default {
         const search = filters.value.search.toLowerCase();
         result = result.filter(product =>
           product.name.toLowerCase().includes(search) ||
-          product.code.toLowerCase().includes(search)
+          product.code.toLowerCase().includes(search) ||
+          (product.description && product.description.toLowerCase().includes(search))
         );
       }
 
@@ -758,136 +757,30 @@ export default {
 
       // Status filter
       if (filters.value.status) {
-        if (filters.value.status === 'out_of_stock') {
-          result = result.filter(product => product.stock === 0);
-        } else {
-          result = result.filter(product => product.status === filters.value.status);
-        }
+        result = result.filter(product => product.status === filters.value.status);
       }
 
-      // Price range filter
-      if (filters.value.priceFrom) {
-        result = result.filter(product => product.price >= Number(filters.value.priceFrom));
-      }
-      if (filters.value.priceTo) {
-        result = result.filter(product => product.price <= Number(filters.value.priceTo));
-      }
-
-      // Stock level filter
-      if (filters.value.stockLevel) {
-        switch (filters.value.stockLevel) {
-          case 'high':
-            result = result.filter(product => product.stock > 50);
-            break;
-          case 'medium':
-            result = result.filter(product => product.stock >= 10 && product.stock <= 50);
-            break;
-          case 'low':
-            result = result.filter(product => product.stock >= 1 && product.stock < 10);
-            break;
-          case 'out':
-            result = result.filter(product => product.stock === 0);
-            break;
-        }
-      }
-
-      // Sorting
-      switch (filters.value.sortBy) {
-        case 'newest':
-          result.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-          break;
-        case 'oldest':
-          result.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-          break;
-        case 'name_asc':
-          result.sort((a, b) => a.name.localeCompare(b.name));
-          break;
-        case 'name_desc':
-          result.sort((a, b) => b.name.localeCompare(a.name));
-          break;
-        case 'price_asc':
-          result.sort((a, b) => a.price - b.price);
-          break;
-        case 'price_desc':
-          result.sort((a, b) => b.price - a.price);
-          break;
-        case 'stock_asc':
-          result.sort((a, b) => a.stock - b.stock);
-          break;
-        case 'stock_desc':
-          result.sort((a, b) => b.stock - a.stock);
-          break;
-      }
+      // Note: Price and stock filters removed since not available in main product entity
+      // These would need to be implemented with product details API
 
       return result;
     });
 
-    // Grid view pagination (separate from DataTable)
-    const totalPages = computed(() => Math.ceil(filteredProducts.value.length / itemsPerPage.value));
 
-    const paginatedProducts = computed(() => {
-      const start = (currentPage.value - 1) * itemsPerPage.value;
-      const end = start + itemsPerPage.value;
-      return filteredProducts.value.slice(start, end);
-    });
-
-    const startItem = computed(() => {
-      if (filteredProducts.value.length === 0) return 0;
-      return (currentPage.value - 1) * itemsPerPage.value + 1;
-    });
-
-    const endItem = computed(() => {
-      const end = currentPage.value * itemsPerPage.value;
-      return Math.min(end, filteredProducts.value.length);
-    });
-
-    const visiblePages = computed(() => {
-      const total = totalPages.value;
-      const current = currentPage.value;
-      const delta = 2;
-
-      if (total <= 7) {
-        return Array.from({ length: total }, (_, i) => i + 1);
-      }
-
-      const pages = [];
-      pages.push(1);
-
-      const rangeStart = Math.max(2, current - delta);
-      const rangeEnd = Math.min(total - 1, current + delta);
-
-      if (rangeStart > 2) {
-        pages.push('...');
-      }
-
-      for (let i = rangeStart; i <= rangeEnd; i++) {
-        pages.push(i);
-      }
-
-      if (rangeEnd < total - 1) {
-        pages.push('...');
-      }
-
-      if (total > 1) {
-        pages.push(total);
-      }
-
-      return pages;
-    });
-
-    const isValidGotoPage = computed(() => {
-      const page = Number(gotoPage.value);
-      return page >= 1 && page <= totalPages.value && !isNaN(page);
-    });
 
 
     // Utility functions
-    const formatCurrency = (value) => {
+    const formatCurrency = (amount) => {
       return new Intl.NumberFormat('vi-VN', {
         style: 'currency',
-        currency: 'VND',
-        minimumFractionDigits: 0
-      }).format(value || 0);
+        currency: 'VND'
+      }).format(amount);
+    };
+
+    const getStockClass = (stock) => {
+      if (stock === 0) return 'out-of-stock';
+      if (stock < 10) return 'low-stock';
+      return 'in-stock';
     };
 
     const formatDate = (dateStr) => {
@@ -909,16 +802,10 @@ export default {
     const getStatusLabel = (status) => {
       const statusMap = {
         active: 'Đang bán',
-        inactive: 'Ngừng bán',
+        inactive: 'Tạm ngưng bán',
         out_of_stock: 'Hết hàng'
       };
-      return statusMap[status] || status;
-    };
-
-    const getStockClass = (stock) => {
-      if (stock === 0) return 'out-of-stock';
-      if (stock < 10) return 'low-stock';
-      return 'in-stock';
+      return statusMap[status] || 'Không xác định';
     };
 
     // Filter functions
@@ -933,12 +820,10 @@ export default {
         stockLevel: '',
         sortBy: 'newest'
       };
-      currentPage.value = 1;
       toast.info('Đã đặt lại bộ lọc');
     };
 
     const applyFilters = () => {
-      currentPage.value = 1;
       toast.success(`Tìm thấy ${filteredProducts.value.length} sản phẩm phù hợp`);
     };
 
@@ -949,8 +834,99 @@ export default {
     };
 
     const viewProduct = (product) => {
-      selectedProductDetail.value = product;
-      showDetailModal.value = true;
+      // Navigate to product detail management page
+      router.push({ name: 'ChiTietSanPham', params: { id: product.id } });
+    };
+
+    // Product details state
+    const showProductDetailsModal = ref(false);
+    const selectedProductForDetails = ref(null);
+    const productDetails = ref([]);
+    const detailsLoading = ref(false);
+    const detailsTotalElements = ref(0);
+    const detailsTotalPages = ref(0);
+    const detailsCurrentPage = ref(0);
+    const detailsPageSize = ref(10);
+
+    // Fetch product details
+    const fetchProductDetails = async (productId) => {
+      try {
+        detailsLoading.value = true;
+        const response = await productService.getProductDetailsWithDetailsPaged(productId, {
+          page: detailsCurrentPage.value,
+          size: detailsPageSize.value,
+          sortBy: 'id',
+          sortDir: 'asc'
+        });
+        
+        productDetails.value = response.data.content.map(detail => ({
+          id: detail.id,
+          productId: detail.idSanPham?.id,
+          productName: detail.idSanPham?.tenSanPham,
+          material: detail.idChatLieu?.tenChatLieu || 'Không xác định',
+          color: detail.idMauSac?.tenMauSac || 'Không xác định',
+          size: detail.idKichCo?.tenKichCo || 'Không xác định',
+          price: detail.giaBan || 0,
+          stock: detail.soLuongTon || 0,
+          status: detail.deleted ? 'inactive' : 'active',
+          createdAt: detail.ngayTao
+        }));
+        
+        detailsTotalElements.value = response.data.totalElements;
+        detailsTotalPages.value = response.data.totalPages;
+        
+      } catch (error) {
+        console.error('Error fetching product details:', error);
+        toast.error('Lỗi khi tải chi tiết sản phẩm');
+        productDetails.value = [];
+      } finally {
+        detailsLoading.value = false;
+      }
+    };
+
+    // Show product details modal
+    const showProductDetails = (product) => {
+      selectedProductForDetails.value = product;
+      detailsCurrentPage.value = 0;
+      showProductDetailsModal.value = true;
+      fetchProductDetails(product.id);
+    };
+
+    // Close product details modal
+    const closeProductDetailsModal = () => {
+      showProductDetailsModal.value = false;
+      selectedProductForDetails.value = null;
+      productDetails.value = [];
+      detailsCurrentPage.value = 0;
+    };
+
+    // Pagination for product details
+    const goToDetailsPage = (page) => {
+      if (page >= 0 && page < detailsTotalPages.value && page !== detailsCurrentPage.value) {
+        detailsCurrentPage.value = page;
+        fetchProductDetails(selectedProductForDetails.value.id);
+      }
+    };
+
+    const changeDetailsPageSize = () => {
+      detailsCurrentPage.value = 0;
+      fetchProductDetails(selectedProductForDetails.value.id);
+    };
+
+    const getDetailsVisiblePages = () => {
+      const pages = [];
+      const maxVisible = 5;
+      let start = Math.max(1, detailsCurrentPage.value + 1 - Math.floor(maxVisible / 2));
+      let end = Math.min(detailsTotalPages.value, start + maxVisible - 1);
+      
+      if (end - start + 1 < maxVisible) {
+        start = Math.max(1, end - maxVisible + 1);
+      }
+      
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+      return pages;
     };
 
     const editProduct = (product) => {
@@ -969,6 +945,25 @@ export default {
       productToDelete.value = product;
       showDeleteModal.value = true;
     };
+
+    const toggleProductStatus = async (product) => {
+  try {
+    const index = products.value.findIndex(p => p.id === product.id)
+    if (index !== -1) {
+      const newStatus = product.status === 'active' ? 'inactive' : 'active'
+      products.value[index] = {
+        ...products.value[index],
+        status: newStatus
+      }
+      
+      const statusText = newStatus === 'active' ? 'tiếp tục bán' : 'tạm ngưng bán'
+      toast.success(`Đã ${statusText} sản phẩm "${product.name}"!`)
+    }
+  } catch (error) {
+    console.error('Lỗi khi cập nhật trạng thái sản phẩm:', error)
+    toast.error('Lỗi khi cập nhật trạng thái sản phẩm.')
+  }
+};
 
     const confirmDelete = () => {
       if (productToDelete.value) {
@@ -1033,24 +1028,51 @@ export default {
     const exportToExcel = () => {
       // In real app, implement Excel export functionality
       toast.info('Tính năng xuất Excel đang được phát triển');
+      // Add new code here
+      console.log('Export to Excel button clicked');
     };
 
-    // Grid pagination methods
-    const goToPage = () => {
-      if (isValidGotoPage.value) {
-        currentPage.value = Number(gotoPage.value);
-        gotoPage.value = '';
-        toast.success(`Đã chuyển đến trang ${currentPage.value}`);
-      } else {
-        toast.error(`Vui lòng nhập số trang hợp lệ (1-${totalPages.value})`);
+
+
+    // Pagination functions
+    const goToPage = (page) => {
+      if (page >= 0 && page < totalPages.value && page !== currentPage.value) {
+        currentPage.value = page;
+        fetchProducts();
       }
     };
 
+    const changePageSize = () => {
+      currentPage.value = 0;
+      fetchProducts();
+    };
+
+    const getVisiblePages = () => {
+      const pages = [];
+      const maxVisible = 5;
+      let start = Math.max(1, currentPage.value + 1 - Math.floor(maxVisible / 2));
+      let end = Math.min(totalPages.value, start + maxVisible - 1);
+      
+      if (end - start + 1 < maxVisible) {
+        start = Math.max(1, end - maxVisible + 1);
+      }
+      
+      for (let i = start; i <= end; i++) {
+        pages.push(i);
+      }
+      return pages;
+    };
 
     // Watch for filter changes
     watch([filters], () => {
-      currentPage.value = 1;
+      currentPage.value = 0;
+      fetchProducts();
     }, { deep: true });
+
+    // Initialize data on component mount
+    onMounted(() => {
+      fetchProducts();
+    });
 
     return {
       // Breadcrumb
@@ -1059,10 +1081,11 @@ export default {
       pageStats,
 
       // State
-      viewMode,
+      loading,
+      totalElements,
+      totalPages,
       currentPage,
-      itemsPerPage,
-      gotoPage,
+      pageSize,
 
       // Modals
       showDetailModal,
@@ -1085,13 +1108,15 @@ export default {
       brands,
       products,
       filteredProducts,
-      paginatedProducts,
-      totalPages,
-      startItem,
-      endItem,
-      visiblePages,
-      isValidGotoPage,
       tableColumns,
+
+      // API functions
+      fetchProducts,
+
+      // Pagination functions
+      goToPage,
+      changePageSize,
+      getVisiblePages,
 
       // Utility functions
       formatCurrency,
@@ -1105,8 +1130,6 @@ export default {
       resetFilters,
       applyFilters,
 
-      // Pagination functions
-      goToPage,
 
 
       // Product functions
@@ -1132,6 +1155,39 @@ export default {
   background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   min-height: 100vh;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* ===== LOADING STYLES ===== */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f4f6;
+  border-top: 4px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-container p {
+  color: #6b7280;
+  font-size: 14px;
+  margin: 0;
 }
 
 /* ===== FILTER SECTION ===== */
@@ -1186,6 +1242,162 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+/* ===== PAGINATION STYLES ===== */
+.pagination-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 24px;
+  padding: 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.pagination-info {
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pagination-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #d1d5db;
+  background: white;
+  border-radius: 8px;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pagination-btn:hover:not(:disabled) {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+  color: #374151;
+}
+
+.pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-numbers {
+  display: flex;
+  gap: 4px;
+  margin: 0 8px;
+}
+
+.page-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #d1d5db;
+  background: white;
+  border-radius: 8px;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+.page-number:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+  color: #374151;
+}
+
+.page-number.active {
+  background: #3b82f6;
+  border-color: #3b82f6;
+  color: white;
+}
+
+.page-size-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.page-size-select {
+  padding: 6px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: white;
+  color: #374151;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.page-size-select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* ===== TABLE COLUMN STYLES ===== */
+.country-info {
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.created-date {
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.category-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  background: #dbeafe;
+  color: #1e40af;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.brand-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  background: #f3e8ff;
+  color: #7c3aed;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.product-code {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  background: #f9fafb;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
 }
 
 .filter-row {
@@ -1343,7 +1555,7 @@ export default {
 .add-product-btn {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 16px;
   background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
   color: white;
   border: none;
@@ -1359,134 +1571,6 @@ export default {
   box-shadow: 0 8px 20px rgba(0, 123, 255, 0.3);
 }
 
-/* ===== PRODUCTS GRID ===== */
-.products-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 24px;
-}
-
-.product-card {
-  background: white;
-  border: 2px solid #f1f5f9;
-  border-radius: 16px;
-  overflow: hidden;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  position: relative;
-}
-
-.product-card:hover {
-  border-color: #007bff;
-  transform: translateY(-4px);
-  box-shadow: 0 12px 24px rgba(0, 123, 255, 0.15);
-}
-
-.product-image {
-  position: relative;
-  height: 200px;
-  overflow: hidden;
-}
-
-.product-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: all 0.3s ease;
-}
-
-.product-card:hover .product-image img {
-  transform: scale(1.05);
-}
-
-.product-overlay {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  display: flex;
-  gap: 6px;
-  opacity: 0;
-  transition: all 0.3s ease;
-}
-
-.product-card:hover .product-overlay {
-  opacity: 1;
-}
-
-.product-status {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-}
-
-.product-status.active {
-  background: #dcfce7;
-  color: #166534;
-}
-
-.product-status.inactive {
-  background: #fef3c7;
-  color: #92400e;
-}
-
-.product-status.out_of_stock {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-.product-info {
-  padding: 20px;
-}
-
-.product-code {
-  font-size: 0.8rem;
-  color: #64748b;
-  font-weight: 500;
-  margin-bottom: 4px;
-}
-
-.product-name {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #1a202c;
-  margin-bottom: 6px;
-  line-height: 1.3;
-}
-
-.product-brand {
-  font-size: 0.85rem;
-  color: #64748b;
-  margin-bottom: 8px;
-}
-
-.product-price {
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: #059669;
-  margin-bottom: 6px;
-}
-
-.product-stock {
-  font-size: 0.9rem;
-  font-weight: 600;
-}
-
-.product-stock.in-stock {
-  color: #166534;
-}
-
-.product-stock.low-stock {
-  color: #d97706;
-}
-
-.product-stock.out-of-stock {
-  color: #dc2626;
-}
 
 
 .table-product-image {
@@ -1610,203 +1694,33 @@ export default {
   transform: scale(1.1);
 }
 
-/* ===== PAGINATION FOOTER ===== */
-.pagination-footer {
-  margin-top: 24px;
-}
-
-/* ===== PAGINATION STYLES ===== */
-.pagination-container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 32px;
-  padding: 24px;
-  background: #f8fafc;
-  border-radius: 16px;
-  gap: 20px;
-  flex-wrap: wrap;
-}
-
-.pagination-info-left {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  min-width: 200px;
-}
-
-.pagination-summary {
-  font-size: 0.9rem;
-  color: #64748b;
-  font-weight: 500;
-}
-
-.page-size-selector {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.9rem;
-  color: #64748b;
-}
-
-.page-size-select {
-  padding: 6px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  background: white;
+.toggle-switch {
+  display: inline-block;
   cursor: pointer;
 }
 
-.page-size-select:focus {
-  outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
 }
 
-.pagination {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.pagination-btn {
-  width: 40px;
-  height: 40px;
-  border: 1px solid #e2e8f0;
-  background: white;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  color: #64748b;
-  font-size: 16px;
-}
-
-.pagination-btn:hover:not(:disabled) {
-  border-color: #007bff;
-  color: #007bff;
-  background: #f0f8ff;
-}
-
-.pagination-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.page-numbers {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin: 0 8px;
-}
-
-.page-number-btn {
-  min-width: 36px;
-  height: 36px;
-  border: 1px solid #e2e8f0;
-  background: white;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  color: #64748b;
-  font-size: 0.9rem;
-  font-weight: 500;
-  padding: 0 8px;
-}
-
-.page-number-btn:hover:not(:disabled):not(.ellipsis) {
-  border-color: #007bff;
-  color: #007bff;
-  background: #f0f8ff;
-}
-
-.page-number-btn.active {
-  background: #007bff;
-  border-color: #007bff;
-  color: white;
-}
-
-.page-number-btn.ellipsis {
-  border: none;
-  background: transparent;
-  cursor: default;
-  color: #9ca3af;
-}
-
-.pagination-info-right {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  align-items: flex-end;
-  min-width: 200px;
-}
-
-.pagination-current {
-  font-size: 0.9rem;
-  color: #64748b;
-  font-weight: 500;
-}
-
-.goto-page {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.9rem;
-  color: #64748b;
-}
-
-.goto-input {
-  width: 60px;
-  padding: 6px 8px;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  text-align: center;
-  background: white;
-}
-
-.goto-input:focus {
-  outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.1);
-}
-
-.goto-btn {
-  width: 32px;
-  height: 32px;
-  border: 1px solid #d1d5db;
-  background: white;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  color: #64748b;
-}
-
-.goto-btn:hover:not(:disabled) {
-  border-color: #007bff;
-  color: #007bff;
-  background: #f0f8ff;
-}
-
-.goto-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* ===== EMPTY STATE ===== */
 .empty-state {
   text-align: center;
   padding: 80px 20px;
-  grid-column: 1 / -1;
 }
 
 .empty-icon {
@@ -2166,9 +2080,6 @@ export default {
     gap: 16px;
   }
 
-  .products-grid {
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  }
 }
 
 @media (max-width: 992px) {
@@ -2284,17 +2195,8 @@ export default {
     gap: 12px;
   }
 
-  .view-toggle {
-    order: 1;
-  }
-
   .form-row {
     grid-template-columns: 1fr;
-  }
-
-  .products-grid {
-    grid-template-columns: 1fr;
-    gap: 16px;
   }
 
   .product-detail {
@@ -2322,33 +2224,6 @@ export default {
     padding: 16px;
   }
 
-  .pagination-container {
-    flex-direction: column;
-    gap: 16px;
-    padding: 16px;
-  }
-
-  .pagination-info-left,
-  .pagination-info-right {
-    min-width: auto;
-    width: 100%;
-    align-items: center;
-    text-align: center;
-  }
-
-  .pagination {
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-
-  .page-numbers {
-    margin: 0 4px;
-  }
-
-  .goto-page {
-    justify-content: center;
-  }
 
   .btn {
     min-width: 100px;
@@ -2395,6 +2270,43 @@ export default {
   100% {
     transform: rotate(360deg);
   }
+}
+
+/* ===== NEW COLUMN STYLES ===== */
+.category-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  background: #e0f2fe;
+  color: #0277bd;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.brand-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  background: #f3e5f5;
+  color: #7b1fa2;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.material-info {
+  color: #424242;
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+.variant-count {
+  display: inline-block;
+  padding: 4px 8px;
+  background: #fff3e0;
+  color: #ef6c00;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 /* ===== ACCESSIBILITY ===== */

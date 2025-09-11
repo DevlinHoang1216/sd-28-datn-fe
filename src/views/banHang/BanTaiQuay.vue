@@ -485,11 +485,9 @@
                 @keyup.enter="fetchSanPham"
               />
               <button class="search-btn primary" @click="fetchSanPham">
-                <iconify-icon icon="solar:magnifer-bold"></iconify-icon>
                 Tìm
               </button>
               <button class="search-btn secondary" @click="tuKhoaSanPham = ''; fetchSanPham()">
-                <iconify-icon icon="solar:refresh-bold"></iconify-icon>
                 Làm mới
               </button>
             </div>
@@ -904,6 +902,12 @@ export default {
     };
 
     const themHoaDonMoi = () => {
+      // Kiểm tra giới hạn tối đa 5 hóa đơn chờ
+      if (hoaDonTabs.value.length >= 5) {
+        toast.error('Đã đạt giới hạn tối đa 5 hóa đơn chờ! Vui lòng hoàn thành hoặc xóa hóa đơn cũ trước khi tạo mới.');
+        return;
+      }
+
       const newIdNum = hoaDonTabs.value.length + 1;
       const newId = `HD${String(newIdNum).padStart(6, '0')}`;
       hoaDonTabs.value.push({ 
@@ -912,7 +916,7 @@ export default {
         khachHang: { ten: 'Khách lẻ', soDienThoai: '' } 
       });
       tabActive.value = newId;
-      toast.info(`Đã tạo hóa đơn mới: ${newId}`);
+      toast.info(`Đã tạo hóa đơn mới: ${newId} (${hoaDonTabs.value.length}/5)`);
     };
 
     const xoaHoaDon = () => {
@@ -2112,7 +2116,6 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 10000 !important;
   padding: 20px;
   backdrop-filter: blur(4px);
 }
@@ -2287,7 +2290,7 @@ export default {
   gap: 6px;
   border: none;
   border-radius: 8px;
-  padding: 12px 16px;
+  padding: 10px 16px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;

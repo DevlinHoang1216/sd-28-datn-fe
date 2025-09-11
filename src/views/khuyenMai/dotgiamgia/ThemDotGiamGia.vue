@@ -249,7 +249,7 @@
               </h3>
             </div>
 
-            <div v-if="selectedProducts.length === 0" class="text-center py-12 text-gray-500 dark:text-gray-400">
+            <div v-if="selectedProducts.length === 0" class="text-center justify-center items-center d-flex row py-12 text-gray-500 dark:text-gray-400">
               <iconify-icon icon="solar:box-outline" class="text-4xl mb-2"></iconify-icon>
               <p>Chọn sản phẩm bên trái để xem biến thể</p>
             </div>
