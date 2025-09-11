@@ -7,6 +7,7 @@ import PhieuGiamGia from './views/khuyenMai/phieugiamgia/PhieuGiamGia.vue'
 import DotGiamGia from './views/khuyenMai/dotgiamgia/DotGiamGia.vue'
 import BanTaiQuay from './views/banHang/BanTaiQuay.vue'
 import SanPham from './views/sanPham/SanPham.vue'
+import ChiTietSanPham from './views/sanPham/ChiTietSanPham.vue'
 import NhanVien from './views/taiKhoan/nhanvien/NhanVien.vue'
 import KhachHang from './views/taiKhoan/khachhang/KhachHang.vue'
 import HoaDonChiTiet from './views/hoaDon/HoaDonChiTiet.vue'
@@ -38,6 +39,11 @@ const routes = [
     path: '/san-pham',
     name: 'SanPham',
     component: SanPham
+  },
+  {
+    path: '/san-pham-chi-tiet/:id',
+    name: 'ChiTietSanPham',
+    component: ChiTietSanPham
   },
 
   // Invoice and order management

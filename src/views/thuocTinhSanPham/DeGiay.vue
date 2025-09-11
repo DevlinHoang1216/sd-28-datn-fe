@@ -86,9 +86,6 @@
                 <span class="table-sole-name">{{ item.name }}</span>
               </div>
             </template>
-            <template #description="{ item }">
-              <span class="description">{{ item.description }}</span>
-            </template>
             <template #productCount="{ item }">
               <span class="product-count">{{ item.productCount }}</span>
             </template>
@@ -105,9 +102,15 @@
                 <button @click="editSole(item)" class="action-btn edit" title="Chỉnh sửa">
                   <iconify-icon icon="solar:pen-bold"></iconify-icon>
                 </button>
-                <button @click="deleteSole(item)" class="action-btn delete" title="Xóa">
-                  <iconify-icon icon="solar:trash-bin-trash-bold"></iconify-icon>
-                </button>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    :checked="item.status === 'active'"
+                    @change="toggleSoleStatus(item)"
+                    class="sr-only peer"
+                  />
+                  <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                </label>
               </div>
             </template>
           </DataTable>
@@ -211,6 +214,7 @@
   import { useRouter } from 'vue-router';
   import Breadcrumb from '@/components/Breadcrumb.vue';
   import DataTable from '@/components/DataTable.vue';
+  import productService from '@/services/api/productAPI.js';
   
   export default {
     name: 'DeGiay',
@@ -243,81 +247,15 @@
         description: ''
       });
   
-      // Sample data
-      const soles = ref([
-        {
-          id: 1,
-          code: 'DG001',
-          name: 'Đế Cao Su Trắng',
-          description: 'Đế cao su trắng chống trượt, độ bền cao',
-          productCount: 15,
-          status: 'active',
-          createdAt: '2024-01-15T10:30:00'
-        },
-        {
-          id: 2,
-          code: 'DG002',
-          name: 'Đế EVA Đen',
-          description: 'Đế EVA đen nhẹ, êm chân, phù hợp thể thao',
-          productCount: 23,
-          status: 'active',
-          createdAt: '2024-01-14T11:15:00'
-        },
-        {
-          id: 3,
-          code: 'DG003',
-          name: 'Đế PU Nâu',
-          description: 'Đế PU màu nâu, thiết kế thanh lịch',
-          productCount: 18,
-          status: 'active',
-          createdAt: '2024-01-13T09:20:00'
-        },
-        {
-          id: 4,
-          code: 'DG004',
-          name: 'Đế Crepe',
-          description: 'Đế crepe tự nhiên, mềm mại và thoải mái',
-          productCount: 12,
-          status: 'active',
-          createdAt: '2024-01-12T14:45:00'
-        },
-        {
-          id: 5,
-          code: 'DG005',
-          name: 'Đế Vibram',
-          description: 'Đế Vibram chuyên dụng outdoor, chống mài mòn',
-          productCount: 8,
-          status: 'active',
-          createdAt: '2024-01-11T16:20:00'
-        },
-        {
-          id: 6,
-          code: 'DG006',
-          name: 'Đế Wedge',
-          description: 'Đế wedge cho giày nữ, tăng chiều cao',
-          productCount: 20,
-          status: 'active',
-          createdAt: '2024-01-10T08:30:00'
-        },
-        {
-          id: 7,
-          code: 'DG007',
-          name: 'Đế Da Thật',
-          description: 'Đế da thật cao cấp, phong cách cổ điển',
-          productCount: 6,
-          status: 'active',
-          createdAt: '2024-01-09T12:15:00'
-        },
-        {
-          id: 8,
-          code: 'DG008',
-          name: 'Đế Air Cushion',
-          description: 'Đế có đệm khí, hỗ trợ giảm chấn tối ưu',
-          productCount: 4,
-          status: 'inactive',
-          createdAt: '2024-01-08T15:45:00'
-        }
-      ]);
+      // Data
+      const soles = ref([]);
+      const loading = ref(false);
+      const pagination = ref({
+        page: 0,
+        size: 10,
+        totalElements: 0,
+        totalPages: 0
+      });
   
       // Breadcrumb data
       const breadcrumbItems = ref([
@@ -367,57 +305,39 @@
         { key: 'stt', label: 'STT' },
         { key: 'code', label: 'Mã đế giày' },
         { key: 'name', label: 'Tên đế giày' },
-        { key: 'description', label: 'Mô tả' },
-        { key: 'productCount', label: 'Số lượng sản phẩm' },
         { key: 'status', label: 'Trạng thái' },
         { key: 'createdAt', label: 'Ngày tạo' },
-        { key: 'actions', label: 'Thao tác' }
+        { key: 'actions', label: 'Hành động' }
       ]);
   
       // Computed
       const filteredSoles = computed(() => {
-        let result = [...soles.value];
-  
-        // Search filter
-        if (filters.value.search.trim()) {
-          const search = filters.value.search.toLowerCase();
-          result = result.filter(sole => 
-            sole.name.toLowerCase().includes(search) ||
-            sole.code.toLowerCase().includes(search) ||
-            sole.description.toLowerCase().includes(search)
-          );
-        }
-  
-        // Status filter
-        if (filters.value.status) {
-          result = result.filter(sole => sole.status === filters.value.status);
-        }
-  
-        // Sorting
-        switch (filters.value.sortBy) {
-          case 'oldest':
-            result.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-            break;
-          case 'name_asc':
-            result.sort((a, b) => a.name.localeCompare(b.name));
-            break;
-          case 'name_desc':
-            result.sort((a, b) => b.name.localeCompare(a.name));
-            break;
-          case 'code_asc':
-            result.sort((a, b) => a.code.localeCompare(b.code));
-            break;
-          case 'code_desc':
-            result.sort((a, b) => b.code.localeCompare(a.code));
-            break;
-          case 'newest':
-          default:
-            result.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-            break;
-        }
-  
-        return result;
+        return soles.value;
       });
+
+      const getSortBy = () => {
+        switch (filters.value.sortBy) {
+          case 'oldest': return 'ngayTao';
+          case 'name_asc': return 'tenDeGiay';
+          case 'name_desc': return 'tenDeGiay';
+          case 'code_asc': return 'maDeGiay';
+          case 'code_desc': return 'maDeGiay';
+          case 'newest':
+          default: return 'ngayTao';
+        }
+      };
+
+      const getSortDirection = () => {
+        switch (filters.value.sortBy) {
+          case 'oldest': return 'asc';
+          case 'name_asc': return 'asc';
+          case 'name_desc': return 'desc';
+          case 'code_asc': return 'asc';
+          case 'code_desc': return 'desc';
+          case 'newest':
+          default: return 'desc';
+        }
+      };
   
       // Methods
       const resetFilters = () => {
@@ -460,6 +380,39 @@
         });
       };
   
+      const loadSoles = async () => {
+        try {
+          loading.value = true;
+          const params = {
+            keyword: filters.value.search,
+            page: pagination.value.page,
+            size: pagination.value.size,
+            sortBy: getSortBy(),
+            sortDirection: getSortDirection()
+          };
+          const response = await productService.getSolesPaged(params);
+          soles.value = response.data.content.map(item => ({
+            id: item.id,
+            code: item.maDeGiay,
+            name: item.tenDeGiay,
+            description: item.description || '',
+            status: item.deleted ? 'inactive' : 'active',
+            createdAt: item.ngayTao
+          }));
+          pagination.value = {
+            page: response.data.number,
+            size: response.data.size,
+            totalElements: response.data.totalElements,
+            totalPages: response.data.totalPages
+          };
+        } catch (error) {
+          console.error('Error loading soles:', error);
+          toast.error('Lỗi khi tải dữ liệu đế giày');
+        } finally {
+          loading.value = false;
+        }
+      };
+
       const generateSoleCode = () => {
         const codes = soles.value.map(s => {
           const num = parseInt(s.code.replace('DG', ''));
@@ -474,6 +427,22 @@
         showEditSoleModal.value = true;
       };
   
+      const toggleSoleStatus = async (sole) => {
+        try {
+          loading.value = true;
+          await productService.toggleSoleStatus(sole.id);
+          
+          const statusText = sole.status === 'active' ? 'vô hiệu hóa' : 'kích hoạt';
+          toast.success(`Đã ${statusText} đế giày "${sole.name}" thành công!`);
+          await loadSoles();
+        } catch (error) {
+          toast.error('Lỗi khi cập nhật trạng thái đế giày: ' + (error.response?.data || error.message));
+          console.error('Error toggling sole status:', error);
+        } finally {
+          loading.value = false;
+        }
+      };
+
       const deleteSole = (sole) => {
         soleToDelete.value = sole;
         showDeleteModal.value = true;
@@ -481,45 +450,45 @@
   
       const saveSole = async () => {
         try {
+          loading.value = true;
+          const soleData = {
+            tenDeGiay: soleForm.value.name,
+            maDeGiay: soleForm.value.code || generateSoleCode(),
+            description: soleForm.value.description
+          };
+
           if (showAddSoleModal.value) {
             // Add new sole
-            const newSole = {
-              id: Date.now(),
-              code: soleForm.value.code || generateSoleCode(),
-              name: soleForm.value.name,
-              description: soleForm.value.description,
-              productCount: 0,
-              status: soleForm.value.status,
-              createdAt: new Date().toISOString()
-            };
-            soles.value.unshift(newSole);
+            await productService.createSole(soleData);
             toast.success('Thêm đế giày mới thành công!');
           } else {
             // Edit existing sole
-            const index = soles.value.findIndex(s => s.id === soleForm.value.id);
-            if (index !== -1) {
-              soles.value[index] = {
-                ...soles.value[index],
-                name: soleForm.value.name,
-                description: soleForm.value.description,
-                status: soleForm.value.status
-              };
-              toast.success('Cập nhật đế giày thành công!');
-            }
+            await productService.updateSole(soleForm.value.id, soleData);
+            toast.success('Cập nhật đế giày thành công!');
           }
+          
           closeSoleForm();
+          await loadSoles();
         } catch (error) {
-          toast.error('Lỗi khi lưu đế giày. Vui lòng thử lại.');
           console.error('Error saving sole:', error);
+          toast.error('Lỗi khi lưu đế giày. Vui lòng thử lại.');
+        } finally {
+          loading.value = false;
         }
       };
   
-      const confirmDelete = () => {
+      const confirmDelete = async () => {
         if (soleToDelete.value) {
-          const index = soles.value.findIndex(s => s.id === soleToDelete.value.id);
-          if (index !== -1) {
-            soles.value.splice(index, 1);
+          try {
+            loading.value = true;
+            await productService.deleteSole(soleToDelete.value.id);
             toast.success(`Đã xóa đế giày "${soleToDelete.value.name}" thành công!`);
+            await loadSoles();
+          } catch (error) {
+            console.error('Error deleting sole:', error);
+            toast.error('Lỗi khi xóa đế giày. Vui lòng thử lại.');
+          } finally {
+            loading.value = false;
           }
           showDeleteModal.value = false;
           soleToDelete.value = null;
@@ -541,6 +510,17 @@
         toast.info('Tính năng xuất Excel đang được phát triển');
       };
   
+      // Watchers
+      watch([() => filters.value.search, () => filters.value.sortBy], () => {
+        pagination.value.page = 0;
+        loadSoles();
+      }, { debounce: 300 });
+
+      // Lifecycle
+      onMounted(() => {
+        loadSoles();
+      });
+
       return {
         // Data
         breadcrumbItems,
@@ -554,21 +534,24 @@
         filters,
         soleForm,
         soles,
+        loading,
+        pagination,
         
         // Computed
         filteredSoles,
         
         // Methods
         resetFilters,
-        openAddSoleModal,
         getStatusLabel,
         formatDate,
         editSole,
+        toggleSoleStatus,
         deleteSole,
         saveSole,
         confirmDelete,
         closeSoleForm,
-        exportToExcel
+        exportToExcel,
+        loadSoles
       };
     }
   };

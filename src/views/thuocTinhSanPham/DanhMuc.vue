@@ -86,12 +86,6 @@
               <span class="table-category-name">{{ item.name }}</span>
             </div>
           </template>
-          <template #description="{ item }">
-            <span class="description">{{ item.description }}</span>
-          </template>
-          <template #productCount="{ item }">
-            <span class="product-count">{{ item.productCount }}</span>
-          </template>
           <template #status="{ item }">
             <span class="status-badge" :class="item.status">
               {{ getStatusLabel(item.status) }}
@@ -105,9 +99,15 @@
               <button @click="editCategory(item)" class="action-btn edit" title="Chỉnh sửa">
                 <iconify-icon icon="solar:pen-bold"></iconify-icon>
               </button>
-              <button @click="deleteCategory(item)" class="action-btn delete" title="Xóa">
-                <iconify-icon icon="solar:trash-bin-trash-bold"></iconify-icon>
-              </button>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  :checked="item.status === 'active'"
+                  @change="toggleCategoryStatus(item)"
+                  class="sr-only peer"
+                />
+                <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+              </label>
             </div>
           </template>
         </DataTable>
@@ -211,6 +211,7 @@ import { useToast } from 'vue-toastification';
 import { useRouter } from 'vue-router';
 import Breadcrumb from '@/components/Breadcrumb.vue';
 import DataTable from '@/components/DataTable.vue';
+import { productService } from '@/services/api/productAPI.js';
 
 export default {
   name: 'DanhMuc',
@@ -242,39 +243,53 @@ export default {
       }
     ]);
 
-    const pageStats = computed(() => [
-      {
-        value: categories.value.length.toString(),
-        label: 'Tổng danh mục',
-        icon: 'solar:folder-2-bold-duotone'
-      },
-      {
-        value: categories.value.filter(c => c.status === 'active').length.toString(),
-        label: 'Đang sử dụng',
-        icon: 'solar:check-circle-bold-duotone'
-      },
-      {
-        value: categories.value.filter(c => c.status === 'inactive').length.toString(),
-        label: 'Ngừng sử dụng',
-        icon: 'solar:close-circle-bold-duotone'
-      },
-      {
-        value: Math.round((categories.value.filter(c => c.status === 'active').length / categories.value.length) * 100) + '%',
-        label: 'Tỷ lệ sử dụng',
-        icon: 'solar:chart-square-bold-duotone'
-      }
-    ]);
+    // API data
+    const categories = ref([]);
+    const loading = ref(false);
+    const pagination = ref({
+      page: 0,
+      size: 10,
+      totalElements: 0,
+      totalPages: 0
+    });
+
+    const pageStats = computed(() => {
+      const activeCount = filteredCategories.value.filter(c => c.status === 'active').length;
+      const totalCount = filteredCategories.value.length;
+      const usageRate = totalCount > 0 ? Math.round((activeCount / totalCount) * 100) : 0;
+      
+      return [
+        {
+          value: pagination.value.totalElements.toString(),
+          label: 'Tổng danh mục',
+          icon: 'solar:folder-2-bold-duotone'
+        },
+        {
+          value: activeCount.toString(),
+          label: 'Đang sử dụng',
+          icon: 'solar:check-circle-bold-duotone'
+        },
+        {
+          value: filteredCategories.value.filter(c => c.status === 'inactive').length.toString(),
+          label: 'Ngừng sử dụng',
+          icon: 'solar:close-circle-bold-duotone'
+        },
+        {
+          value: usageRate + '%',
+          label: 'Tỷ lệ sử dụng',
+          icon: 'solar:chart-square-bold-duotone'
+        }
+      ];
+    });
 
     // Table columns definition
     const tableColumns = ref([
       { key: 'stt', label: 'STT' },
       { key: 'code', label: 'Mã danh mục' },
       { key: 'name', label: 'Tên danh mục' },
-      { key: 'description', label: 'Mô tả' },
-      { key: 'productCount', label: 'Số lượng sản phẩm' },
       { key: 'status', label: 'Trạng thái' },
       { key: 'createdAt', label: 'Ngày tạo' },
-      { key: 'actions', label: 'Thao tác' }
+      { key: 'actions', label: 'Hành động' }
     ]);
 
     // Modals
@@ -300,164 +315,17 @@ export default {
       description: ''
     });
 
-    // Sample data - Fake categories data
-    const categories = ref([
-      {
-        id: 1,
-        code: 'DM001',
-        name: 'Giày thể thao',
-        description: 'Giày dành cho các hoạt động thể thao và tập luyện',
-        productCount: 45,
-        status: 'active',
-        createdAt: '2024-01-15T10:30:00'
-      },
-      {
-        id: 2,
-        code: 'DM002',
-        name: 'Giày công sở',
-        description: 'Giày trang trọng phù hợp cho môi trường công sở',
-        productCount: 32,
-        status: 'active',
-        createdAt: '2024-01-14T11:15:00'
-      },
-      {
-        id: 3,
-        code: 'DM003',
-        name: 'Giày cao gót',
-        description: 'Giày cao gót thời trang cho phái nữ',
-        productCount: 28,
-        status: 'active',
-        createdAt: '2024-01-13T09:20:00'
-      },
-      {
-        id: 4,
-        code: 'DM004',
-        name: 'Giày sandal',
-        description: 'Giày sandal thoáng mát cho mùa hè',
-        productCount: 22,
-        status: 'active',
-        createdAt: '2024-01-12T14:45:00'
-      },
-      {
-        id: 5,
-        code: 'DM005',
-        name: 'Giày boot',
-        description: 'Giày boot phong cách và bảo vệ tốt',
-        productCount: 18,
-        status: 'active',
-        createdAt: '2024-01-11T16:30:00'
-      },
-      {
-        id: 6,
-        code: 'DM006',
-        name: 'Giày lười',
-        description: 'Giày lười tiện lợi và thoải mái',
-        productCount: 15,
-        status: 'active',
-        createdAt: '2024-01-10T08:15:00'
-      },
-      {
-        id: 7,
-        code: 'DM007',
-        name: 'Giày chạy bộ',
-        description: 'Giày chuyên dụng cho chạy bộ và marathon',
-        productCount: 0,
-        status: 'inactive',
-        createdAt: '2024-01-09T14:20:00'
-      },
-      {
-        id: 8,
-        code: 'DM008',
-        name: 'Giày bóng đá',
-        description: 'Giày chuyên dụng cho bóng đá',
-        productCount: 12,
-        status: 'active',
-        createdAt: '2024-01-08T12:45:00'
-      },
-      {
-        id: 9,
-        code: 'DM009',
-        name: 'Giày tennis',
-        description: 'Giày chuyên dụng cho tennis',
-        productCount: 8,
-        status: 'active',
-        createdAt: '2024-01-07T16:30:00'
-      },
-      {
-        id: 10,
-        code: 'DM010',
-        name: 'Giày bóng rổ',
-        description: 'Giày chuyên dụng cho bóng rổ',
-        productCount: 6,
-        status: 'active',
-        createdAt: '2024-01-06T10:15:00'
-      },
-      {
-        id: 11,
-        code: 'DM011',
-        name: 'Giày trẻ em',
-        description: 'Giày dành cho trẻ em các độ tuổi',
-        productCount: 14,
-        status: 'active',
-        createdAt: '2024-01-05T13:25:00'
-      },
-      {
-        id: 12,
-        code: 'DM012',
-        name: 'Giày vintage',
-        description: 'Giày phong cách cổ điển vintage',
-        productCount: 0,
-        status: 'inactive',
-        createdAt: '2024-01-04T09:40:00'
-      }
-    ]);
-
     // Computed properties
     const filteredCategories = computed(() => {
-      let result = [...categories.value];
-
-      // Search filter
-      if (filters.value.search.trim()) {
-        const search = filters.value.search.toLowerCase();
-        result = result.filter(category => 
-          category.name.toLowerCase().includes(search) ||
-          category.code.toLowerCase().includes(search) ||
-          category.description.toLowerCase().includes(search)
-        );
-      }
-
-      // Status filter
-      if (filters.value.status) {
-        result = result.filter(category => category.status === filters.value.status);
-      }
-
-      // Sorting
-      switch (filters.value.sortBy) {
-        case 'oldest':
-          result.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-          break;
-        case 'name_asc':
-          result.sort((a, b) => a.name.localeCompare(b.name));
-          break;
-        case 'name_desc':
-          result.sort((a, b) => b.name.localeCompare(a.name));
-          break;
-        case 'code_asc':
-          result.sort((a, b) => a.code.localeCompare(b.code));
-          break;
-        case 'code_desc':
-          result.sort((a, b) => b.code.localeCompare(a.code));
-          break;
-        case 'newest':
-        default:
-          result.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-          break;
-      }
-
-      return result;
+      return categories.value.map((item, index) => ({
+        ...item,
+        code: item.maDanhMuc,
+        name: item.tenDanhMuc,
+        description: item.description || '',
+        status: item.deleted ? 'inactive' : 'active',
+        createdAt: item.ngayTao
+      }));
     });
-
-
 
     // Methods
     const resetFilters = () => {
@@ -520,6 +388,22 @@ export default {
       showEditCategoryModal.value = true;
     };
 
+    const toggleCategoryStatus = async (category) => {
+      try {
+        loading.value = true;
+        await productService.toggleCategoryStatus(category.id);
+        
+        const statusText = category.status === 'active' ? 'vô hiệu hóa' : 'kích hoạt';
+        toast.success(`Đã ${statusText} danh mục "${category.name}" thành công!`);
+        await loadCategories();
+      } catch (error) {
+        toast.error('Lỗi khi cập nhật trạng thái danh mục: ' + (error.response?.data || error.message));
+        console.error('Error toggling category status:', error);
+      } finally {
+        loading.value = false;
+      }
+    };
+
     const deleteCategory = (category) => {
       categoryToDelete.value = category;
       showDeleteModal.value = true;
@@ -527,45 +411,44 @@ export default {
 
     const saveCategory = async () => {
       try {
+        loading.value = true;
         if (showAddCategoryModal.value) {
-          // Add new category
-          const newCategory = {
-            id: Date.now(),
-            code: categoryForm.value.code || generateCategoryCode(),
-            name: categoryForm.value.name,
-            description: categoryForm.value.description,
-            productCount: 0,
-            status: categoryForm.value.status,
-            createdAt: new Date().toISOString()
+          const categoryData = {
+            tenDanhMuc: categoryForm.value.name,
+            maDanhMuc: categoryForm.value.code
           };
-          categories.value.unshift(newCategory);
+          await productService.createCategory(categoryData);
           toast.success('Thêm danh mục mới thành công!');
         } else {
-          // Edit existing category
-          const index = categories.value.findIndex(c => c.id === categoryForm.value.id);
-          if (index !== -1) {
-            categories.value[index] = {
-              ...categories.value[index],
-              name: categoryForm.value.name,
-              description: categoryForm.value.description,
-              status: categoryForm.value.status
-            };
-            toast.success('Cập nhật danh mục thành công!');
-          }
+          const categoryData = {
+            tenDanhMuc: categoryForm.value.name,
+            maDanhMuc: categoryForm.value.code
+          };
+          await productService.updateCategory(categoryForm.value.id, categoryData);
+          toast.success('Cập nhật danh mục thành công!');
         }
         closeCategoryForm();
+        await loadCategories();
       } catch (error) {
-        toast.error('Lỗi khi lưu danh mục. Vui lòng thử lại.');
+        toast.error('Lỗi khi lưu danh mục: ' + (error.response?.data || error.message));
         console.error('Error saving category:', error);
+      } finally {
+        loading.value = false;
       }
     };
 
-    const confirmDelete = () => {
+    const confirmDelete = async () => {
       if (categoryToDelete.value) {
-        const index = categories.value.findIndex(c => c.id === categoryToDelete.value.id);
-        if (index !== -1) {
-          categories.value.splice(index, 1);
+        try {
+          loading.value = true;
+          await productService.deleteCategory(categoryToDelete.value.id);
           toast.success(`Đã xóa danh mục "${categoryToDelete.value.name}" thành công!`);
+          await loadCategories();
+        } catch (error) {
+          toast.error('Lỗi khi xóa danh mục: ' + (error.response?.data || error.message));
+          console.error('Error deleting category:', error);
+        } finally {
+          loading.value = false;
         }
         showDeleteModal.value = false;
         categoryToDelete.value = null;
@@ -584,9 +467,71 @@ export default {
     };
 
 
+    // API Methods
+    const loadCategories = async () => {
+      try {
+        loading.value = true;
+        const params = {
+          keyword: filters.value.search,
+          page: pagination.value.page,
+          size: pagination.value.size,
+          sortBy: getSortBy(),
+          sortDirection: getSortDirection()
+        };
+        const response = await productService.getCategoriesPaged(params);
+        categories.value = response.data.content;
+        pagination.value = {
+          page: response.data.number,
+          size: response.data.size,
+          totalElements: response.data.totalElements,
+          totalPages: response.data.totalPages
+        };
+      } catch (error) {
+        toast.error('Lỗi khi tải dữ liệu danh mục');
+        console.error('Error loading categories:', error);
+      } finally {
+        loading.value = false;
+      }
+    };
+
+    const getSortBy = () => {
+      switch (filters.value.sortBy) {
+        case 'name_asc':
+        case 'name_desc':
+          return 'tenDanhMuc';
+        case 'code_asc':
+        case 'code_desc':
+          return 'maDanhMuc';
+        case 'oldest':
+        case 'newest':
+        default:
+          return 'id';
+      }
+    };
+
+    const getSortDirection = () => {
+      return filters.value.sortBy.includes('asc') || filters.value.sortBy === 'oldest' ? 'asc' : 'desc';
+    };
+
     const exportToExcel = () => {
       toast.info('Tính năng xuất Excel đang được phát triển');
     };
+
+    // Watchers
+    watch(() => filters.value.search, () => {
+      pagination.value.page = 0;
+      loadCategories();
+    }, { debounce: 500 });
+
+    watch(() => filters.value.sortBy, () => {
+      pagination.value.page = 0;
+      loadCategories();
+    });
+
+    // Load data on component mount
+    onMounted(() => {
+      loadCategories();
+    });
 
     return {
       // Data
@@ -605,17 +550,23 @@ export default {
       // Computed
       filteredCategories,
       
+      // State
+      loading,
+      pagination,
+      
       // Methods
       resetFilters,
       openAddCategoryModal,
       getStatusLabel,
       formatDate,
       editCategory,
+      toggleCategoryStatus,
       deleteCategory,
       saveCategory,
       confirmDelete,
       closeCategoryForm,
-      exportToExcel
+      exportToExcel,
+      loadCategories
     };
   }
 };

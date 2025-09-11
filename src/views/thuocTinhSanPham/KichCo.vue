@@ -86,12 +86,6 @@
               <span class="table-size-name">{{ item.name }}</span>
             </div>
           </template>
-          <template #description="{ item }">
-            <span class="description">{{ item.description }}</span>
-          </template>
-          <template #productCount="{ item }">
-            <span class="product-count">{{ item.productCount }}</span>
-          </template>
           <template #status="{ item }">
             <span class="status-badge" :class="item.status">
               {{ getStatusLabel(item.status) }}
@@ -105,9 +99,15 @@
               <button @click="editSize(item)" class="action-btn edit" title="Chỉnh sửa">
                 <iconify-icon icon="solar:pen-bold"></iconify-icon>
               </button>
-              <button @click="deleteSize(item)" class="action-btn delete" title="Xóa">
-                <iconify-icon icon="solar:trash-bin-trash-bold"></iconify-icon>
-              </button>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  :checked="item.status === 'active'"
+                  @change="toggleSizeStatus(item)"
+                  class="sr-only peer"
+                />
+                <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+              </label>
             </div>
           </template>
         </DataTable>
@@ -211,6 +211,7 @@ import { useToast } from 'vue-toastification';
 import { useRouter } from 'vue-router';
 import Breadcrumb from '@/components/Breadcrumb.vue';
 import DataTable from '@/components/DataTable.vue';
+import { productService } from '@/services/api/productAPI.js';
 
 export default {
   name: 'KichCo',
@@ -243,81 +244,15 @@ export default {
       description: ''
     });
 
-    // Sample data
-    const sizes = ref([
-      {
-        id: 1,
-        code: 'KC001',
-        name: '35',
-        description: 'Kích cỡ 35 - phù hợp cho chân nhỏ',
-        productCount: 12,
-        status: 'active',
-        createdAt: '2024-01-15T10:30:00'
-      },
-      {
-        id: 2,
-        code: 'KC002',
-        name: '36',
-        description: 'Kích cỡ 36 - kích cỡ phổ biến',
-        productCount: 25,
-        status: 'active',
-        createdAt: '2024-01-14T11:15:00'
-      },
-      {
-        id: 3,
-        code: 'KC003',
-        name: '37',
-        description: 'Kích cỡ 37 - kích cỡ phổ biến',
-        productCount: 28,
-        status: 'active',
-        createdAt: '2024-01-13T09:20:00'
-      },
-      {
-        id: 4,
-        code: 'KC004',
-        name: '38',
-        description: 'Kích cỡ 38 - kích cỡ phổ biến',
-        productCount: 30,
-        status: 'active',
-        createdAt: '2024-01-12T14:45:00'
-      },
-      {
-        id: 5,
-        code: 'KC005',
-        name: '39',
-        description: 'Kích cỡ 39 - kích cỡ phổ biến',
-        productCount: 22,
-        status: 'active',
-        createdAt: '2024-01-11T16:20:00'
-      },
-      {
-        id: 6,
-        code: 'KC006',
-        name: '40',
-        description: 'Kích cỡ 40 - kích cỡ nam phổ biến',
-        productCount: 18,
-        status: 'active',
-        createdAt: '2024-01-10T08:30:00'
-      },
-      {
-        id: 7,
-        code: 'KC007',
-        name: '41',
-        description: 'Kích cỡ 41 - kích cỡ nam phổ biến',
-        productCount: 15,
-        status: 'active',
-        createdAt: '2024-01-09T12:15:00'
-      },
-      {
-        id: 8,
-        code: 'KC008',
-        name: '42',
-        description: 'Kích cỡ 42 - kích cỡ nam lớn',
-        productCount: 10,
-        status: 'inactive',
-        createdAt: '2024-01-08T15:45:00'
-      }
-    ]);
+    // API data
+    const sizes = ref([]);
+    const loading = ref(false);
+    const pagination = ref({
+      page: 0,
+      size: 10,
+      totalElements: 0,
+      totalPages: 0
+    });
 
     // Breadcrumb data
     const breadcrumbItems = ref([
@@ -367,11 +302,9 @@ export default {
       { key: 'stt', label: 'STT' },
       { key: 'code', label: 'Mã kích cỡ' },
       { key: 'name', label: 'Tên kích cỡ' },
-      { key: 'description', label: 'Mô tả' },
-      { key: 'productCount', label: 'Số lượng sản phẩm' },
       { key: 'status', label: 'Trạng thái' },
       { key: 'createdAt', label: 'Ngày tạo' },
-      { key: 'actions', label: 'Thao tác' }
+      { key: 'actions', label: 'Hành động' }
     ]);
 
     // Computed
@@ -474,6 +407,22 @@ export default {
       showEditSizeModal.value = true;
     };
 
+    const toggleSizeStatus = async (size) => {
+      try {
+        loading.value = true;
+        await productService.toggleSizeStatus(size.id);
+        
+        const statusText = size.status === 'active' ? 'vô hiệu hóa' : 'kích hoạt';
+        toast.success(`Đã ${statusText} kích cỡ "${size.name}" thành công!`);
+        await loadSizes();
+      } catch (error) {
+        toast.error('Lỗi khi cập nhật trạng thái kích cỡ: ' + (error.response?.data || error.message));
+        console.error('Error toggling size status:', error);
+      } finally {
+        loading.value = false;
+      }
+    };
+
     const deleteSize = (size) => {
       sizeToDelete.value = size;
       showDeleteModal.value = true;
@@ -481,45 +430,44 @@ export default {
 
     const saveSize = async () => {
       try {
+        loading.value = true;
         if (showAddSizeModal.value) {
-          // Add new size
-          const newSize = {
-            id: Date.now(),
-            code: sizeForm.value.code || generateSizeCode(),
-            name: sizeForm.value.name,
-            description: sizeForm.value.description,
-            productCount: 0,
-            status: sizeForm.value.status,
-            createdAt: new Date().toISOString()
+          const sizeData = {
+            tenKichCo: sizeForm.value.name,
+            maKichCo: sizeForm.value.code
           };
-          sizes.value.unshift(newSize);
+          await productService.createSize(sizeData);
           toast.success('Thêm kích cỡ mới thành công!');
         } else {
-          // Edit existing size
-          const index = sizes.value.findIndex(s => s.id === sizeForm.value.id);
-          if (index !== -1) {
-            sizes.value[index] = {
-              ...sizes.value[index],
-              name: sizeForm.value.name,
-              description: sizeForm.value.description,
-              status: sizeForm.value.status
-            };
-            toast.success('Cập nhật kích cỡ thành công!');
-          }
+          const sizeData = {
+            tenKichCo: sizeForm.value.name,
+            maKichCo: sizeForm.value.code
+          };
+          await productService.updateSize(sizeForm.value.id, sizeData);
+          toast.success('Cập nhật kích cỡ thành công!');
         }
         closeSizeForm();
+        await loadSizes();
       } catch (error) {
-        toast.error('Lỗi khi lưu kích cỡ. Vui lòng thử lại.');
+        toast.error('Lỗi khi lưu kích cỡ: ' + (error.response?.data || error.message));
         console.error('Error saving size:', error);
+      } finally {
+        loading.value = false;
       }
     };
 
-    const confirmDelete = () => {
+    const confirmDelete = async () => {
       if (sizeToDelete.value) {
-        const index = sizes.value.findIndex(s => s.id === sizeToDelete.value.id);
-        if (index !== -1) {
-          sizes.value.splice(index, 1);
+        try {
+          loading.value = true;
+          await productService.deleteSize(sizeToDelete.value.id);
           toast.success(`Đã xóa kích cỡ "${sizeToDelete.value.name}" thành công!`);
+          await loadSizes();
+        } catch (error) {
+          toast.error('Lỗi khi xóa kích cỡ: ' + (error.response?.data || error.message));
+          console.error('Error deleting size:', error);
+        } finally {
+          loading.value = false;
         }
         showDeleteModal.value = false;
         sizeToDelete.value = null;
@@ -537,9 +485,78 @@ export default {
       };
     };
 
+    // API Methods
+    const loadSizes = async () => {
+      try {
+        loading.value = true;
+        const params = {
+          keyword: filters.value.search,
+          page: pagination.value.page,
+          size: pagination.value.size,
+          sortBy: getSortBy(),
+          sortDirection: getSortDirection()
+        };
+        const response = await productService.getSizesPaged(params);
+        sizes.value = response.data.content.map(item => ({
+          id: item.id,
+          code: item.maKichCo,
+          name: item.tenKichCo,
+          description: item.description || '',
+          status: item.deleted ? 'inactive' : 'active',
+          createdAt: item.ngayTao
+        }));
+        pagination.value = {
+          page: response.data.number,
+          size: response.data.size,
+          totalElements: response.data.totalElements,
+          totalPages: response.data.totalPages
+        };
+      } catch (error) {
+        toast.error('Lỗi khi tải dữ liệu kích cỡ');
+        console.error('Error loading sizes:', error);
+      } finally {
+        loading.value = false;
+      }
+    };
+
+    const getSortBy = () => {
+      switch (filters.value.sortBy) {
+        case 'name_asc':
+        case 'name_desc':
+          return 'tenKichCo';
+        case 'code_asc':
+        case 'code_desc':
+          return 'maKichCo';
+        case 'oldest':
+        case 'newest':
+        default:
+          return 'id';
+      }
+    };
+
+    const getSortDirection = () => {
+      return filters.value.sortBy.includes('asc') || filters.value.sortBy === 'oldest' ? 'asc' : 'desc';
+    };
+
     const exportToExcel = () => {
       toast.info('Tính năng xuất Excel đang được phát triển');
     };
+
+    // Watchers
+    watch(() => filters.value.search, () => {
+      pagination.value.page = 0;
+      loadSizes();
+    }, { debounce: 500 });
+
+    watch(() => filters.value.sortBy, () => {
+      pagination.value.page = 0;
+      loadSizes();
+    });
+
+    // Load data on component mount
+    onMounted(() => {
+      loadSizes();
+    });
 
     return {
       // Data
@@ -558,17 +575,22 @@ export default {
       // Computed
       filteredSizes,
       
+      // State
+      loading,
+      pagination,
+      
       // Methods
       resetFilters,
-      openAddSizeModal,
       getStatusLabel,
       formatDate,
       editSize,
+      toggleSizeStatus,
       deleteSize,
       saveSize,
       confirmDelete,
       closeSizeForm,
-      exportToExcel
+      exportToExcel,
+      loadSizes
     };
   }
 };

@@ -86,9 +86,6 @@
               <span class="table-brand-name">{{ item.name }}</span>
             </div>
           </template>
-          <template #description="{ item }">
-            <span class="description">{{ item.description }}</span>
-          </template>
           <template #productCount="{ item }">
             <span class="product-count">{{ item.productCount }}</span>
           </template>
@@ -105,9 +102,15 @@
               <button @click="editBrand(item)" class="action-btn edit" title="Chỉnh sửa">
                 <iconify-icon icon="solar:pen-bold"></iconify-icon>
               </button>
-              <button @click="deleteBrand(item)" class="action-btn delete" title="Xóa">
-                <iconify-icon icon="solar:trash-bin-trash-bold"></iconify-icon>
-              </button>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  :checked="item.status === 'active'"
+                  @change="toggleBrandStatus(item)"
+                  class="sr-only peer"
+                />
+                <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+              </label>
             </div>
           </template>
         </DataTable>
@@ -211,6 +214,7 @@ import { useToast } from 'vue-toastification';
 import { useRouter } from 'vue-router';
 import Breadcrumb from '@/components/Breadcrumb.vue';
 import DataTable from '@/components/DataTable.vue';
+import { productService } from '@/services/api/productAPI.js';
 
 export default {
   name: 'Hang',
@@ -243,8 +247,18 @@ export default {
       description: ''
     });
 
-    // Sample data
-    const brands = ref([
+    // API data
+    const brands = ref([]);
+    const loading = ref(false);
+    const pagination = ref({
+      page: 0,
+      size: 10,
+      totalElements: 0,
+      totalPages: 0
+    });
+
+    // Sample data - will be replaced
+    const sampleBrands = ref([
       {
         id: 1,
         code: 'H001',
@@ -322,11 +336,9 @@ export default {
       { key: 'stt', label: 'STT' },
       { key: 'code', label: 'Mã hãng' },
       { key: 'name', label: 'Tên hãng' },
-      { key: 'description', label: 'Mô tả' },
-      { key: 'productCount', label: 'Số lượng sản phẩm' },
       { key: 'status', label: 'Trạng thái' },
       { key: 'createdAt', label: 'Ngày tạo' },
-      { key: 'actions', label: 'Thao tác' }
+      { key: 'actions', label: 'Hành động' }
     ]);
 
     // Computed
@@ -429,6 +441,22 @@ export default {
       showEditBrandModal.value = true;
     };
 
+    const toggleBrandStatus = async (brand) => {
+      try {
+        loading.value = true;
+        await productService.toggleBrandStatus(brand.id);
+        
+        const statusText = brand.status === 'active' ? 'vô hiệu hóa' : 'kích hoạt';
+        toast.success(`Đã ${statusText} thương hiệu "${brand.name}" thành công!`);
+        await loadBrands();
+      } catch (error) {
+        toast.error('Lỗi khi cập nhật trạng thái thương hiệu: ' + (error.response?.data || error.message));
+        console.error('Error toggling brand status:', error);
+      } finally {
+        loading.value = false;
+      }
+    };
+
     const deleteBrand = (brand) => {
       brandToDelete.value = brand;
       showDeleteModal.value = true;
@@ -436,45 +464,44 @@ export default {
 
     const saveBrand = async () => {
       try {
+        loading.value = true;
         if (showAddBrandModal.value) {
-          // Add new brand
-          const newBrand = {
-            id: Date.now(),
-            code: brandForm.value.code || generateBrandCode(),
-            name: brandForm.value.name,
-            description: brandForm.value.description,
-            productCount: 0,
-            status: brandForm.value.status,
-            createdAt: new Date().toISOString()
+          const brandData = {
+            tenThuongHieu: brandForm.value.name,
+            maThuongHieu: brandForm.value.code
           };
-          brands.value.unshift(newBrand);
-          toast.success('Thêm hãng mới thành công!');
+          await productService.createBrand(brandData);
+          toast.success('Thêm thương hiệu mới thành công!');
         } else {
-          // Edit existing brand
-          const index = brands.value.findIndex(b => b.id === brandForm.value.id);
-          if (index !== -1) {
-            brands.value[index] = {
-              ...brands.value[index],
-              name: brandForm.value.name,
-              description: brandForm.value.description,
-              status: brandForm.value.status
-            };
-            toast.success('Cập nhật hãng thành công!');
-          }
+          const brandData = {
+            tenThuongHieu: brandForm.value.name,
+            maThuongHieu: brandForm.value.code
+          };
+          await productService.updateBrand(brandForm.value.id, brandData);
+          toast.success('Cập nhật thương hiệu thành công!');
         }
         closeBrandForm();
+        await loadBrands();
       } catch (error) {
-        toast.error('Lỗi khi lưu hãng. Vui lòng thử lại.');
+        toast.error('Lỗi khi lưu thương hiệu: ' + (error.response?.data || error.message));
         console.error('Error saving brand:', error);
+      } finally {
+        loading.value = false;
       }
     };
 
-    const confirmDelete = () => {
+    const confirmDelete = async () => {
       if (brandToDelete.value) {
-        const index = brands.value.findIndex(b => b.id === brandToDelete.value.id);
-        if (index !== -1) {
-          brands.value.splice(index, 1);
-          toast.success(`Đã xóa hãng "${brandToDelete.value.name}" thành công!`);
+        try {
+          loading.value = true;
+          await productService.deleteBrand(brandToDelete.value.id);
+          toast.success(`Đã xóa thương hiệu "${brandToDelete.value.name}" thành công!`);
+          await loadBrands();
+        } catch (error) {
+          toast.error('Lỗi khi xóa thương hiệu: ' + (error.response?.data || error.message));
+          console.error('Error deleting brand:', error);
+        } finally {
+          loading.value = false;
         }
         showDeleteModal.value = false;
         brandToDelete.value = null;
@@ -492,9 +519,78 @@ export default {
       };
     };
 
+    // API Methods
+    const loadBrands = async () => {
+      try {
+        loading.value = true;
+        const params = {
+          keyword: filters.value.search,
+          page: pagination.value.page,
+          size: pagination.value.size,
+          sortBy: getSortBy(),
+          sortDirection: getSortDirection()
+        };
+        const response = await productService.getBrandsPaged(params);
+        brands.value = response.data.content.map(item => ({
+          id: item.id,
+          code: item.maThuongHieu,
+          name: item.tenThuongHieu,
+          description: item.description || '',
+          status: item.deleted ? 'inactive' : 'active',
+          createdAt: item.ngayTao
+        }));
+        pagination.value = {
+          page: response.data.number,
+          size: response.data.size,
+          totalElements: response.data.totalElements,
+          totalPages: response.data.totalPages
+        };
+      } catch (error) {
+        toast.error('Lỗi khi tải dữ liệu thương hiệu');
+        console.error('Error loading brands:', error);
+      } finally {
+        loading.value = false;
+      }
+    };
+
+    const getSortBy = () => {
+      switch (filters.value.sortBy) {
+        case 'name_asc':
+        case 'name_desc':
+          return 'tenThuongHieu';
+        case 'code_asc':
+        case 'code_desc':
+          return 'maThuongHieu';
+        case 'oldest':
+        case 'newest':
+        default:
+          return 'id';
+      }
+    };
+
+    const getSortDirection = () => {
+      return filters.value.sortBy.includes('asc') || filters.value.sortBy === 'oldest' ? 'asc' : 'desc';
+    };
+
     const exportToExcel = () => {
       toast.info('Tính năng xuất Excel đang được phát triển');
     };
+
+    // Watchers
+    watch(() => filters.value.search, () => {
+      pagination.value.page = 0;
+      loadBrands();
+    }, { debounce: 500 });
+
+    watch(() => filters.value.sortBy, () => {
+      pagination.value.page = 0;
+      loadBrands();
+    });
+
+    // Load data on component mount
+    onMounted(() => {
+      loadBrands();
+    });
 
     return {
       // Data
@@ -513,17 +609,22 @@ export default {
       // Computed
       filteredBrands,
       
+      // State
+      loading,
+      pagination,
+      
       // Methods
       resetFilters,
-      openAddBrandModal,
       getStatusLabel,
       formatDate,
       editBrand,
+      toggleBrandStatus,
       deleteBrand,
       saveBrand,
       confirmDelete,
       closeBrandForm,
-      exportToExcel
+      exportToExcel,
+      loadBrands
     };
   }
 };

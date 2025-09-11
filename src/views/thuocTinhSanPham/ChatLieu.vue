@@ -86,12 +86,6 @@
               <span class="table-material-name">{{ item.name }}</span>
             </div>
           </template>
-          <template #description="{ item }">
-            <span class="description">{{ item.description }}</span>
-          </template>
-          <template #productCount="{ item }">
-            <span class="product-count">{{ item.productCount }}</span>
-          </template>
           <template #status="{ item }">
             <span class="status-badge" :class="item.status">
               {{ getStatusLabel(item.status) }}
@@ -105,9 +99,15 @@
               <button @click="editMaterial(item)" class="action-btn edit" title="Chỉnh sửa">
                 <iconify-icon icon="solar:pen-bold"></iconify-icon>
               </button>
-              <button @click="deleteMaterial(item)" class="action-btn delete" title="Xóa">
-                <iconify-icon icon="solar:trash-bin-trash-bold"></iconify-icon>
-              </button>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  :checked="item.status === 'active'"
+                  @change="toggleMaterialStatus(item)"
+                  class="sr-only peer"
+                />
+                <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+              </label>
             </div>
           </template>
         </DataTable>
@@ -211,6 +211,7 @@ import { useToast } from 'vue-toastification';
 import { useRouter } from 'vue-router';
 import Breadcrumb from '@/components/Breadcrumb.vue';
 import DataTable from '@/components/DataTable.vue';
+import { productService } from '@/services/api/productAPI.js';
 
 export default {
   name: 'ChatLieu',
@@ -242,39 +243,43 @@ export default {
       }
     ]);
 
-    const pageStats = computed(() => [
-      {
-        value: materials.value.length.toString(),
-        label: 'Tổng chất liệu',
-        icon: 'solar:palette-2-bold-duotone'
-      },
-      {
-        value: materials.value.filter(m => m.status === 'active').length.toString(),
-        label: 'Đang sử dụng',
-        icon: 'solar:check-circle-bold-duotone'
-      },
-      {
-        value: materials.value.filter(m => m.status === 'inactive').length.toString(),
-        label: 'Ngừng sử dụng',
-        icon: 'solar:close-circle-bold-duotone'
-      },
-      {
-        value: Math.round((materials.value.filter(m => m.status === 'active').length / materials.value.length) * 100) + '%',
-        label: 'Tỷ lệ sử dụng',
-        icon: 'solar:chart-square-bold-duotone'
-      }
-    ]);
+    const pageStats = computed(() => {
+      const activeCount = filteredMaterials.value.filter(m => m.status === 'active').length;
+      const totalCount = filteredMaterials.value.length;
+      const usageRate = totalCount > 0 ? Math.round((activeCount / totalCount) * 100) : 0;
+      
+      return [
+        {
+          value: pagination.value.totalElements.toString(),
+          label: 'Tổng chất liệu',
+          icon: 'solar:palette-2-bold-duotone'
+        },
+        {
+          value: activeCount.toString(),
+          label: 'Đang sử dụng',
+          icon: 'solar:check-circle-bold-duotone'
+        },
+        {
+          value: filteredMaterials.value.filter(m => m.status === 'inactive').length.toString(),
+          label: 'Ngừng sử dụng',
+          icon: 'solar:close-circle-bold-duotone'
+        },
+        {
+          value: usageRate + '%',
+          label: 'Tỷ lệ sử dụng',
+          icon: 'solar:chart-square-bold-duotone'
+        }
+      ];
+    });
 
     // Table columns definition
     const tableColumns = ref([
       { key: 'stt', label: 'STT' },
       { key: 'code', label: 'Mã chất liệu' },
       { key: 'name', label: 'Tên chất liệu' },
-      { key: 'description', label: 'Mô tả' },
-      { key: 'productCount', label: 'Số lượng sản phẩm' },
       { key: 'status', label: 'Trạng thái' },
       { key: 'createdAt', label: 'Ngày tạo' },
-      { key: 'actions', label: 'Thao tác' }
+      { key: 'actions', label: 'Hành động' }
     ]);
 
     // Modals
@@ -300,191 +305,27 @@ export default {
       description: ''
     });
 
-    // Sample data - Fake materials data
-    const materials = ref([
-      {
-        id: 1,
-        code: 'CL001',
-        name: 'Da thật',
-        description: 'Chất liệu da thật cao cấp, mềm mại và bền đẹp',
-        productCount: 45,
-        status: 'active',
-        createdAt: '2024-01-15T10:30:00'
-      },
-      {
-        id: 2,
-        code: 'CL002',
-        name: 'Da tổng hợp',
-        description: 'Da tổng hợp chất lượng cao, giá thành hợp lý',
-        productCount: 32,
-        status: 'active',
-        createdAt: '2024-01-14T11:15:00'
-      },
-      {
-        id: 3,
-        code: 'CL003',
-        name: 'Canvas',
-        description: 'Vải canvas bền chắc, thích hợp cho giày thể thao',
-        productCount: 28,
-        status: 'active',
-        createdAt: '2024-01-13T09:20:00'
-      },
-      {
-        id: 4,
-        code: 'CL004',
-        name: 'Mesh',
-        description: 'Vải lưới thoáng khí, phù hợp cho giày chạy bộ',
-        productCount: 22,
-        status: 'active',
-        createdAt: '2024-01-12T14:45:00'
-      },
-      {
-        id: 5,
-        code: 'CL005',
-        name: 'Suede',
-        description: 'Da lộn mềm mại, sang trọng',
-        productCount: 18,
-        status: 'active',
-        createdAt: '2024-01-11T16:30:00'
-      },
-      {
-        id: 6,
-        code: 'CL006',
-        name: 'Nylon',
-        description: 'Vải nylon nhẹ và bền',
-        productCount: 15,
-        status: 'active',
-        createdAt: '2024-01-10T08:15:00'
-      },
-      {
-        id: 7,
-        code: 'CL007',
-        name: 'Rubber',
-        description: 'Cao su tự nhiên cho đế giày',
-        productCount: 0,
-        status: 'inactive',
-        createdAt: '2024-01-09T14:20:00'
-      },
-      {
-        id: 8,
-        code: 'CL008',
-        name: 'Polyester',
-        description: 'Sợi polyester chống thấm nước',
-        productCount: 12,
-        status: 'active',
-        createdAt: '2024-01-08T12:45:00'
-      },
-      {
-        id: 9,
-        code: 'CL009',
-        name: 'Cotton',
-        description: 'Vải cotton tự nhiên, thoáng mát',
-        productCount: 8,
-        status: 'active',
-        createdAt: '2024-01-07T16:30:00'
-      },
-      {
-        id: 10,
-        code: 'CL010',
-        name: 'Microfiber',
-        description: 'Sợi siêu mịn, dễ vệ sinh',
-        productCount: 6,
-        status: 'active',
-        createdAt: '2024-01-06T10:15:00'
-      },
-      {
-        id: 11,
-        code: 'CL011',
-        name: 'Knit',
-        description: 'Vải dệt kim co giãn tốt',
-        productCount: 14,
-        status: 'active',
-        createdAt: '2024-01-05T13:25:00'
-      },
-      {
-        id: 12,
-        code: 'CL012',
-        name: 'Flyknit',
-        description: 'Công nghệ dệt kim hiện đại của Nike',
-        productCount: 0,
-        status: 'inactive',
-        createdAt: '2024-01-04T09:40:00'
-      },
-      {
-        id: 13,
-        code: 'CL013',
-        name: 'Primeknit',
-        description: 'Công nghệ dệt kim của Adidas',
-        productCount: 10,
-        status: 'active',
-        createdAt: '2024-01-03T15:50:00'
-      },
-      {
-        id: 14,
-        code: 'CL014',
-        name: 'Leather',
-        description: 'Da thuộc truyền thống',
-        productCount: 0,
-        status: 'inactive',
-        createdAt: '2024-01-02T11:30:00'
-      },
-      {
-        id: 15,
-        code: 'CL015',
-        name: 'Synthetic',
-        description: 'Chất liệu tổng hợp hiện đại',
-        productCount: 20,
-        status: 'active',
-        createdAt: '2024-01-01T14:15:00'
-      }
-    ]);
+    // API data
+    const materials = ref([]);
+    const loading = ref(false);
+    const pagination = ref({
+      page: 0,
+      size: 10,
+      totalElements: 0,
+      totalPages: 0
+    });
 
     // Computed properties
     const filteredMaterials = computed(() => {
-      let result = [...materials.value];
-
-      // Search filter
-      if (filters.value.search.trim()) {
-        const search = filters.value.search.toLowerCase();
-        result = result.filter(material => 
-          material.name.toLowerCase().includes(search) ||
-          material.code.toLowerCase().includes(search) ||
-          material.description.toLowerCase().includes(search)
-        );
-      }
-
-      // Status filter
-      if (filters.value.status) {
-        result = result.filter(material => material.status === filters.value.status);
-      }
-
-      // Sorting
-      switch (filters.value.sortBy) {
-        case 'oldest':
-          result.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
-          break;
-        case 'name_asc':
-          result.sort((a, b) => a.name.localeCompare(b.name));
-          break;
-        case 'name_desc':
-          result.sort((a, b) => b.name.localeCompare(a.name));
-          break;
-        case 'code_asc':
-          result.sort((a, b) => a.code.localeCompare(b.code));
-          break;
-        case 'code_desc':
-          result.sort((a, b) => b.code.localeCompare(a.code));
-          break;
-        case 'newest':
-        default:
-          result.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-          break;
-      }
-
-      return result;
+      return materials.value.map((material, index) => ({
+        ...material,
+        code: material.maChatLieu,
+        name: material.tenChatLieu,
+        description: material.description || 'Chưa có mô tả',
+        status: material.deleted ? 'inactive' : 'active',
+        createdAt: material.ngayTao
+      }));
     });
-
-
 
     // Methods
     const resetFilters = () => {
@@ -537,52 +378,69 @@ export default {
       showEditMaterialModal.value = true;
     };
 
+    const toggleMaterialStatus = async (material) => {
+      try {
+        loading.value = true;
+        await productService.toggleMaterialStatus(material.id);
+        
+        const statusText = material.status === 'active' ? 'vô hiệu hóa' : 'kích hoạt';
+        toast.success(`Đã ${statusText} chất liệu "${material.name}" thành công!`);
+        await loadMaterials();
+      } catch (error) {
+        toast.error('Lỗi khi cập nhật trạng thái chất liệu: ' + (error.response?.data || error.message));
+        console.error('Error toggling material status:', error);
+      } finally {
+        loading.value = false;
+      }
+    };
+
     const deleteMaterial = (material) => {
       materialToDelete.value = material;
       showDeleteModal.value = true;
     };
 
-    const saveMaterial = () => {
+    const saveMaterial = async () => {
       try {
+        loading.value = true;
         if (showAddMaterialModal.value) {
           // Add new material
-          const newMaterial = {
-            id: Date.now(),
-            code: materialForm.value.code || generateMaterialCode(),
-            name: materialForm.value.name,
-            description: materialForm.value.description,
-            productCount: 0,
-            status: materialForm.value.status,
-            createdAt: new Date().toISOString()
+          const materialData = {
+            tenChatLieu: materialForm.value.name,
+            maChatLieu: materialForm.value.code
           };
-          materials.value.unshift(newMaterial);
+          await productService.createMaterial(materialData);
           toast.success('Thêm chất liệu mới thành công!');
         } else {
           // Edit existing material
-          const index = materials.value.findIndex(m => m.id === materialForm.value.id);
-          if (index !== -1) {
-            materials.value[index] = {
-              ...materials.value[index],
-              name: materialForm.value.name,
-              description: materialForm.value.description,
-              status: materialForm.value.status
-            };
-            toast.success('Cập nhật chất liệu thành công!');
-          }
+          const materialData = {
+            tenChatLieu: materialForm.value.name,
+            maChatLieu: materialForm.value.code
+          };
+          await productService.updateMaterial(materialForm.value.id, materialData);
+          toast.success('Cập nhật chất liệu thành công!');
         }
         closeMaterialForm();
+        await loadMaterials();
       } catch (error) {
-        toast.error('Lỗi khi lưu chất liệu. Vui lòng thử lại.');
+        toast.error('Lỗi khi lưu chất liệu: ' + (error.response?.data || error.message));
         console.error('Error saving material:', error);
+      } finally {
+        loading.value = false;
       }
     };
 
-    const confirmDelete = () => {
+    const confirmDelete = async () => {
       if (materialToDelete.value) {
-        const index = materials.value.findIndex(m => m.id === materialToDelete.value.id);
-        if (index !== -1) {
-          materials.value.splice(index, 1);
+        try {
+          loading.value = true;
+          await productService.deleteMaterial(materialToDelete.value.id);
           toast.success(`Đã xóa chất liệu "${materialToDelete.value.name}" thành công!`);
+          await loadMaterials();
+        } catch (error) {
+          toast.error('Lỗi khi xóa chất liệu: ' + (error.response?.data || error.message));
+          console.error('Error deleting material:', error);
+        } finally {
+          loading.value = false;
         }
         showDeleteModal.value = false;
         materialToDelete.value = null;
@@ -601,9 +459,71 @@ export default {
     };
 
 
+    // API Methods
+    const loadMaterials = async () => {
+      try {
+        loading.value = true;
+        const params = {
+          keyword: filters.value.search,
+          page: pagination.value.page,
+          size: pagination.value.size,
+          sortBy: getSortBy(),
+          sortDirection: getSortDirection()
+        };
+        const response = await productService.getMaterialsPaged(params);
+        materials.value = response.data.content;
+        pagination.value = {
+          page: response.data.number,
+          size: response.data.size,
+          totalElements: response.data.totalElements,
+          totalPages: response.data.totalPages
+        };
+      } catch (error) {
+        toast.error('Lỗi khi tải dữ liệu chất liệu');
+        console.error('Error loading materials:', error);
+      } finally {
+        loading.value = false;
+      }
+    };
+
+    const getSortBy = () => {
+      switch (filters.value.sortBy) {
+        case 'name_asc':
+        case 'name_desc':
+          return 'tenChatLieu';
+        case 'code_asc':
+        case 'code_desc':
+          return 'maChatLieu';
+        case 'oldest':
+        case 'newest':
+        default:
+          return 'id';
+      }
+    };
+
+    const getSortDirection = () => {
+      return filters.value.sortBy.includes('asc') || filters.value.sortBy === 'oldest' ? 'asc' : 'desc';
+    };
+
     const exportToExcel = () => {
       toast.info('Tính năng xuất Excel đang được phát triển');
     };
+
+    // Watchers
+    watch(() => filters.value.search, () => {
+      pagination.value.page = 0;
+      loadMaterials();
+    }, { debounce: 500 });
+
+    watch(() => filters.value.sortBy, () => {
+      pagination.value.page = 0;
+      loadMaterials();
+    });
+
+    // Load data on component mount
+    onMounted(() => {
+      loadMaterials();
+    });
 
     return {
       // Data
@@ -622,16 +542,22 @@ export default {
       // Computed
       filteredMaterials,
       
+      // State
+      loading,
+      pagination,
+      
       // Methods
       resetFilters,
       getStatusLabel,
       formatDate,
       editMaterial,
+      toggleMaterialStatus,
       deleteMaterial,
       saveMaterial,
       confirmDelete,
       closeMaterialForm,
-      exportToExcel
+      exportToExcel,
+      loadMaterials
     };
   }
 };
