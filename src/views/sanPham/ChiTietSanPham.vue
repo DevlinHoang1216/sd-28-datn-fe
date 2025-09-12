@@ -41,35 +41,8 @@
               </option>
             </select>
           </div>
-          <div class="filter-group">
-            <label class="filter-label">Chất liệu</label>
-            <select v-model="filters.material" class="filter-select">
-              <option value="">Tất cả chất liệu</option>
-              <option v-for="material in materials" :key="material.id" :value="material.id">
-                {{ material.name }}
-              </option>
-            </select>
-          </div>
         </div>
         <div class="filter-row">
-          <div class="filter-group">
-            <label class="filter-label">Đế giày</label>
-            <select v-model="filters.sole" class="filter-select">
-              <option value="">Tất cả đế giày</option>
-              <option v-for="sole in soles" :key="sole.id" :value="sole.id">
-                {{ sole.name }}
-              </option>
-            </select>
-          </div>
-          <div class="filter-group">
-            <label class="filter-label">Thương hiệu</label>
-            <select v-model="filters.brand" class="filter-select">
-              <option value="">Tất cả thương hiệu</option>
-              <option v-for="brand in brands" :key="brand.id" :value="brand.id">
-                {{ brand.name }}
-              </option>
-            </select>
-          </div>
           <div class="filter-group">
             <label class="filter-label">Trạng thái</label>
             <select v-model="filters.status" class="filter-select">
@@ -194,18 +167,6 @@
             </div>
           </template>
 
-          <!-- Material & Sole Column - Only if different from common -->
-          <template #materialSole="{ item }">
-            <div class="material-sole-info">
-              <div class="info-item" v-if="item.idChatLieu">
-                <span class="info-label">Chất liệu:</span>
-                <span class="info-value material-badge">{{ item.idChatLieu?.tenChatLieu || 'N/A' }}</span>
-              </div>
-              <div class="info-item" v-if="!item.idChatLieu">
-                <span class="info-value common-indicator">Chưa có thông tin</span>
-              </div>
-            </div>
-          </template>
 
           <!-- Price Column -->
           <template #price="{ item }">
@@ -326,26 +287,8 @@
                   </option>
                 </select>
               </div>
-              <div class="form-group">
-                <label class="form-label required">Chất liệu</label>
-                <select v-model="productDetailForm.materialId" class="form-input" required>
-                  <option value="">Chọn chất liệu</option>
-                  <option v-for="material in materials" :key="material.id" :value="material.id">
-                    {{ material.name }}
-                  </option>
-                </select>
-              </div>
             </div>
             <div class="form-row">
-              <div class="form-group">
-                <label class="form-label required">Đế giày</label>
-                <select v-model="productDetailForm.soleId" class="form-input" required>
-                  <option value="">Chọn đế giày</option>
-                  <option v-for="sole in soles" :key="sole.id" :value="sole.id">
-                    {{ sole.name }}
-                  </option>
-                </select>
-              </div>
               <div class="form-group">
                 <label class="form-label required">Giá bán</label>
                 <input type="number" v-model="productDetailForm.price" class="form-input" 
@@ -513,14 +456,11 @@ export default {
     // Product ID from route
     const productId = ref(null);
 
-    // Filters - Updated for variant-specific filtering
+    // Filters 
     const filters = ref({
       search: '',
       size: '',
       color: '',
-      material: '',
-      sole: '',
-      brand: '',
       status: '',
       priceFrom: '',
       priceTo: '',
@@ -532,8 +472,6 @@ export default {
       productId: '',
       sizeId: '',
       colorId: '',
-      materialId: '',
-      soleId: '',
       price: '',
       stock: '',
       status: 'active',
@@ -544,10 +482,6 @@ export default {
     const baseProducts = ref([]);
     const sizes = ref([]);
     const colors = ref([]);
-    const materials = ref([]);
-    const soles = ref([]);
-    const brands = ref([]);
-    const categories = ref([]);
 
     // Product details data from API
     const productDetails = ref([]);
@@ -559,7 +493,6 @@ export default {
       { key: 'image', label: 'Hình ảnh', class: 'text-center' },
       { key: 'productInfo', label: 'Thông tin sản phẩm' },
       { key: 'variantAttributes', label: 'Thuộc tính biến thể' },
-      { key: 'materialSole', label: 'Chất liệu & Đế riêng' },
       { key: 'price', label: 'Giá bán', class: 'text-right' },
       { key: 'stock', label: 'Tồn kho', class: 'text-center' },
       { key: 'status', label: 'Trạng thái', class: 'text-center' },
@@ -589,15 +522,7 @@ export default {
         result = result.filter(item => item.idMauSac?.id === Number(filters.value.color));
       }
 
-      // Material filter
-      if (filters.value.material) {
-        result = result.filter(item => item.idChatLieu?.id === Number(filters.value.material));
-      }
 
-      // Brand filter
-      if (filters.value.brand) {
-        result = result.filter(item => item.idSanPham?.idThuongHieu?.id === Number(filters.value.brand));
-      }
 
       // Status filter
       if (filters.value.status) {
@@ -674,25 +599,7 @@ export default {
       return color ? color.code : '#CCCCCC';
     };
 
-    const getMaterialName = (materialId) => {
-      const material = materials.value.find(m => m.id === materialId);
-      return material ? material.name : 'N/A';
-    };
 
-    const getSoleName = (soleId) => {
-      const sole = soles.value.find(s => s.id === soleId);
-      return sole ? sole.name : 'N/A';
-    };
-
-    const getBrandName = (brandId) => {
-      const brand = brands.value.find(b => b.id === brandId);
-      return brand ? brand.name : 'N/A';
-    };
-
-    const getCategoryName = (categoryId) => {
-      const category = categories.value.find(c => c.id === categoryId);
-      return category ? category.name : 'N/A';
-    };
 
     const getStatusLabel = (stock) => {
       if (stock === 0) return 'Hết hàng';
@@ -718,9 +625,6 @@ export default {
         search: '',
         size: '',
         color: '',
-        material: '',
-        sole: '',
-        brand: '',
         status: '',
         priceFrom: '',
         priceTo: '',
@@ -739,8 +643,6 @@ export default {
         productId: '',
         sizeId: '',
         colorId: '',
-        materialId: '',
-        soleId: '',
         price: '',
         stock: '',
         status: 'active',
@@ -851,10 +753,6 @@ export default {
         'Tên sản phẩm': item.productName,
         'Kích cỡ': getSizeName(item.sizeId),
         'Màu sắc': getColorName(item.colorId),
-        'Chất liệu': getMaterialName(item.materialId),
-        'Đế giày': getSoleName(item.soleId),
-        'Thương hiệu': getBrandName(item.brandId),
-        'Danh mục': getCategoryName(item.categoryId),
         'Giá bán': item.price,
         'Tồn kho': item.stock,
         'Trạng thái': getStatusLabel(item.status),
@@ -1044,13 +942,9 @@ export default {
 
     const loadAttributes = async () => {
       try {
-        const [sizesRes, colorsRes, materialsRes, solesRes, brandsRes, categoriesRes] = await Promise.all([
+        const [sizesRes, colorsRes] = await Promise.all([
           productService.getAllSizes(),
-          productService.getAllColors(),
-          productService.getAllMaterials(),
-          productService.getAllSoles(),
-          productService.getAllBrands(),
-          productService.getAllCategories()
+          productService.getAllColors()
         ]);
 
         sizes.value = (sizesRes.data || []).map(size => ({
@@ -1061,22 +955,6 @@ export default {
           id: color.id,
           name: color.tenMauSac || color.name,
           hex: color.hex
-        }));
-        materials.value = (materialsRes.data || []).map(material => ({
-          id: material.id,
-          name: material.tenChatLieu || material.name
-        }));
-        soles.value = (solesRes.data || []).map(sole => ({
-          id: sole.id,
-          name: sole.tenDeGiay || sole.name
-        }));
-        brands.value = (brandsRes.data || []).map(brand => ({
-          id: brand.id,
-          name: brand.tenThuongHieu || brand.name
-        }));
-        categories.value = (categoriesRes.data || []).map(category => ({
-          id: category.id,
-          name: category.tenDanhMuc || category.name
         }));
       } catch (err) {
         console.error('Error loading attributes:', err);
@@ -1188,10 +1066,6 @@ export default {
       baseProducts,
       sizes,
       colors,
-      materials,
-      soles,
-      brands,
-      categories,
       productDetails,
       columns,
       
@@ -1204,10 +1078,6 @@ export default {
       getSizeName,
       getColorName,
       getColorCode,
-      getMaterialName,
-      getSoleName,
-      getBrandName,
-      getCategoryName,
       getStatusLabel,
       getStatusClass,
       getStockClass,
