@@ -137,7 +137,7 @@ export default {
           icon: 'solar:tag-outline', // Icon cho mục thuộc tính chính
           expanded: true, // Đặt thành true để mở rộng mặc định
           children: [
-            { path: '/thuoc-tinh/hang', label: 'Hãng', icon: 'mdi:factory' }, // Đã thay đổi icon cho Hãng
+            { path: '/thuoc-tinh/thuong-hieu', label: 'Thương Hiệu', icon: 'mdi:factory' }, // Đã thay đổi icon cho Thương Hiệu
             { path: '/thuoc-tinh/mau-sac', label: 'Màu Sắc', icon: 'solar:palette-outline' },
             { path: '/thuoc-tinh/kich-co', label: 'Kích Cỡ', icon: 'solar:ruler-outline' },
             { path: '/thuoc-tinh/chat-lieu', label: 'Chất Liệu', icon: 'mdi:tshirt-crew-outline' }, // Đã thay đổi icon cho Chất liệu

@@ -1,11 +1,11 @@
 <template>
-  <div class="quan-ly-hang-container">
+  <div class="quan-ly-thuong-hieu-container">
     <!-- Breadcrumb -->
     <Breadcrumb 
       :items="breadcrumbItems"
       :show-page-info="true"
-      page-title="Quản Lý Hãng"
-      page-description="Hệ thống quản lý hãng sản phẩm cho Shop Giày"
+      page-title="Quản Lý Thương Hiệu"
+      page-description="Hệ thống quản lý thương hiệu sản phẩm cho Shop Giày"
       page-icon="solar:buildings-2-bold-duotone"
       :page-stats="pageStats"
       :actions="breadcrumbActions"
@@ -16,7 +16,7 @@
       <div class="filter-header">
         <h3 class="filter-title">
           <iconify-icon icon="solar:filter-bold-duotone"></iconify-icon>
-          Bộ Lọc Hãng
+          Bộ Lọc Thương Hiệu
         </h3>
         <button class="reset-filter-btn" @click="resetFilters">
           Đặt lại bộ lọc
@@ -30,7 +30,7 @@
               type="text" 
               v-model="filters.search" 
               class="filter-input"
-              placeholder="Tìm theo tên hoặc mã hãng..."
+              placeholder="Tìm theo tên hoặc mã thương hiệu..."
             />
           </div>
           <div class="filter-group">
@@ -63,7 +63,7 @@
         <div class="section-header">
           <h3 class="section-title">
             <iconify-icon icon="solar:buildings-2-bold-duotone"></iconify-icon>
-            Danh Sách Hãng ({{ filteredBrands.length }})
+            Danh Sách Thương Hiệu ({{ filteredBrands.length }})
           </h3>
         </div>
 
@@ -71,8 +71,8 @@
         <DataTable
           :data="filteredBrands"
           :columns="tableColumns"
-          item-label="hãng"
-          empty-message="Không tìm thấy hãng nào."
+          item-label="thương hiệu"
+          empty-message="Không tìm thấy thương hiệu nào."
           key-field="id"
         >
           <template #stt="{ rowIndex }">
@@ -122,8 +122,8 @@
       <div class="modal-container" @click.stop>
         <div class="modal-header">
           <h3 class="modal-title">
-            <iconify-icon icon="solar:buildings-2-bold-duotone"></iconify-icon>
-            {{ showAddBrandModal ? 'Thêm Hãng Mới' : 'Chỉnh Sửa Hãng' }}
+            <iconify-icon icon="solar:star-bold-duotone"></iconify-icon>
+            {{ showAddBrandModal ? 'Thêm Thương Hiệu Mới' : 'Chỉnh Sửa Thương Hiệu' }}
           </h3>
           <button class="modal-close" @click="closeBrandForm">
             <iconify-icon icon="solar:close-circle-bold"></iconify-icon>
@@ -133,22 +133,22 @@
           <form @submit.prevent="saveBrand" class="brand-form">
             <div class="form-row">
               <div class="form-group">
-                <label class="form-label required">Tên hãng</label>
+                <label class="form-label required">Tên thương hiệu</label>
                 <input 
                   type="text" 
                   v-model="brandForm.name" 
                   class="form-input"
-                  placeholder="Nhập tên hãng"
+                  placeholder="Nhập tên thương hiệu"
                   required
                 />
               </div>
               <div class="form-group">
-                <label class="form-label required">Mã hãng</label>
+                <label class="form-label required">Mã thương hiệu</label>
                 <input 
                   type="text" 
                   v-model="brandForm.code" 
                   class="form-input"
-                  placeholder="Nhập mã hãng"
+                  placeholder="Nhập mã thương hiệu"
                   required
                 />
               </div>
@@ -158,16 +158,16 @@
                 <label class="form-label">Trạng thái</label>
                 <select v-model="brandForm.status" class="form-input">
                   <option value="active">Đang sử dụng</option>
-                  <option value="inactive">Ngừng sử dụng</option>
+                  <option value="inactive">Ngưng sử dụng</option>
                 </select>
               </div>
             </div>
             <div class="form-group full-width">
-              <label class="form-label">Mô tả hãng</label>
+              <label class="form-label">Mô tả thương hiệu</label>
               <textarea 
                 v-model="brandForm.description" 
                 class="form-textarea"
-                placeholder="Nhập mô tả hãng"
+                placeholder="Nhập mô tả thương hiệu"
                 rows="4"
               ></textarea>
             </div>
@@ -177,7 +177,7 @@
           <button type="button" class="btn secondary" @click="closeBrandForm">Hủy</button>
           <button type="button" class="btn primary" @click="saveBrand">
             <iconify-icon icon="solar:check-circle-bold"></iconify-icon>
-            {{ showAddBrandModal ? 'Thêm hãng' : 'Cập nhật' }}
+            {{ showAddBrandModal ? 'Thêm thương hiệu' : 'Cập nhật' }}
           </button>
         </div>
       </div>
@@ -187,13 +187,13 @@
     <div v-if="showDeleteModal" class="modal-overlay" @click="showDeleteModal = false">
       <div class="modal-container small" @click.stop>
         <div class="modal-header">
-          <h3 class="modal-title">Xác nhận xóa hãng</h3>
+          <h3 class="modal-title">Xác nhận xóa thương hiệu</h3>
           <button class="modal-close" @click="showDeleteModal = false">
             <iconify-icon icon="solar:close-circle-bold"></iconify-icon>
           </button>
         </div>
         <div class="modal-content">
-          <p>Bạn có chắc chắn muốn xóa hãng <strong>{{ brandToDelete?.name }}</strong> không?</p>
+          <p>Bạn có chắc chắn muốn xóa thương hiệu <strong>{{ brandToDelete?.name }}</strong> không?</p>
           <p class="warning-text">Hành động này không thể hoàn tác!</p>
         </div>
         <div class="modal-footer">
@@ -232,19 +232,19 @@ export default {
     const showDeleteModal = ref(false);
     const brandToDelete = ref(null);
 
-    // Filters
-    const filters = ref({
-      search: '',
-      status: '',
-      sortBy: 'newest'
-    });
-
     // Form data
     const brandForm = ref({
       name: '',
       code: '',
       status: 'active',
       description: ''
+    });
+
+    // Filters
+    const filters = ref({
+      search: '',
+      status: '',
+      sortBy: 'newest'
     });
 
     // API data
@@ -292,14 +292,14 @@ export default {
     const breadcrumbItems = ref([
       { label: 'Quản lý', path: '/quan-ly' },
       { label: 'Thuộc tính', path: '/attributes' },
-      { label: 'Hãng', path: '/attributes/hang' }
+      { label: 'Thương Hiệu', path: '/attributes/hang' }
     ]);
 
     const breadcrumbActions = ref([
       {
-        label: 'Thêm hãng',
+        label: 'Thêm thương hiệu',
         type: 'primary',
-        handler: () => showAddBrandModal.value = true
+        handler: () => router.push('/thuoc-tinh/thuong-hieu/them')
       },
       {
         label: 'Xuất Excel',
@@ -311,7 +311,7 @@ export default {
     const pageStats = computed(() => [
       {
         value: brands.value.length.toString(),
-        label: 'Tổng hãng',
+        label: 'Tổng thương hiệu',
         icon: 'solar:buildings-2-bold-duotone'
       },
       {
@@ -334,8 +334,8 @@ export default {
     // Table columns
     const tableColumns = ref([
       { key: 'stt', label: 'STT' },
-      { key: 'code', label: 'Mã hãng' },
-      { key: 'name', label: 'Tên hãng' },
+      { key: 'code', label: 'Mã thương hiệu' },
+      { key: 'name', label: 'Tên thương hiệu' },
       { key: 'status', label: 'Trạng thái' },
       { key: 'createdAt', label: 'Ngày tạo' },
       { key: 'actions', label: 'Hành động' }
@@ -347,7 +347,7 @@ export default {
 
       // Search filter
       if (filters.value.search.trim()) {
-        const search = filters.value.search.toLowerCase();
+        const search = filters.value.search.trim().replace(/\s+/g, ' ').toLowerCase();
         result = result.filter(brand => 
           brand.name.toLowerCase().includes(search) ||
           brand.code.toLowerCase().includes(search) ||
@@ -396,16 +396,6 @@ export default {
       toast.info('Đã đặt lại bộ lọc');
     };
 
-    const openAddBrandModal = () => {
-      brandForm.value = {
-        name: '',
-        code: '',
-        status: 'active',
-        description: ''
-      };
-      showAddBrandModal.value = true;
-    };
-
     const getStatusLabel = (status) => {
       switch (status) {
         case 'active':
@@ -437,8 +427,7 @@ export default {
     };
 
     const editBrand = (brand) => {
-      brandForm.value = { ...brand };
-      showEditBrandModal.value = true;
+      router.push(`/thuoc-tinh/thuong-hieu/sua/${brand.id}`);
     };
 
     const toggleBrandStatus = async (brand) => {
@@ -465,26 +454,27 @@ export default {
     const saveBrand = async () => {
       try {
         loading.value = true;
+        const brandData = {
+          tenThuongHieu: brandForm.value.name,
+          maThuongHieu: brandForm.value.code || generateBrandCode(),
+          description: brandForm.value.description
+        };
+
         if (showAddBrandModal.value) {
-          const brandData = {
-            tenThuongHieu: brandForm.value.name,
-            maThuongHieu: brandForm.value.code
-          };
+          // Add new brand
           await productService.createBrand(brandData);
           toast.success('Thêm thương hiệu mới thành công!');
         } else {
-          const brandData = {
-            tenThuongHieu: brandForm.value.name,
-            maThuongHieu: brandForm.value.code
-          };
+          // Edit existing brand
           await productService.updateBrand(brandForm.value.id, brandData);
           toast.success('Cập nhật thương hiệu thành công!');
         }
+        
         closeBrandForm();
         await loadBrands();
       } catch (error) {
-        toast.error('Lỗi khi lưu thương hiệu: ' + (error.response?.data || error.message));
         console.error('Error saving brand:', error);
+        toast.error('Lỗi khi lưu thương hiệu. Vui lòng thử lại.');
       } finally {
         loading.value = false;
       }
@@ -524,7 +514,7 @@ export default {
       try {
         loading.value = true;
         const params = {
-          keyword: filters.value.search,
+          keyword: filters.value.search.trim().replace(/\s+/g, ' '),
           page: pagination.value.page,
           size: pagination.value.size,
           sortBy: getSortBy(),
@@ -602,8 +592,8 @@ export default {
       showEditBrandModal,
       showDeleteModal,
       brandToDelete,
-      filters,
       brandForm,
+      filters,
       brands,
       
       // Computed
@@ -631,14 +621,12 @@ export default {
 </script>
 
 <style scoped>
-/* ===== GENERAL STYLES ===== */
-.quan-ly-hang-container {
-  padding: 24px;
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+.quan-ly-thuong-hieu-container {
   min-height: 100vh;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
+/* ===== FILTER SECTION ===== */
 .filter-section {
   background: white;
   border-radius: 20px;
@@ -856,54 +844,28 @@ export default {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 10000;
-  padding: 20px;
-  backdrop-filter: blur(4px);
-  animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
 }
 
 .modal-container {
   background: white;
   border-radius: 20px;
-  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
-  max-width: 90vw;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+  max-width: 600px;
+  width: 90%;
   max-height: 90vh;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  animation: slideUp 0.3s ease;
-}
-
-@keyframes slideUp {
-  from {
-    transform: translateY(30px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+  animation: slideUp 0.3s ease-out;
 }
 
 .modal-container.small {
-  width: 400px;
-}
-
-.modal-container.large {
-  width: 800px;
+  max-width: 400px;
 }
 
 .modal-header {
@@ -912,42 +874,47 @@ export default {
   align-items: center;
   padding: 24px 28px;
   border-bottom: 1px solid #e2e8f0;
-  background: #f8fafc;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
 }
 
 .modal-title {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #1a202c;
+  font-size: 20px;
+  font-weight: 600;
+  color: #1e293b;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   margin: 0;
 }
 
+.modal-title iconify-icon {
+  font-size: 24px;
+  color: #3b82f6;
+}
+
 .modal-close {
-  width: 40px;
-  height: 40px;
+  background: none;
   border: none;
-  border-radius: 50%;
-  background: #f1f5f9;
+  font-size: 24px;
   color: #64748b;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 12px;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 18px;
 }
 
 .modal-close:hover {
-  background: #e2e8f0;
-  color: #374151;
+  background: #f1f5f9;
+  color: #ef4444;
+  transform: scale(1.1);
 }
 
 .modal-content {
-  flex: 1;
   padding: 28px;
+  max-height: 60vh;
   overflow-y: auto;
 }
 
@@ -963,7 +930,7 @@ export default {
 .brand-form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
 }
 
 .form-row {
@@ -975,7 +942,7 @@ export default {
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .form-group.full-width {
@@ -983,32 +950,31 @@ export default {
 }
 
 .form-label {
-  font-weight: 600;
+  font-weight: 500;
   color: #374151;
-  font-size: 0.9rem;
+  font-size: 14px;
 }
 
 .form-label.required::after {
   content: ' *';
-  color: #dc2626;
+  color: #ef4444;
 }
 
 .form-input,
 .form-textarea {
   padding: 12px 16px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font-size: 0.95rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  font-size: 14px;
   transition: all 0.2s ease;
   background: white;
-  font-family: inherit;
 }
 
 .form-input:focus,
 .form-textarea:focus {
   outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .form-textarea {
@@ -1017,40 +983,38 @@ export default {
 }
 
 .btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 12px 20px;
-  border: none;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 0.95rem;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-weight: 500;
+  font-size: 14px;
   cursor: pointer;
   transition: all 0.2s ease;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   text-decoration: none;
-  min-width: 120px;
 }
 
 .btn.primary {
-  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
   color: white;
 }
 
 .btn.primary:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
 }
 
 .btn.secondary {
   background: #f1f5f9;
   color: #64748b;
-  border: 1px solid #d1d5db;
+  border: 1px solid #e2e8f0;
 }
 
 .btn.secondary:hover {
   background: #e2e8f0;
-  color: #374151;
+  color: #475569;
 }
 
 .btn.danger {
@@ -1059,8 +1023,8 @@ export default {
 }
 
 .btn.danger:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(220, 38, 38, 0.3);
 }
 
 .warning-text {
@@ -1072,29 +1036,42 @@ export default {
 
 /* ===== RESPONSIVE DESIGN ===== */
 @media (max-width: 768px) {
-  .quan-ly-hang-container {
-    padding: 12px;
+  .quan-ly-thuong-hieu-container {
+    padding: 16px;
   }
   
   .filter-section,
   .brands-section {
-    padding: 16px;
-    border-radius: 12px;
+    padding: 20px;
   }
   
-  .filter-row {
+  .filter-content {
     grid-template-columns: 1fr;
-    gap: 16px;
   }
   
+  .filter-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .section-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .modal-container {
+    width: 95%;
+    margin: 20px;
+  }
+
   .form-row {
     grid-template-columns: 1fr;
   }
-  
-  .modal-container.large {
-    width: 95vw;
-    margin: 10px;
+
+  .modal-header,
+  .modal-content,
+  .modal-footer {
+    padding: 20px;
   }
-  
 }
 </style>
