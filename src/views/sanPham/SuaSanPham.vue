@@ -47,6 +47,27 @@
         </div>
 
         <div class="form-row">
+          <div class="form-group">
+            <label class="form-label required">Chất liệu</label>
+            <select v-model="productForm.materialId" class="form-input" required>
+              <option value="">Chọn chất liệu</option>
+              <option v-for="material in materials" :key="material.id" :value="material.id">
+                {{ material.name }}
+              </option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label required">Đế giày</label>
+            <select v-model="productForm.soleId" class="form-input" required>
+              <option value="">Chọn đế giày</option>
+              <option v-for="sole in soles" :key="sole.id" :value="sole.id">
+                {{ sole.name }}
+              </option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
             <div class="form-group">
               <label class="form-label">Quốc gia sản xuất</label>
               <select v-model="productForm.country" class="form-input">
@@ -172,6 +193,8 @@ export default {
       code: '',
       categoryId: '',
       brandId: '',
+      materialId: '',
+      soleId: '',
       description: '',
       country: '',
       imageUrl: '',
@@ -181,6 +204,8 @@ export default {
     // Data from API
     const categories = ref([]);
     const brands = ref([]);
+    const materials = ref([]);
+    const soles = ref([]);
     const countries = ref([]);
 
     // Methods
@@ -195,6 +220,8 @@ export default {
           code: product.ma || '',
           categoryId: product.idDanhMuc?.id || '',
           brandId: product.idThuongHieu?.id || '',
+          materialId: product.idChatLieu?.id || '',
+          soleId: product.idDeGiay?.id || '',
           description: product.moTaSanPham || '',
           country: product.quocGiaSanXuat || '',
           imageUrl: product.idAnhSanPham?.urlAnh || '',
@@ -211,9 +238,11 @@ export default {
 
     const loadAttributes = async () => {
       try {
-        const [categoriesRes, brandsRes, countriesData] = await Promise.all([
+        const [categoriesRes, brandsRes, materialsRes, solesRes, countriesData] = await Promise.all([
           productService.getAllCategories(),
           productService.getAllBrands(),
+          productService.getAllMaterials(),
+          productService.getAllSoles(),
           countryService.getAllCountries()
         ]);
 
@@ -224,6 +253,14 @@ export default {
         brands.value = (brandsRes.data || []).map(brand => ({
           id: brand.id,
           name: brand.tenThuongHieu || brand.name
+        }));
+        materials.value = (materialsRes.data || []).map(material => ({
+          id: material.id,
+          name: material.tenChatLieu || material.name
+        }));
+        soles.value = (solesRes.data || []).map(sole => ({
+          id: sole.id,
+          name: sole.tenDeGiay || sole.name
         }));
         countries.value = countriesData;
       } catch (error) {
@@ -260,6 +297,8 @@ export default {
           quocGiaSanXuat: productForm.value.country,
           idDanhMuc: productForm.value.categoryId ? Number(productForm.value.categoryId) : null,
           idThuongHieu: productForm.value.brandId ? Number(productForm.value.brandId) : null,
+          idChatLieu: productForm.value.materialId ? Number(productForm.value.materialId) : null,
+          idDeGiay: productForm.value.soleId ? Number(productForm.value.soleId) : null,
           urlAnhDaiDien: productForm.value.imageUrl,
           trangThai: productForm.value.status
         };
@@ -301,6 +340,8 @@ export default {
       productForm,
       categories,
       brands,
+      materials,
+      soles,
       countries,
       imageUploading,
       imageInput,

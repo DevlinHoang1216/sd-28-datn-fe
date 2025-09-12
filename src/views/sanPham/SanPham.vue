@@ -41,6 +41,26 @@
               </option>
             </select>
           </div>
+        </div>
+        <div class="filter-row">
+          <div class="filter-group">
+            <label class="filter-label">Chất liệu</label>
+            <select v-model="filters.material" class="filter-select">
+              <option value="">Tất cả chất liệu</option>
+              <option v-for="material in materials" :key="material.id" :value="material.id">
+                {{ material.name }}
+              </option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label class="filter-label">Đế giày</label>
+            <select v-model="filters.sole" class="filter-select">
+              <option value="">Tất cả đế giày</option>
+              <option v-for="sole in soles" :key="sole.id" :value="sole.id">
+                {{ sole.name }}
+              </option>
+            </select>
+          </div>
           <div class="filter-group">
             <label class="filter-label">Trạng thái</label>
             <select v-model="filters.status" class="filter-select">
@@ -132,7 +152,6 @@
             <template #name="{ item }">
               <div class="table-product-info">
                 <span class="table-product-name">{{ item.name }}</span>
-                <span class="table-product-category">{{ item.categoryName || getCategoryName(item.categoryId) }}</span>
               </div>
             </template>
 
@@ -144,6 +163,16 @@
             <!-- Brand Column -->
             <template #brand="{ item }">
               <span class="brand-badge">{{ item.brandName || getBrandName(item.brandId) }}</span>
+            </template>
+
+            <!-- Material Column -->
+            <template #material="{ item }">
+              <span class="material-badge">{{ item.materialName || 'Không xác định' }}</span>
+            </template>
+
+            <!-- Sole Column -->
+            <template #sole="{ item }">
+              <span class="sole-badge">{{ item.soleName || 'Không xác định' }}</span>
             </template>
 
             <!-- Country Column -->
@@ -284,6 +313,18 @@
                   <span>{{ getBrandName(selectedProductDetail.brandId) }}</span>
                 </div>
                 <div class="info-group">
+                  <label>Chất liệu:</label>
+                  <span>{{ selectedProductDetail.materialName || 'Không xác định' }}</span>
+                </div>
+                <div class="info-group">
+                  <label>Đế giày:</label>
+                  <span>{{ selectedProductDetail.soleName || 'Không xác định' }}</span>
+                </div>
+                <div class="info-group">
+                  <label>Quốc gia sản xuất:</label>
+                  <span>{{ selectedProductDetail.country || 'Không xác định' }}</span>
+                </div>
+                <div class="info-group">
                   <label>Giá bán:</label>
                   <span class="price-highlight">{{ formatCurrency(selectedProductDetail.price) }}</span>
                 </div>
@@ -344,6 +385,7 @@
                   <tr>
                     <th>STT</th>
                     <th>Chất liệu</th>
+                    <th>Đế giày</th>
                     <th>Màu sắc</th>
                     <th>Kích cỡ</th>
                     <th>Giá bán</th>
@@ -355,6 +397,7 @@
                   <tr v-for="(detail, index) in productDetails" :key="detail.id">
                     <td>{{ (detailsCurrentPage * detailsPageSize) + index + 1 }}</td>
                     <td>{{ detail.material }}</td>
+                    <td>{{ detail.sole }}</td>
                     <td>{{ detail.color }}</td>
                     <td>{{ detail.size }}</td>
                     <td class="price">{{ formatCurrency(detail.price) }}</td>
@@ -520,6 +563,8 @@ export default {
       search: '',
       category: '',
       brand: '',
+      material: '',
+      sole: '',
       status: '',
       priceFrom: '',
       priceTo: '',
@@ -546,6 +591,9 @@ export default {
       { id: 6, name: 'Puma' }
     ]);
 
+    const materials = ref([]);
+    const soles = ref([]);
+
     // Table columns configuration - Updated to match API data
     const tableColumns = ref([
       { key: 'stt', label: 'STT', class: 'text-center' },
@@ -554,6 +602,8 @@ export default {
       { key: 'name', label: 'Tên sản phẩm' },
       { key: 'category', label: 'Danh mục' },
       { key: 'brand', label: 'Thương hiệu' },
+      { key: 'material', label: 'Chất liệu' },
+      { key: 'sole', label: 'Đế giày' },
       { key: 'country', label: 'Quốc gia SX' },
       { key: 'createdDate', label: 'Ngày tạo' },
       { key: 'status', label: 'Trạng thái', class: 'text-center' },
@@ -580,8 +630,12 @@ export default {
           name: product.tenSanPham,
           categoryId: product.idDanhMuc?.id,
           brandId: product.idThuongHieu?.id,
+          materialId: product.idChatLieu?.id,
+          soleId: product.idDeGiay?.id,
           categoryName: product.idDanhMuc?.tenDanhMuc,
           brandName: product.idThuongHieu?.tenThuongHieu,
+          materialName: product.idChatLieu?.tenChatLieu,
+          soleName: product.idDeGiay?.tenDeGiay,
           country: product.quocGiaSanXuat,
           status: product.deleted ? 'inactive' : 'active',
           image: product.idAnhSanPham?.urlAnh || 'https://via.placeholder.com/300x300?text=No+Image',
@@ -654,6 +708,16 @@ export default {
         result = result.filter(product => product.brandId === Number(filters.value.brand));
       }
 
+      // Material filter
+      if (filters.value.material) {
+        result = result.filter(product => product.materialId === Number(filters.value.material));
+      }
+
+      // Sole filter
+      if (filters.value.sole) {
+        result = result.filter(product => product.soleId === Number(filters.value.sole));
+      }
+
       // Status filter
       if (filters.value.status) {
         result = result.filter(product => product.status === filters.value.status);
@@ -713,6 +777,8 @@ export default {
         search: '',
         category: '',
         brand: '',
+        material: '',
+        sole: '',
         status: '',
         priceFrom: '',
         priceTo: '',
@@ -724,6 +790,29 @@ export default {
 
     const applyFilters = () => {
       toast.success(`Tìm thấy ${filteredProducts.value.length} sản phẩm phù hợp`);
+    };
+
+    // Load materials and soles data
+    const loadAttributes = async () => {
+      try {
+        const [materialsRes, solesRes] = await Promise.all([
+          productService.getAllMaterials(),
+          productService.getAllSoles()
+        ]);
+
+        materials.value = (materialsRes.data || []).map(material => ({
+          id: material.id,
+          name: material.tenChatLieu || material.name
+        }));
+
+        soles.value = (solesRes.data || []).map(sole => ({
+          id: sole.id,
+          name: sole.tenDeGiay || sole.name
+        }));
+      } catch (error) {
+        console.error('Error loading attributes:', error);
+        toast.error('Lỗi khi tải danh sách thuộc tính');
+      }
     };
 
     // Product management functions
@@ -762,7 +851,8 @@ export default {
           id: detail.id,
           productId: detail.idSanPham?.id,
           productName: detail.idSanPham?.tenSanPham,
-          material: detail.idChatLieu?.tenChatLieu || 'Không xác định',
+          material: detail.idSanPham?.idChatLieu?.tenChatLieu || 'Không xác định',
+          sole: detail.idSanPham?.idDeGiay?.tenDeGiay || 'Không xác định',
           color: detail.idMauSac?.tenMauSac || 'Không xác định',
           size: detail.idKichCo?.tenKichCo || 'Không xác định',
           price: detail.giaBan || 0,
@@ -930,6 +1020,7 @@ export default {
     // Initialize data on component mount
     onMounted(() => {
       fetchProducts();
+      loadAttributes();
     });
 
     return {
@@ -960,6 +1051,8 @@ export default {
       // Data
       categories,
       brands,
+      materials,
+      soles,
       products,
       filteredProducts,
       tableColumns,
@@ -1220,11 +1313,13 @@ export default {
   padding: 4px 12px;
   background: #dbeafe;
   color: #1e40af;
-  border-radius: 20px;
-  font-size: 12px;
+  border-radius: 16px;
+  font-size: 11px;
   font-weight: 600;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  white-space: nowrap;
 }
 
 .brand-badge {
@@ -1232,11 +1327,41 @@ export default {
   padding: 4px 12px;
   background: #f3e8ff;
   color: #7c3aed;
-  border-radius: 20px;
-  font-size: 12px;
+  border-radius: 16px;
+  font-size: 11px;
   font-weight: 600;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.material-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  background: #ecfdf5;
+  color: #059669;
+  border-radius: 16px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+.sole-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  background: #fef3c7;
+  color: #d97706;
+  border-radius: 16px;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
 }
 
 .product-code {
