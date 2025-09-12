@@ -319,93 +319,6 @@
       </div>
     </div>
 
-    <!-- Add/Edit Product Modal -->
-    <div v-if="showAddProductModal || showEditProductModal" class="modal-overlay" @click="closeProductForm">
-      <div class="modal-container large" @click.stop>
-        <div class="modal-header">
-          <h3 class="modal-title">
-            <iconify-icon icon="solar:box-bold-duotone"></iconify-icon>
-            {{ showAddProductModal ? 'Thêm Sản Phẩm Mới' : 'Chỉnh Sửa Sản Phẩm' }}
-          </h3>
-          <button class="modal-close" @click="closeProductForm">
-            <iconify-icon icon="solar:close-circle-bold"></iconify-icon>
-          </button>
-        </div>
-        <div class="modal-content">
-          <form @submit.prevent="saveProduct" class="product-form">
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label required">Tên sản phẩm</label>
-                <input type="text" v-model="productForm.name" class="form-input" placeholder="Nhập tên sản phẩm"
-                  required />
-              </div>
-              <div class="form-group">
-                <label class="form-label required">Mã sản phẩm</label>
-                <input type="text" v-model="productForm.code" class="form-input" placeholder="Nhập mã sản phẩm"
-                  required />
-              </div>
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label required">Danh mục</label>
-                <select v-model="productForm.categoryId" class="form-input" required>
-                  <option value="">Chọn danh mục</option>
-                  <option v-for="category in categories" :key="category.id" :value="category.id">
-                    {{ category.name }}
-                  </option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label class="form-label required">Thương hiệu</label>
-                <select v-model="productForm.brandId" class="form-input" required>
-                  <option value="">Chọn thương hiệu</option>
-                  <option v-for="brand in brands" :key="brand.id" :value="brand.id">
-                    {{ brand.name }}
-                  </option>
-                </select>
-              </div>
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label required">Giá bán</label>
-                <input type="number" v-model="productForm.price" class="form-input" placeholder="Nhập giá bán" min="0"
-                  required />
-              </div>
-              <div class="form-group">
-                <label class="form-label required">Số lượng tồn kho</label>
-                <input type="number" v-model="productForm.stock" class="form-input" placeholder="Nhập số lượng" min="0"
-                  required />
-              </div>
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label class="form-label">URL hình ảnh</label>
-                <input type="url" v-model="productForm.image" class="form-input" placeholder="Nhập URL hình ảnh" />
-              </div>
-              <div class="form-group">
-                <label class="form-label">Trạng thái</label>
-                <select v-model="productForm.status" class="form-input">
-                  <option value="active">Đang bán</option>
-                  <option value="inactive">Ngừng bán</option>
-                </select>
-              </div>
-            </div>
-            <div class="form-group full-width">
-              <label class="form-label">Mô tả sản phẩm</label>
-              <textarea v-model="productForm.description" class="form-textarea" placeholder="Nhập mô tả sản phẩm"
-                rows="4"></textarea>
-            </div>
-          </form>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn secondary" @click="closeProductForm">Hủy</button>
-          <button type="button" class="btn primary" @click="saveProduct">
-            <iconify-icon icon="solar:check-circle-bold"></iconify-icon>
-            {{ showAddProductModal ? 'Thêm sản phẩm' : 'Cập nhật' }}
-          </button>
-        </div>
-      </div>
-    </div>
 
     <!-- Product Details Modal -->
     <div v-if="showProductDetailsModal" class="modal-overlay" @click="closeProductDetailsModal">
@@ -554,7 +467,7 @@ export default {
       {
         label: 'Thêm sản phẩm',
         type: 'primary',
-        handler: () => showAddProductModal.value = true
+        handler: () => router.push('/san-pham/them')
       },
       {
         label: 'Xuất Excel',
@@ -596,8 +509,6 @@ export default {
 
     // Modals
     const showDetailModal = ref(false);
-    const showAddProductModal = ref(false);
-    const showEditProductModal = ref(false);
     const showDeleteModal = ref(false);
 
     // Selected items
@@ -616,18 +527,6 @@ export default {
       sortBy: 'newest'
     });
 
-    // Form data
-    const productForm = ref({
-      name: '',
-      code: '',
-      categoryId: '',
-      brandId: '',
-      price: '',
-      stock: '',
-      image: '',
-      status: 'active',
-      description: ''
-    });
 
     // Sample data
     const categories = ref([
@@ -685,7 +584,7 @@ export default {
           brandName: product.idThuongHieu?.tenThuongHieu,
           country: product.quocGiaSanXuat,
           status: product.deleted ? 'inactive' : 'active',
-          image: product.urlAnhDaiDien || 'https://via.placeholder.com/300x300?text=No+Image',
+          image: product.idAnhSanPham?.urlAnh || 'https://via.placeholder.com/300x300?text=No+Image',
           description: product.moTaSanPham,
           createdAt: product.ngayTao,
           createdDate: product.ngayTao
@@ -737,7 +636,7 @@ export default {
 
       // Search filter
       if (filters.value.search.trim()) {
-        const search = filters.value.search.toLowerCase();
+        const search = filters.value.search.trim().toLowerCase();
         result = result.filter(product =>
           product.name.toLowerCase().includes(search) ||
           product.code.toLowerCase().includes(search) ||
@@ -930,15 +829,7 @@ export default {
     };
 
     const editProduct = (product) => {
-      productForm.value = {
-        ...product,
-        categoryId: String(product.categoryId),
-        brandId: String(product.brandId),
-        price: String(product.price),
-        stock: String(product.stock)
-      };
-      showEditProductModal.value = true;
-      showDetailModal.value = false;
+      router.push(`/san-pham/sua/${product.id}`);
     };
 
     const deleteProduct = (product) => {
@@ -977,58 +868,25 @@ export default {
       productToDelete.value = null;
     };
 
-    const closeProductForm = () => {
-      showAddProductModal.value = false;
-      showEditProductModal.value = false;
-      productForm.value = {
-        name: '',
-        code: '',
-        categoryId: '',
-        brandId: '',
-        price: '',
-        stock: '',
-        image: '',
-        status: 'active',
-        description: ''
-      };
-    };
-
-    const saveProduct = () => {
-      if (!productForm.value.name || !productForm.value.code) {
-        toast.error('Vui lòng điền đầy đủ thông tin bắt buộc');
-        return;
-      }
-
-      const productData = {
-        ...productForm.value,
-        categoryId: Number(productForm.value.categoryId),
-        brandId: Number(productForm.value.brandId),
-        price: Number(productForm.value.price),
-        stock: Number(productForm.value.stock),
-        createdAt: new Date().toISOString()
-      };
-
-      if (showAddProductModal.value) {
-        // Add new product
-        productData.id = Math.max(...products.value.map(p => p.id)) + 1;
-        products.value.unshift(productData);
-        toast.success(`Đã thêm sản phẩm "${productData.name}" thành công`);
-      } else {
-        // Update existing product
-        const index = products.value.findIndex(p => p.id === productData.id);
-        if (index > -1) {
-          products.value[index] = { ...products.value[index], ...productData };
-          toast.success(`Đã cập nhật sản phẩm "${productData.name}" thành công`);
-        }
-      }
-
-      closeProductForm();
-    };
 
     const exportToExcel = () => {
       // In real app, implement Excel export functionality
       toast.info('Tính năng xuất Excel đang được phát triển');
       // Add new code here
+      const data = filteredProducts.value.map(product => ({
+        'Mã sản phẩm': product.code,
+        'Tên sản phẩm': product.name,
+        'Danh mục': getCategoryName(product.categoryId),
+        'Thương hiệu': getBrandName(product.brandId),
+        'Giá bán': formatCurrency(product.price),
+        'Số lượng tồn': product.stock,
+        'Trạng thái': getStatusLabel(product.status)
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(data);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Sản phẩm');
+      XLSX.writeFile(workbook, 'san-pham.xlsx');
       console.log('Export to Excel button clicked');
     };
 
@@ -1089,8 +947,6 @@ export default {
 
       // Modals
       showDetailModal,
-      showAddProductModal,
-      showEditProductModal,
       showDeleteModal,
 
       // Selected items
@@ -1100,8 +956,6 @@ export default {
       // Filters
       filters,
 
-      // Form
-      productForm,
 
       // Data
       categories,
@@ -1140,8 +994,6 @@ export default {
       // Other functions
       deleteProduct,
       confirmDelete,
-      closeProductForm,
-      saveProduct,
       exportToExcel
     };
   }
@@ -1151,8 +1003,6 @@ export default {
 <style scoped>
 /* ===== GENERAL STYLES ===== */
 .quan-ly-san-pham-container {
-  padding: 24px;
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   min-height: 100vh;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }

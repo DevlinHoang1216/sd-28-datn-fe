@@ -52,6 +52,15 @@ export const productService = {
     })
   },
 
+  // Get product by ID
+  getProductById: (id) => productAPI.get(`/san-pham/${id}`),
+
+  // Update product
+  updateProduct: (id, data) => productAPI.put(`/san-pham/${id}`, data),
+
+  // Create product
+  createProduct: (data) => productAPI.post('/san-pham', data),
+
   // Product details API functions
   // Get paginated product details by product ID
   getProductDetailsPaged: (productId, params = {}) => {
@@ -227,6 +236,31 @@ export const productService = {
     const params = { name }
     if (excludeId) params.excludeId = excludeId
     return productAPI.get('/de-giay/check-name-exists', { params })
+  },
+
+  // Image upload API (fallback to simple upload if Cloudinary fails)
+  uploadImage: async (file) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    
+    try {
+      // Try Cloudinary upload first
+      const response = await productAPI.post('/upload/image', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+      return response.data.url
+    } catch (error) {
+      console.warn('Cloudinary upload failed, trying simple upload:', error)
+      // Fallback to simple upload
+      const response = await productAPI.post('/simple-upload/image', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+      return response.data.url
+    }
   },
 }
 
