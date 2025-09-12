@@ -574,24 +574,31 @@ export default {
     },
 
     async toggleCouponStatus(coupon) {
-      try {
-        const index = this.allCoupons.findIndex(c => c.id === coupon.id);
-        if (index !== -1) {
-          const newStatus = coupon.tenTrangThai === 'DANG_DIEN_RA' ? 'DA_KET_THUC' : 'DANG_DIEN_RA';
-          this.allCoupons[index] = {
-            ...this.allCoupons[index],
-            tenTrangThai: newStatus,
-            ngayCapNhat: new Date().toISOString()
-          };
-        }
-        
-        const statusText = coupon.tenTrangThai === 'DANG_DIEN_RA' ? 'vô hiệu hóa' : 'kích hoạt';
-        this.toast.success(`Đã ${statusText} phiếu giảm giá ${coupon.tenPhieuGiamGia}!`);
-      } catch (error) {
-        console.error('Lỗi khi cập nhật trạng thái phiếu giảm giá:', error);
-        this.toast.error(`Không thể cập nhật trạng thái: ${error.message}`);
+    try {
+      // Gọi API để chuyển đổi trạng thái
+      const response = await axios.put(`http://localhost:8080/api/phieu-giam-gia/delete/${coupon.id}`);
+      
+      // Cập nhật dữ liệu phiếu giảm giá cục bộ một cách phản ứng
+      const index = this.allCoupons.findIndex(c => c.id === coupon.id);
+      if (index !== -1) {
+        this.allCoupons[index] = {
+          ...this.allCoupons[index],
+          tenTrangThai: response.data.trangThai ? 'DANG_DIEN_RA' : 'DA_KET_THUC',
+          ngayCapNhat: new Date().toISOString()
+        };
+        // Buộc Vue làm mới mảng để đảm bảo tính phản ứng
+        this.allCoupons = [...this.allCoupons];
       }
-    },
+      
+      // Hiển thị thông báo thành công
+      const statusText = response.data.trangThai ? 'kích hoạt' : 'vô hiệu hóa';
+      this.toast.success(`Đã ${statusText} phiếu giảm giá ${coupon.tenPhieuGiamGia}!`, { timeout: 3000 });
+    } catch (error) {
+      console.error('Lỗi khi cập nhật trạng thái phiếu giảm giá:', error);
+      const errorMsg = error.response?.data || 'Không thể cập nhật trạng thái';
+      this.toast.error(`Lỗi: ${errorMsg}`, { timeout: 5000 });
+    }
+  },
 
     // Mapping functions
     mapLoaiApDungText(value) {
