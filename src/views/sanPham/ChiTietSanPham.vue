@@ -62,15 +62,6 @@
             </select>
           </div>
           <div class="filter-group">
-            <label class="filter-label">Sản phẩm gốc</label>
-            <select v-model="filters.baseProduct" class="filter-select">
-              <option value="">Tất cả sản phẩm</option>
-              <option v-for="product in baseProducts" :key="product.id" :value="product.id">
-                {{ product.name }}
-              </option>
-            </select>
-          </div>
-          <div class="filter-group">
             <label class="filter-label">Thương hiệu</label>
             <select v-model="filters.brand" class="filter-select">
               <option value="">Tất cả thương hiệu</option>
@@ -198,9 +189,7 @@
               </div>
               <div class="attribute-item">
                 <span class="attr-label">Màu:</span>
-                <span class="attr-value color-badge" :style="{ backgroundColor: item.idMauSac?.hex || '#CCCCCC' }">
-                  {{ item.idMauSac?.tenMauSac || 'N/A' }}
-                </span>
+                <span class="color-badge" :style="{ backgroundColor: item.idMauSac?.hex || '#CCCCCC' }" :title="item.idMauSac?.tenMauSac || 'N/A'"></span>
               </div>
             </div>
           </template>
@@ -230,8 +219,8 @@
 
           <!-- Status Column -->
           <template #status="{ item }">
-            <span class="status-badge" :class="item.trangThaiSanPhamRieng">
-              {{ getStatusLabel(item.trangThaiSanPhamRieng) }}
+            <span class="status-badge" :class="getStatusClass(item.soLuongTonKho)">
+              {{ getStatusLabel(item.soLuongTonKho) }}
             </span>
           </template>
 
@@ -481,26 +470,26 @@ export default {
       }
     ]);
 
-    const pageStats = ref([
+    const pageStats = computed(() => [
       {
-        value: '156',
+        value: totalElements.value.toString(),
         label: 'Tổng chi tiết',
         icon: 'solar:widget-4-bold-duotone'
       },
       {
-        value: '24',
-        label: 'Biến thể mới',
-        icon: 'solar:add-circle-bold-duotone'
+        value: productDetails.value.filter(item => (item.soLuongTonKho || 0) > 5).length.toString(),
+        label: 'Còn hàng',
+        icon: 'solar:check-circle-bold-duotone'
       },
       {
-        value: '8',
+        value: productDetails.value.filter(item => (item.soLuongTonKho || 0) <= 5 && (item.soLuongTonKho || 0) > 0).length.toString(),
         label: 'Sắp hết hàng',
         icon: 'solar:danger-bold-duotone'
       },
       {
-        value: '95%',
-        label: 'Tỷ lệ còn hàng',
-        icon: 'solar:chart-square-bold-duotone'
+        value: productDetails.value.filter(item => (item.soLuongTonKho || 0) === 0).length.toString(),
+        label: 'Hết hàng',
+        icon: 'solar:close-circle-bold-duotone'
       }
     ]);
 
@@ -531,7 +520,7 @@ export default {
       color: '',
       material: '',
       sole: '',
-      baseProduct: '',
+      brand: '',
       status: '',
       priceFrom: '',
       priceTo: '',
@@ -605,9 +594,9 @@ export default {
         result = result.filter(item => item.idChatLieu?.id === Number(filters.value.material));
       }
 
-      // Base Product filter
-      if (filters.value.baseProduct) {
-        result = result.filter(item => item.idSanPham?.id === Number(filters.value.baseProduct));
+      // Brand filter
+      if (filters.value.brand) {
+        result = result.filter(item => item.idSanPham?.idThuongHieu?.id === Number(filters.value.brand));
       }
 
       // Status filter
@@ -705,16 +694,16 @@ export default {
       return category ? category.name : 'N/A';
     };
 
-    const getStatusLabel = (status) => {
-      const statusLabels = {
-        'Còn hàng': 'Còn hàng',
-        'Hết hàng': 'Hết hàng',
-        'Ngừng bán': 'Ngừng bán',
-        active: 'Đang bán',
-        inactive: 'Ngừng bán',
-        out_of_stock: 'Hết hàng'
-      };
-      return statusLabels[status] || status;
+    const getStatusLabel = (stock) => {
+      if (stock === 0) return 'Hết hàng';
+      if (stock <= 5) return 'Sắp hết hàng';
+      return 'Còn hàng';
+    };
+
+    const getStatusClass = (stock) => {
+      if (stock === 0) return 'out-of-stock';
+      if (stock <= 5) return 'low-stock';
+      return 'in-stock';
     };
 
     const getStockClass = (stock) => {
@@ -731,7 +720,7 @@ export default {
         color: '',
         material: '',
         sole: '',
-        baseProduct: '',
+        brand: '',
         status: '',
         priceFrom: '',
         priceTo: '',
@@ -1050,7 +1039,6 @@ export default {
         }));
       } catch (err) {
         console.error('Error loading base products:', err);
-        toast.error('Không thể tải danh sách sản phẩm gốc');
       }
     };
 
@@ -1078,7 +1066,10 @@ export default {
           id: material.id,
           name: material.tenChatLieu || material.name
         }));
-        soles.value = solesRes.data || [];
+        soles.value = (solesRes.data || []).map(sole => ({
+          id: sole.id,
+          name: sole.tenDeGiay || sole.name
+        }));
         brands.value = (brandsRes.data || []).map(brand => ({
           id: brand.id,
           name: brand.tenThuongHieu || brand.name
@@ -1218,6 +1209,7 @@ export default {
       getBrandName,
       getCategoryName,
       getStatusLabel,
+      getStatusClass,
       getStockClass,
       resetFilters,
       
@@ -1506,12 +1498,12 @@ export default {
 }
 
 .color-badge {
-  padding: 2px 8px;
-  border-radius: 12px;
-  color: white;
-  font-size: 11px;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(0, 0, 0, 0.1);
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  cursor: pointer;
 }
 
 .material-sole-info,
@@ -1568,23 +1560,25 @@ export default {
 }
 
 .status-badge {
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 14px;
-  font-weight: 500;
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
 }
 
-.status-badge.active {
+.status-badge.in-stock {
   background: #dcfce7;
   color: #166534;
 }
 
-.status-badge.inactive {
-  background: #f3f4f6;
-  color: #374151;
+.status-badge.low-stock {
+  background: #fef3c7;
+  color: #92400e;
 }
 
-.status-badge.out_of_stock {
+.status-badge.out-of-stock {
   background: #fee2e2;
   color: #991b1b;
 }
@@ -1932,15 +1926,12 @@ export default {
 }
 
 .color-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.85rem;
-  font-weight: 500;
-  color: white;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(0, 0, 0, 0.2);
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 0, 0, 0.1);
+  cursor: pointer;
 }
 
 .material-badge {

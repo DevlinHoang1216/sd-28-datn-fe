@@ -295,7 +295,7 @@ export default {
 .data-table th {
   background: #f8fafc;
   padding: 16px 12px;
-  text-align: left;
+  text-align: center;
   font-weight: 600;
   color: #64748b;
   font-size: 0.875rem;
@@ -303,10 +303,35 @@ export default {
   white-space: nowrap;
 }
 
+.data-table th > * {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
 .data-table td {
   padding: 16px 12px;
   border-bottom: 1px solid #f1f5f9;
   vertical-align: middle;
+  text-align: center;
+}
+
+.data-table td > * {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* Đảm bảo các button, badge, icon được căn giữa */
+.data-table td .btn,
+.data-table td .badge,
+.data-table td .status-badge,
+.data-table td .action-buttons,
+.data-table td iconify-icon {
+  margin: 0 auto;
 }
 
 .data-table tbody tr:hover {

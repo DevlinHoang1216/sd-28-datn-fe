@@ -262,6 +262,10 @@ const navigateToAddEmployee = () => {
   router.push('/them-nhan-vien')
 }
 
+const editNhanVien = (employee) => {
+  router.push(`/nhan-vien/edit/${employee.id}`)
+}
+
 const openAddModal = () => {
   resetNewEmployeeForm()
   showAddModal.value = true
@@ -693,7 +697,7 @@ onMounted(() => {
             <template #actions="{ item }">
               <div class="flex justify-center items-center gap-3">
                 <button
-                  @click="openEditModal(item)"
+                  @click="editNhanVien(item)"
                   class="action-btn edit"
                   title="Sửa"
                 >

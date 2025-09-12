@@ -13,7 +13,6 @@
     <div class="form-section">
       <div class="form-header">
         <h3 class="form-title">
-          <iconify-icon icon="solar:ruler-bold-duotone"></iconify-icon>
           {{ isEdit ? 'Chỉnh Sửa Kích Cỡ' : 'Thêm Kích Cỡ Mới' }}
         </h3>
       </div>

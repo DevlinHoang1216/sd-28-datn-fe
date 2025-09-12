@@ -13,7 +13,6 @@
     <div class="form-section">
       <div class="form-header">
         <h3 class="form-title">
-          <iconify-icon icon="solar:folder-2-bold-duotone"></iconify-icon>
           {{ isEdit ? 'Chỉnh Sửa Danh Mục' : 'Thêm Danh Mục Mới' }}
         </h3>
       </div>
