@@ -268,7 +268,7 @@
         {
           label: 'Thêm đế giày',
           type: 'primary',
-          handler: () => showAddSoleModal.value = true
+          handler: () => router.push('/thuoc-tinh/de-giay/them')
         },
         {
           label: 'Xuất Excel',
@@ -384,7 +384,7 @@
         try {
           loading.value = true;
           const params = {
-            keyword: filters.value.search,
+            keyword: filters.value.search.trim().replace(/\s+/g, ' '),
             page: pagination.value.page,
             size: pagination.value.size,
             sortBy: getSortBy(),
@@ -423,8 +423,7 @@
       };
   
       const editSole = (sole) => {
-        soleForm.value = { ...sole };
-        showEditSoleModal.value = true;
+        router.push(`/thuoc-tinh/de-giay/sua/${sole.id}`);
       };
   
       const toggleSoleStatus = async (sole) => {
@@ -560,8 +559,6 @@
   <style scoped>
   /* ===== CONTAINER ===== */
   .quan-ly-de-giay-container {
-    padding: 24px;
-    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
     min-height: 100vh;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   }

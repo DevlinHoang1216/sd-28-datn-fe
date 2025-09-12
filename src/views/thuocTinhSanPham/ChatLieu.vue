@@ -116,10 +116,10 @@
 
     <!-- Add/Edit Material Modal -->
     <div v-if="showAddMaterialModal || showEditMaterialModal" class="modal-overlay" @click="closeMaterialForm">
-      <div class="modal-container" @click.stop>
+      <div class="modal-container" @click.stop">
         <div class="modal-header">
           <h3 class="modal-title">
-            <iconify-icon icon="solar:palette-2-bold-duotone"></iconify-icon>
+            <iconify-icon icon="solar:layers-bold-duotone"></iconify-icon>
             {{ showAddMaterialModal ? 'Thêm Chất Liệu Mới' : 'Chỉnh Sửa Chất Liệu' }}
           </h3>
           <button class="modal-close" @click="closeMaterialForm">
@@ -155,7 +155,7 @@
                 <label class="form-label">Trạng thái</label>
                 <select v-model="materialForm.status" class="form-input">
                   <option value="active">Đang sử dụng</option>
-                  <option value="inactive">Ngừng sử dụng</option>
+                  <option value="inactive">Ngưng sử dụng</option>
                 </select>
               </div>
             </div>
@@ -234,7 +234,7 @@ export default {
       {
         label: 'Thêm chất liệu',
         type: 'primary',
-        handler: () => showAddMaterialModal.value = true
+        handler: () => router.push('/thuoc-tinh/chat-lieu/them')
       },
       {
         label: 'Xuất Excel',
@@ -290,19 +290,19 @@ export default {
     // Selected items
     const materialToDelete = ref(null);
 
-    // Filters
-    const filters = ref({
-      search: '',
-      status: '',
-      sortBy: 'newest'
-    });
-
     // Form data
     const materialForm = ref({
       name: '',
       code: '',
       status: 'active',
       description: ''
+    });
+
+    // Filters
+    const filters = ref({
+      search: '',
+      status: '',
+      sortBy: 'newest'
     });
 
     // API data
@@ -368,14 +368,7 @@ export default {
     };
 
     const editMaterial = (material) => {
-      materialForm.value = {
-        id: material.id,
-        name: material.name,
-        code: material.code,
-        status: material.status,
-        description: material.description
-      };
-      showEditMaterialModal.value = true;
+      router.push(`/thuoc-tinh/chat-lieu/sua/${material.id}`);
     };
 
     const toggleMaterialStatus = async (material) => {
@@ -399,31 +392,31 @@ export default {
       showDeleteModal.value = true;
     };
 
+
     const saveMaterial = async () => {
       try {
         loading.value = true;
+        const materialData = {
+          tenChatLieu: materialForm.value.name,
+          maChatLieu: materialForm.value.code || generateMaterialCode(),
+          description: materialForm.value.description
+        };
+
         if (showAddMaterialModal.value) {
           // Add new material
-          const materialData = {
-            tenChatLieu: materialForm.value.name,
-            maChatLieu: materialForm.value.code
-          };
           await productService.createMaterial(materialData);
           toast.success('Thêm chất liệu mới thành công!');
         } else {
           // Edit existing material
-          const materialData = {
-            tenChatLieu: materialForm.value.name,
-            maChatLieu: materialForm.value.code
-          };
           await productService.updateMaterial(materialForm.value.id, materialData);
           toast.success('Cập nhật chất liệu thành công!');
         }
+        
         closeMaterialForm();
         await loadMaterials();
       } catch (error) {
-        toast.error('Lỗi khi lưu chất liệu: ' + (error.response?.data || error.message));
         console.error('Error saving material:', error);
+        toast.error('Lỗi khi lưu chất liệu. Vui lòng thử lại.');
       } finally {
         loading.value = false;
       }
@@ -459,12 +452,13 @@ export default {
     };
 
 
+
     // API Methods
     const loadMaterials = async () => {
       try {
         loading.value = true;
         const params = {
-          keyword: filters.value.search,
+          keyword: filters.value.search.trim().replace(/\s+/g, ' '),
           page: pagination.value.page,
           size: pagination.value.size,
           sortBy: getSortBy(),
@@ -535,8 +529,8 @@ export default {
       showEditMaterialModal,
       showDeleteModal,
       materialToDelete,
-      filters,
       materialForm,
+      filters,
       materials,
       
       // Computed
@@ -564,10 +558,8 @@ export default {
 </script>
 
 <style scoped>
-/* ===== GENERAL STYLES ===== */
+/* ===== CONTAINER ===== */
 .quan-ly-chat-lieu-container {
-  padding: 24px;
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   min-height: 100vh;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
@@ -1014,36 +1006,46 @@ export default {
 /* ===== WARNING TEXT ===== */
 .warning-text {
   color: #dc2626;
-  font-size: 0.9rem;
-  font-weight: 500;
-  margin-top: 8px;
 }
 
-/* ===== RESPONSIVE DESIGN ===== */
+/* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
   .quan-ly-chat-lieu-container {
-    padding: 12px;
+    padding: 16px;
   }
   
   .filter-section,
   .materials-section {
-    padding: 16px;
-    border-radius: 12px;
+    padding: 20px;
   }
   
-  .filter-row {
+  .filter-content {
     grid-template-columns: 1fr;
-    gap: 16px;
   }
   
+  .filter-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .section-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .modal-container {
+    width: 95%;
+    margin: 20px;
+  }
+
   .form-row {
     grid-template-columns: 1fr;
   }
-  
-  .modal-container.large {
-    width: 95vw;
-    margin: 10px;
+
+  .modal-header,
+  .modal-content,
+  .modal-footer {
+    padding: 20px;
   }
-  
 }
 </style>
