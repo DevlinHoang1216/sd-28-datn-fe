@@ -93,7 +93,11 @@ export const productService = {
   createMaterial: (data) => productAPI.post('/chat-lieu', data),
   updateMaterial: (id, data) => productAPI.put(`/chat-lieu/${id}`, data),
   toggleMaterialStatus: (id) => productAPI.put(`/chat-lieu/${id}/toggle-status`),
-  deleteMaterial: (id) => productAPI.delete(`/chat-lieu/${id}`),
+  checkMaterialNameExists: (name, excludeId = null) => {
+    const params = { name }
+    if (excludeId) params.excludeId = excludeId
+    return productAPI.get('/chat-lieu/check-name-exists', { params })
+  },
 
   // Danh Muc (Category) APIs
   getCategoriesPaged: (params = {}) => {
@@ -114,7 +118,11 @@ export const productService = {
   createCategory: (data) => productAPI.post('/danh-muc', data),
   updateCategory: (id, data) => productAPI.put(`/danh-muc/${id}`, data),
   toggleCategoryStatus: (id) => productAPI.put(`/danh-muc/${id}/toggle-status`),
-  deleteCategory: (id) => productAPI.delete(`/danh-muc/${id}`),
+  checkCategoryNameExists: (name, excludeId = null) => {
+    const params = { name }
+    if (excludeId) params.excludeId = excludeId
+    return productAPI.get('/danh-muc/check-name-exists', { params })
+  },
 
   // Kich Co (Size) APIs
   getSizesPaged: (params = {}) => {
@@ -135,7 +143,11 @@ export const productService = {
   createSize: (data) => productAPI.post('/kich-co', data),
   updateSize: (id, data) => productAPI.put(`/kich-co/${id}`, data),
   toggleSizeStatus: (id) => productAPI.put(`/kich-co/${id}/toggle-status`),
-  deleteSize: (id) => productAPI.delete(`/kich-co/${id}`),
+  checkSizeNameExists: (name, excludeId = null) => {
+    const params = { name }
+    if (excludeId) params.excludeId = excludeId
+    return productAPI.get('/kich-co/check-name-exists', { params })
+  },
 
   // Mau Sac (Color) APIs
   getColorsPaged: (params = {}) => {
@@ -156,7 +168,16 @@ export const productService = {
   createColor: (data) => productAPI.post('/mau-sac', data),
   updateColor: (id, data) => productAPI.put(`/mau-sac/${id}`, data),
   toggleColorStatus: (id) => productAPI.put(`/mau-sac/${id}/toggle-status`),
-  deleteColor: (id) => productAPI.delete(`/mau-sac/${id}`),
+  checkColorNameExists: (name, excludeId = null) => {
+    const params = { name }
+    if (excludeId) params.excludeId = excludeId
+    return productAPI.get('/mau-sac/check-name-exists', { params })
+  },
+  checkColorNameAndHexExists: (name, hex, excludeId = null) => {
+    const params = { name, hex }
+    if (excludeId) params.excludeId = excludeId
+    return productAPI.get('/mau-sac/check-name-and-hex-exists', { params })
+  },
 
   // Thuong Hieu (Brand) APIs
   getBrandsPaged: (params = {}) => {
@@ -177,7 +198,11 @@ export const productService = {
   createBrand: (data) => productAPI.post('/thuong-hieu', data),
   updateBrand: (id, data) => productAPI.put(`/thuong-hieu/${id}`, data),
   toggleBrandStatus: (id) => productAPI.put(`/thuong-hieu/${id}/toggle-status`),
-  deleteBrand: (id) => productAPI.delete(`/thuong-hieu/${id}`),
+  checkBrandNameExists: (name, excludeId = null) => {
+    const params = { name }
+    if (excludeId) params.excludeId = excludeId
+    return productAPI.get('/thuong-hieu/check-name-exists', { params })
+  },
 
   // De Giay (Shoe Sole) APIs
   getSolesPaged: (params = {}) => {
@@ -198,7 +223,11 @@ export const productService = {
   createSole: (data) => productAPI.post('/de-giay', data),
   updateSole: (id, data) => productAPI.put(`/de-giay/${id}`, data),
   toggleSoleStatus: (id) => productAPI.put(`/de-giay/${id}/toggle-status`),
-  deleteSole: (id) => productAPI.delete(`/de-giay/${id}`),
+  checkSoleNameExists: (name, excludeId = null) => {
+    const params = { name }
+    if (excludeId) params.excludeId = excludeId
+    return productAPI.get('/de-giay/check-name-exists', { params })
+  },
 }
 
 export default productService

@@ -116,7 +116,7 @@
 
     <!-- Add/Edit Size Modal -->
     <div v-if="showAddSizeModal || showEditSizeModal" class="modal-overlay" @click="closeSizeForm">
-      <div class="modal-container" @click.stop>
+      <div class="modal-container" @click.stop">
         <div class="modal-header">
           <h3 class="modal-title">
             <iconify-icon icon="solar:ruler-bold-duotone"></iconify-icon>
@@ -155,7 +155,7 @@
                 <label class="form-label">Trạng thái</label>
                 <select v-model="sizeForm.status" class="form-input">
                   <option value="active">Đang sử dụng</option>
-                  <option value="inactive">Ngừng sử dụng</option>
+                  <option value="inactive">Ngưng sử dụng</option>
                 </select>
               </div>
             </div>
@@ -227,14 +227,9 @@ export default {
     const showAddSizeModal = ref(false);
     const showEditSizeModal = ref(false);
     const showDeleteModal = ref(false);
-    const sizeToDelete = ref(null);
 
-    // Filters
-    const filters = ref({
-      search: '',
-      status: '',
-      sortBy: 'newest'
-    });
+    // Selected items
+    const sizeToDelete = ref(null);
 
     // Form data
     const sizeForm = ref({
@@ -242,6 +237,13 @@ export default {
       code: '',
       status: 'active',
       description: ''
+    });
+
+    // Filters
+    const filters = ref({
+      search: '',
+      status: '',
+      sortBy: 'newest'
     });
 
     // API data
@@ -265,7 +267,7 @@ export default {
       {
         label: 'Thêm kích cỡ',
         type: 'primary',
-        handler: () => showAddSizeModal.value = true
+        handler: () => router.push('/thuoc-tinh/kich-co/them')
       },
       {
         label: 'Xuất Excel',
@@ -313,7 +315,7 @@ export default {
 
       // Search filter
       if (filters.value.search.trim()) {
-        const search = filters.value.search.toLowerCase();
+        const search = filters.value.search.trim().replace(/\s+/g, ' ').toLowerCase();
         result = result.filter(size => 
           size.name.toLowerCase().includes(search) ||
           size.code.toLowerCase().includes(search) ||
@@ -403,8 +405,7 @@ export default {
     };
 
     const editSize = (size) => {
-      sizeForm.value = { ...size };
-      showEditSizeModal.value = true;
+      router.push(`/thuoc-tinh/kich-co/sua/${size.id}`);
     };
 
     const toggleSizeStatus = async (size) => {
@@ -428,29 +429,31 @@ export default {
       showDeleteModal.value = true;
     };
 
+
     const saveSize = async () => {
       try {
         loading.value = true;
+        const sizeData = {
+          tenKichCo: sizeForm.value.name,
+          maKichCo: sizeForm.value.code || generateSizeCode(),
+          description: sizeForm.value.description
+        };
+
         if (showAddSizeModal.value) {
-          const sizeData = {
-            tenKichCo: sizeForm.value.name,
-            maKichCo: sizeForm.value.code
-          };
+          // Add new size
           await productService.createSize(sizeData);
           toast.success('Thêm kích cỡ mới thành công!');
         } else {
-          const sizeData = {
-            tenKichCo: sizeForm.value.name,
-            maKichCo: sizeForm.value.code
-          };
+          // Edit existing size
           await productService.updateSize(sizeForm.value.id, sizeData);
           toast.success('Cập nhật kích cỡ thành công!');
         }
+        
         closeSizeForm();
         await loadSizes();
       } catch (error) {
-        toast.error('Lỗi khi lưu kích cỡ: ' + (error.response?.data || error.message));
         console.error('Error saving size:', error);
+        toast.error('Lỗi khi lưu kích cỡ. Vui lòng thử lại.');
       } finally {
         loading.value = false;
       }
@@ -485,12 +488,13 @@ export default {
       };
     };
 
+
     // API Methods
     const loadSizes = async () => {
       try {
         loading.value = true;
         const params = {
-          keyword: filters.value.search,
+          keyword: filters.value.search.trim().replace(/\s+/g, ' '),
           page: pagination.value.page,
           size: pagination.value.size,
           sortBy: getSortBy(),
@@ -568,8 +572,8 @@ export default {
       showEditSizeModal,
       showDeleteModal,
       sizeToDelete,
-      filters,
       sizeForm,
+      filters,
       sizes,
       
       // Computed
@@ -599,8 +603,6 @@ export default {
 <style scoped>
 /* ===== CONTAINER ===== */
 .quan-ly-kich-co-container {
-  padding: 24px;
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   min-height: 100vh;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
@@ -826,54 +828,28 @@ export default {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 10000;
-  padding: 20px;
-  backdrop-filter: blur(4px);
-  animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  z-index: 1000;
+  animation: fadeIn 0.2s ease-out;
 }
 
 .modal-container {
   background: white;
   border-radius: 20px;
-  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.15);
-  max-width: 90vw;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+  max-width: 600px;
+  width: 90%;
   max-height: 90vh;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  animation: slideUp 0.3s ease;
-}
-
-@keyframes slideUp {
-  from {
-    transform: translateY(30px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+  animation: slideUp 0.3s ease-out;
 }
 
 .modal-container.small {
-  width: 400px;
-}
-
-.modal-container.large {
-  width: 800px;
+  max-width: 400px;
 }
 
 .modal-header {
@@ -882,42 +858,47 @@ export default {
   align-items: center;
   padding: 24px 28px;
   border-bottom: 1px solid #e2e8f0;
-  background: #f8fafc;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
 }
 
 .modal-title {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #1a202c;
+  font-size: 20px;
+  font-weight: 600;
+  color: #1e293b;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   margin: 0;
 }
 
+.modal-title iconify-icon {
+  font-size: 24px;
+  color: #3b82f6;
+}
+
 .modal-close {
-  width: 40px;
-  height: 40px;
+  background: none;
   border: none;
-  border-radius: 50%;
-  background: #f1f5f9;
+  font-size: 24px;
   color: #64748b;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 12px;
+  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 18px;
 }
 
 .modal-close:hover {
-  background: #e2e8f0;
-  color: #374151;
+  background: #f1f5f9;
+  color: #ef4444;
+  transform: scale(1.1);
 }
 
 .modal-content {
-  flex: 1;
   padding: 28px;
+  max-height: 60vh;
   overflow-y: auto;
 }
 
@@ -933,7 +914,7 @@ export default {
 .size-form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
 }
 
 .form-row {
@@ -945,7 +926,7 @@ export default {
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .form-group.full-width {
@@ -953,32 +934,31 @@ export default {
 }
 
 .form-label {
-  font-weight: 600;
+  font-weight: 500;
   color: #374151;
-  font-size: 0.9rem;
+  font-size: 14px;
 }
 
 .form-label.required::after {
   content: ' *';
-  color: #dc2626;
+  color: #ef4444;
 }
 
 .form-input,
 .form-textarea {
   padding: 12px 16px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font-size: 0.95rem;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  font-size: 14px;
   transition: all 0.2s ease;
   background: white;
-  font-family: inherit;
 }
 
 .form-input:focus,
 .form-textarea:focus {
   outline: none;
-  border-color: #007bff;
-  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .form-textarea {
@@ -986,41 +966,40 @@ export default {
   min-height: 100px;
 }
 
+/* ===== BUTTON STYLES ===== */
 .btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 12px 20px;
-  border: none;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 0.95rem;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-weight: 500;
+  font-size: 14px;
   cursor: pointer;
   transition: all 0.2s ease;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   text-decoration: none;
-  min-width: 120px;
 }
 
 .btn.primary {
-  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
   color: white;
 }
 
 .btn.primary:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
 }
 
 .btn.secondary {
   background: #f1f5f9;
   color: #64748b;
-  border: 1px solid #d1d5db;
+  border: 1px solid #e2e8f0;
 }
 
 .btn.secondary:hover {
   background: #e2e8f0;
-  color: #374151;
+  color: #475569;
 }
 
 .btn.danger {
@@ -1029,43 +1008,61 @@ export default {
 }
 
 .btn.danger:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(220, 38, 38, 0.3);
 }
 
-.warning-text {
-  color: #dc2626;
-  font-size: 0.9rem;
-  font-weight: 500;
-  margin-top: 8px;
+/* ===== ANIMATIONS ===== */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
-/* ===== RESPONSIVE DESIGN ===== */
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
   .quan-ly-kich-co-container {
-    padding: 12px;
+    padding: 16px;
   }
   
   .filter-section,
   .sizes-section {
-    padding: 16px;
-    border-radius: 12px;
+    padding: 20px;
   }
   
-  .filter-row {
+  .filter-content {
     grid-template-columns: 1fr;
-    gap: 16px;
   }
   
+  .filter-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .section-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .modal-container {
+    width: 95%;
+    margin: 20px;
+  }
+
   .form-row {
     grid-template-columns: 1fr;
   }
-  
-  .modal-container.large {
-    width: 95vw;
-    margin: 10px;
-  }
-  
+
   .modal-header,
   .modal-content,
   .modal-footer {
