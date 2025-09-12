@@ -142,7 +142,7 @@
         </div>
       </div>
 
-      <!-- Right Panel - Customer Table -->
+      <!-- Right Panel - Customer Management -->
       <div class="right-panel">
         <div class="card shadow-sm">
           <div class="card-content" :class="{ 'disabled-overlay': !coupon.isPrivate }">
@@ -161,10 +161,10 @@
                 <div class="text-center">
                   <input
                     type="checkbox"
-                    v-model="selectedCustomers"
-                    :value="item.id"
+                    :checked="selectedCustomers.includes(item.id)"
                     :disabled="!coupon.isPrivate"
                     class="customer-checkbox"
+                    @change="toggleCustomer(item.id, $event)"
                   />
                 </div>
               </template>
@@ -178,6 +178,34 @@
                 {{ item.taiKhoan?.soDienThoai || 'N/A' }}
               </template>
             </DataTable>
+
+            <!-- Selected Customers Table -->
+            <div class="selected-customers-table mt-4" v-if="coupon.isPrivate && selectedCustomers.length > 0">
+              <h4 class="section-subtitle">
+                <iconify-icon icon="solar:user-check-bold-duotone"></iconify-icon>
+                Khách hàng đã chọn ({{ selectedCustomers.length }})
+              </h4>
+              <DataTable
+                :data="selectedCustomersData"
+                :columns="selectedCustomerColumns"
+                item-label="khách hàng đã chọn"
+                empty-message="Không có khách hàng nào được chọn."
+                key-field="id"
+              >
+                <template #ten="{ item }">
+                  {{ item.ten || 'N/A' }}
+                </template>
+                <template #email="{ item }">
+                  {{ item.taiKhoan?.email || 'N/A' }}
+                </template>
+                <template #soDienThoai="{ item }">
+                  {{ item.taiKhoan?.soDienThoai || 'N/A' }}
+                </template>
+              </DataTable>
+            </div>
+            <p v-else-if="coupon.isPrivate" class="text-gray-500 text-sm">
+              Chưa có khách hàng nào được chọn.
+            </p>
           </div>
         </div>
       </div>
@@ -274,6 +302,11 @@ export default {
           label: 'SĐT',
         },
       ],
+      selectedCustomerColumns: [
+        { key: 'ten', label: 'Tên khách hàng' },
+        { key: 'email', label: 'Email' },
+        { key: 'soDienThoai', label: 'SĐT' },
+      ],
     };
   },
   computed: {
@@ -281,6 +314,11 @@ export default {
       return this.coupon.loaiGiamGia === 'SO_TIEN_CO_DINH'
         ? 'Giá trị giảm (VND)'
         : 'Giá trị giảm (%)';
+    },
+    selectedCustomersData() {
+      return this.customers.filter((customer) =>
+        this.selectedCustomers.includes(customer.id)
+      );
     },
   },
   async mounted() {
@@ -292,23 +330,25 @@ export default {
       this.loading = true;
       try {
         const couponId = this.route.params.id;
-        const res = await axios.get(`/api/phieu-giam-gia/${couponId}`);
+        const res = await axios.get(`/api/phieu-giam-gia/detail/${couponId}`);
         const data = res.data;
         
         this.coupon = {
           id: data.id,
-          maPhieuGiamGia: data.maPhieuGiamGia || data.ma,
+          maPhieuGiamGia: data.ma,
           tenPhieuGiamGia: data.tenPhieuGiamGia,
-          giaTriGiam: data.giaTriGiam || data.phanTramGiamGia || data.soTienGiamGia,
+          giaTriGiam: data.phanTramGiamGia || data.soTienGiamGia,
           hoaDonToiThieu: data.hoaDonToiThieu,
           soTienGiamToiDa: data.soTienGiamToiDa,
           ngayBatDau: this.formatDateTimeForInput(data.ngayBatDau),
           ngayKetThuc: this.formatDateTimeForInput(data.ngayKetThuc),
-          loaiGiamGia: data.loaiGiamGia || (data.loaiPhieuGiamGia === 'PHANTRAM' ? 'PHAN_TRAM' : 'SO_TIEN_CO_DINH'),
+          loaiGiamGia: data.loaiPhieuGiamGia === 'PHANTRAM' ? 'PHAN_TRAM' : data.loaiPhieuGiamGia || 'SO_TIEN_CO_DINH',
           isPrivate: data.riengTu || false,
         };
 
-        this.selectedCustomers = data.customerIds || [];
+        this.selectedCustomers = data.riengTu && data.customers
+          ? data.customers.map(customer => customer.idKhachHang)
+          : [];
         
         this.toast.success('Tải thông tin phiếu giảm giá thành công!');
       } catch (err) {
@@ -318,6 +358,8 @@ export default {
       } finally {
         this.loading = false;
       }
+      console.log('Selected Customers:', this.selectedCustomers);
+      console.log('All Customers:', this.customers);
     },
 
     formatDateTimeForInput(dateTime) {
@@ -351,6 +393,31 @@ export default {
       } catch (err) {
         console.error('Lỗi tải khách hàng:', err);
         this.toast.error(`Không thể tải danh sách khách hàng: ${err.message || 'Lỗi không xác định'}`);
+      }
+    },
+
+    async toggleCustomer(khId, event) {
+      if (!this.coupon.isPrivate) return;
+
+      this.loading = true;
+      try {
+        const couponId = this.coupon.id;
+        await axios.post(`/api/phieu-giam-gia/${couponId}/toggle-customer/${khId}`);
+        if (event.target.checked) {
+          if (!this.selectedCustomers.includes(khId)) {
+            this.selectedCustomers = [...this.selectedCustomers, khId];
+          }
+        } else {
+          this.selectedCustomers = this.selectedCustomers.filter(id => id !== khId);
+        }
+        this.toast.success('Cập nhật khách hàng thành công!');
+      } catch (err) {
+        console.error('Lỗi toggle khách hàng:', err);
+        this.toast.error(`Không thể cập nhật khách hàng: ${err.response?.data || 'Lỗi không xác định'}`);
+        // Rollback trạng thái bằng cách tải lại dữ liệu
+        await this.fetchCouponData();
+      } finally {
+        this.loading = false;
       }
     },
 
@@ -407,16 +474,29 @@ export default {
 
       this.loading = true;
       try {
-        const formatDateTime = (dt) => (dt ? dt + ':00' : null);
+        const formatDateTime = (dt) => (dt ? dt + ':00Z' : null);
+        const isPhanTram = this.coupon.loaiGiamGia === 'PHAN_TRAM';
         const dataToSend = {
-          ...this.coupon,
+          ma: this.coupon.maPhieuGiamGia,
+          tenPhieuGiamGia: this.coupon.tenPhieuGiamGia,
+          loaiPhieuGiamGia: isPhanTram ? 'PHAN_TRAM' : 'SO_TIEN_CO_DINH',
+          phanTramGiamGia: isPhanTram ? this.coupon.giaTriGiam : null,
+          soTienGiamToiDa: isPhanTram ? this.coupon.soTienGiamToiDa : null,
+          hoaDonToiThieu: this.coupon.hoaDonToiThieu,
+          soLuongDung: this.coupon.soLuongDung || null,
           ngayBatDau: formatDateTime(this.coupon.ngayBatDau),
           ngayKetThuc: formatDateTime(this.coupon.ngayKetThuc),
-          customerIds: this.coupon.isPrivate ? this.selectedCustomers : [],
+          riengTu: this.coupon.isPrivate,
+          moTa: this.coupon.moTa || "",
+          khachHangIds: this.selectedCustomers,
         };
+        // Nếu là số tiền cố định thì gửi giá trị giảm vào phanTramGiamGia (vì DTO không có soTienGiamGia)
+        if (!isPhanTram) {
+          dataToSend.phanTramGiamGia = this.coupon.giaTriGiam;
+        }
 
-        const res = await axios.put(`/api/phieu-giam-gia/${this.coupon.id}`, dataToSend);
-        if (res.status === 200 || res.status === 204) {
+        const res = await axios.put(`/api/phieu-giam-gia/update/${this.coupon.id}`, dataToSend);
+        if (res.status === 200) {
           this.toast.success('Cập nhật phiếu giảm giá thành công!');
           this.router.push({ name: 'PhieuGiamGia' });
         }
@@ -585,6 +665,16 @@ input[type="checkbox"]:disabled {
   margin-bottom: 20px;
 }
 
+.section-subtitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1a202c;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
 /* ===== CUSTOMER CHECKBOX STYLES ===== */
 .customer-checkbox {
   width: 20px;
@@ -718,6 +808,10 @@ input[type="checkbox"]:disabled {
 
   .section-title {
     font-size: 1.1rem;
+  }
+
+  .section-subtitle {
+    font-size: 0.95rem;
   }
 
   .submit-btn {
