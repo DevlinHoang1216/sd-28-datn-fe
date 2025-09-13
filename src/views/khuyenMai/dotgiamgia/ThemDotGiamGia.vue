@@ -21,6 +21,19 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Mã Đợt Giảm Giá *
+            </label>
+            <input
+              v-model="newCampaign.ma"
+              type="text"
+              required
+              class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors"
+              placeholder="Nhập mã đợt giảm giá (e.g., DOT2025-XX)"
+            />
+          </div>
+          
+          <div>
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Tên Đợt Giảm Giá *
             </label>
             <input
@@ -104,14 +117,28 @@
             
             <div>
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Số Tiền Giảm Tối Đa
+              </label>
+              <input
+                v-model.number="discountConfig.soTienGiamToiDa"
+                type="number"
+                :min="0"
+                :step="1000"
+                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors"
+                placeholder="Nhập số tiền giảm tối đa (VNĐ)"
+              />
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Áp Dụng Cho
               </label>
               <select
                 v-model="discountConfig.applyTo"
                 class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors"
               >
-                <option value="selected">Sản phẩm đã chọn</option>
-                <option value="all">Tất cả sản phẩm</option>
+                <option value="selected">Biến thể đã chọn</option>
+                <option value="all">Tất cả biến thể</option>
               </select>
             </div>
           </div>
@@ -196,7 +223,6 @@
               key-field="id"
               :max-height="400"
             >
-              <!-- Custom column templates -->
               <template #selection="{ item }">
                 <input
                   type="checkbox"
@@ -238,6 +264,39 @@
                 </span>
               </template>
             </DataTable>
+
+            <!-- Pagination Controls -->
+            <div class="flex justify-between items-center mt-4">
+              <div class="text-sm text-gray-600 dark:text-gray-400">
+                Hiển thị {{ pagination.totalElements ? (pagination.page * pagination.size + 1) : 0 }} - 
+                {{ Math.min((pagination.page + 1) * pagination.size, pagination.totalElements) }} 
+                / {{ pagination.totalElements }} sản phẩm
+              </div>
+              <div class="flex gap-2">
+                <button
+                  :disabled="pagination.page === 0"
+                  @click="changePage(pagination.page - 1)"
+                  class="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+                >
+                  Trước
+                </button>
+                <button
+                  v-for="page in Array.from({ length: pagination.totalPages }, (_, i) => i)"
+                  :key="page"
+                  @click="changePage(page)"
+                  :class="['px-3 py-2 text-sm rounded-lg', pagination.page === page ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200']"
+                >
+                  {{ page + 1 }}
+                </button>
+                <button
+                  :disabled="pagination.page >= pagination.totalPages - 1"
+                  @click="changePage(pagination.page + 1)"
+                  class="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+                >
+                  Sau
+                </button>
+              </div>
+            </div>
           </div>
 
           <!-- Right Table: Product Variants -->
@@ -295,7 +354,6 @@
                 key-field="id"
                 :max-height="400"
               >
-                <!-- Custom column templates -->
                 <template #selection="{ item }">
                   <input
                     type="checkbox"
@@ -369,10 +427,11 @@
 
 <script>
 import { ref, computed, onMounted } from 'vue';
-import { useRouter } from "vue-router";
-import { useToast } from "vue-toastification";
+import { useRouter } from 'vue-router';
+import { useToast } from 'vue-toastification';
 import Breadcrumb from '@/components/Breadcrumb.vue';
 import DataTable from '@/components/DataTable.vue';
+import axios from 'axios';
 
 export default {
   name: 'ThemDotGiamGia',
@@ -384,7 +443,10 @@ export default {
     const toast = useToast();
     const router = useRouter();
 
-    // Breadcrumb configuration
+    const API_BASE_URL = 'http://localhost:8080/api/san-pham';
+    const API_CAMPAIGN_URL = 'http://localhost:8080/api/dot-giam-gia/add';
+
+    // Cấu hình breadcrumb
     const breadcrumbItems = ref([
       { label: 'Đợt giảm giá', path: '/dot-giam-gia' },
       { label: 'Thêm mới', path: '/dot-giam-gia/them-moi' },
@@ -404,6 +466,7 @@ export default {
     ]);
 
     const newCampaign = ref({
+      ma: '',
       tenDotGiamGia: '',
       moTa: '',
       thoiGianBatDau: '',
@@ -417,84 +480,27 @@ export default {
       productSearch: '',
       productStatus: '',
       variantSearch: '',
-      variantStatus: ''
+      variantStatus: '',
     });
 
     const discountConfig = ref({
       type: 'percentage',
       value: 10,
-      applyTo: 'selected'
+      soTienGiamToiDa: null,
+      applyTo: 'selected',
     });
 
-    // Fake data for testing - grouped by products with variants
-    const fakeProducts = [
-      {
-        id: 1,
-        maSanPham: 'SP001',
-        tenSanPham: 'Giày Nike Air Max 270',
-        anhSanPham: '/sneakers/sneakers-1.jpg',
-        trangThai: true,
-        giaThapNhat: 2500000,
-        chiTietSanPhams: [
-          { id: 101, tenSanPham: 'Giày Nike Air Max 270', anhSanPham: '/sneakers/sneakers-1.jpg', mauSac: 'Đen', kichThuoc: '42', giaBan: 2500000, soLuong: 10, trangThai: true },
-          { id: 102, tenSanPham: 'Giày Nike Air Max 270', anhSanPham: '/sneakers/sneakers-1-alt1.jpg', mauSac: 'Trắng', kichThuoc: '43', giaBan: 2600000, soLuong: 8, trangThai: true },
-          { id: 103, tenSanPham: 'Giày Nike Air Max 270', anhSanPham: '/sneakers/sneakers-1-alt2.jpg', mauSac: 'Xanh', kichThuoc: '41', giaBan: 2550000, soLuong: 5, trangThai: true }
-        ]
-      },
-      {
-        id: 2,
-        maSanPham: 'SP002',
-        tenSanPham: 'Giày Adidas Ultraboost',
-        anhSanPham: '/sneakers/sneakers-2.jpg',
-        trangThai: true,
-        giaThapNhat: 3200000,
-        chiTietSanPhams: [
-          { id: 201, tenSanPham: 'Giày Adidas Ultraboost', anhSanPham: '/sneakers/sneakers-2.jpg', mauSac: 'Xanh', kichThuoc: '41', giaBan: 3200000, soLuong: 12, trangThai: true },
-          { id: 202, tenSanPham: 'Giày Adidas Ultraboost', anhSanPham: '/sneakers/sneakers-2-alt1.jpg', mauSac: 'Đỏ', kichThuoc: '42', giaBan: 3300000, soLuong: 6, trangThai: true },
-          { id: 203, tenSanPham: 'Giày Adidas Ultraboost', anhSanPham: '/sneakers/sneakers-2-alt2.jpg', mauSac: 'Xanh', kichThuoc: '43', giaBan: 3400000, soLuong: 9, trangThai: true }
-        ]
-      },
-      {
-        id: 3,
-        maSanPham: 'SP003',
-        tenSanPham: 'Giày Converse Chuck Taylor',
-        anhSanPham: '/sneakers/sneakers-3.jpg',
-        trangThai: false,
-        giaThapNhat: 1800000,
-        chiTietSanPhams: [
-          { id: 301, tenSanPham: 'Giày Converse Chuck Taylor', anhSanPham: '/sneakers/sneakers-3.jpg', mauSac: 'Đen', kichThuoc: '40', giaBan: 1800000, soLuong: 15, trangThai: false },
-          { id: 302, tenSanPham: 'Giày Converse Chuck Taylor', anhSanPham: '/sneakers/sneakers-3-alt1.jpg', mauSac: 'Trắng', kichThuoc: '41', giaBan: 1900000, soLuong: 20, trangThai: false }
-        ]
-      },
-      {
-        id: 4,
-        maSanPham: 'SP004',
-        tenSanPham: 'Giày Vans Old Skool',
-        anhSanPham: '/sneakers/sneakers-4.jpg',
-        trangThai: true,
-        giaThapNhat: 2200000,
-        chiTietSanPhams: [
-          { id: 401, tenSanPham: 'Giày Vans Old Skool', anhSanPham: '/sneakers/sneakers-4.jpg', mauSac: 'Đen/Trắng', kichThuoc: '40', giaBan: 2200000, soLuong: 18, trangThai: true },
-          { id: 402, tenSanPham: 'Giày Vans Old Skool', anhSanPham: '/sneakers/sneakers-4-alt1.jpg', mauSac: 'Xanh Navy', kichThuoc: '42', giaBan: 2300000, soLuong: 11, trangThai: true }
-        ]
-      },
-      {
-        id: 5,
-        maSanPham: 'SP005',
-        tenSanPham: 'Giày Puma RS-X',
-        anhSanPham: '/sneakers/sneakers-5.jpg',
-        trangThai: true,
-        giaThapNhat: 2800000,
-        chiTietSanPhams: [
-          { id: 501, tenSanPham: 'Giày Puma RS-X', anhSanPham: '/sneakers/sneakers-5.jpg', mauSac: 'Trắng/Xanh', kichThuoc: '41', giaBan: 2800000, soLuong: 14, trangThai: true },
-          { id: 502, tenSanPham: 'Giày Puma RS-X', anhSanPham: '/sneakers/sneakers-5-alt1.jpg', mauSac: 'Đen/Đỏ', kichThuoc: '42', giaBan: 2900000, soLuong: 9, trangThai: true }
-        ]
-      }
-    ];
+    const pagination = ref({
+      page: 0,
+      size: 10,
+      sortBy: 'id',
+      sortDir: 'asc',
+      totalElements: 0,
+      totalPages: 0,
+    });
 
     const allProducts = ref([]);
 
-    // DataTable columns configuration
     const productTableColumns = ref([
       { key: 'selection', label: '', class: 'text-center', width: '50px' },
       { key: 'anhSanPham', label: 'Ảnh', class: 'text-center', width: '80px' },
@@ -502,7 +508,7 @@ export default {
       { key: 'tenSanPham', label: 'Tên Sản Phẩm' },
       { key: 'soLuongBienThe', label: 'Biến Thể', class: 'text-center' },
       { key: 'giaThapNhat', label: 'Giá Từ', class: 'text-right' },
-      { key: 'trangThai', label: 'Trạng Thái', class: 'text-center' }
+      { key: 'trangThai', label: 'Trạng Thái', class: 'text-center' },
     ]);
 
     const variantTableColumns = ref([
@@ -513,66 +519,126 @@ export default {
       { key: 'kichThuoc', label: 'Size' },
       { key: 'giaBan', label: 'Giá Bán', class: 'text-right' },
       { key: 'soLuong', label: 'SL', class: 'text-center' },
-      { key: 'trangThai', label: 'Trạng Thái', class: 'text-center' }
+      { key: 'trangThai', label: 'Trạng Thái', class: 'text-center' },
     ]);
 
+    const mapProductData = (apiProduct) => {
+      return {
+        id: apiProduct.id,
+        maSanPham: apiProduct.ma,
+        tenSanPham: apiProduct.tenSanPham,
+        anhSanPham: apiProduct.idAnhSanPham?.urlAnh || '/default-product.png',
+        trangThai: !apiProduct.deleted,
+        giaThapNhat: apiProduct.chiTietSanPhams?.length
+          ? Math.min(
+              ...apiProduct.chiTietSanPhams
+                .filter((variant) => !variant.deleted)
+                .map((variant) => variant.giaBan)
+            )
+          : 0,
+        chiTietSanPhams: apiProduct.chiTietSanPhams
+          .filter((variant) => !variant.deleted)
+          .map((variant) => ({
+            id: variant.id,
+            tenSanPham: apiProduct.tenSanPham,
+            anhSanPham: apiProduct.idAnhSanPham?.urlAnh || '/default-product.png',
+            mauSac: variant.idMauSac?.tenMauSac || 'N/A',
+            kichThuoc: variant.idKichCo?.tenKichCo || 'N/A',
+            giaBan: variant.giaBan,
+            soLuong: variant.soLuongTonKho,
+            trangThai: !variant.deleted,
+          })),
+      };
+    };
+
     const filteredProducts = computed(() => {
-      return fakeProducts.filter(product => {
-        const matchesSearch = !filters.value.productSearch || 
-          product.tenSanPham.toLowerCase().includes(filters.value.productSearch.toLowerCase()) ||
-          product.maSanPham.toLowerCase().includes(filters.value.productSearch.toLowerCase());
-        
-        const matchesStatus = !filters.value.productStatus || 
+      return allProducts.value.filter((product) => {
+        const matchesSearch =
+          !filters.value.productSearch ||
+          product.tenSanPham
+            .toLowerCase()
+            .includes(filters.value.productSearch.toLowerCase()) ||
+          product.maSanPham
+            .toLowerCase()
+            .includes(filters.value.productSearch.toLowerCase());
+
+        const matchesStatus =
+          !filters.value.productStatus ||
           (filters.value.productStatus === 'active' && product.trangThai) ||
           (filters.value.productStatus === 'inactive' && !product.trangThai);
-        
+
         return matchesSearch && matchesStatus;
       });
     });
 
     const availableVariants = computed(() => {
       const variants = [];
-      selectedProducts.value.forEach(product => {
-        variants.push(...product.chiTietSanPhams);
+      selectedProducts.value.forEach((product) => {
+        variants.push(...(product.chiTietSanPhams || []));
       });
       return variants;
     });
 
     const filteredVariants = computed(() => {
-      return availableVariants.value.filter(variant => {
-        const matchesSearch = !filters.value.variantSearch || 
-          variant.tenSanPham.toLowerCase().includes(filters.value.variantSearch.toLowerCase()) ||
-          variant.mauSac.toLowerCase().includes(filters.value.variantSearch.toLowerCase()) ||
-          variant.kichThuoc.toLowerCase().includes(filters.value.variantSearch.toLowerCase());
-        
-        const matchesStatus = !filters.value.variantStatus || 
+      return availableVariants.value.filter((variant) => {
+        const matchesSearch =
+          !filters.value.variantSearch ||
+          variant.tenSanPham
+            .toLowerCase()
+            .includes(filters.value.variantSearch.toLowerCase()) ||
+          variant.mauSac
+            .toLowerCase()
+            .includes(filters.value.variantSearch.toLowerCase()) ||
+          variant.kichThuoc
+            .toLowerCase()
+            .includes(filters.value.variantSearch.toLowerCase());
+
+        const matchesStatus =
+          !filters.value.variantStatus ||
           (filters.value.variantStatus === 'active' && variant.trangThai) ||
           (filters.value.variantStatus === 'inactive' && !variant.trangThai);
-        
+
         return matchesSearch && matchesStatus;
       });
     });
 
     const allProductsSelected = computed(() => {
-      return filteredProducts.value.length > 0 && 
-             filteredProducts.value.every(product => isProductSelected(product.id));
+      return (
+        filteredProducts.value.length > 0 &&
+        filteredProducts.value.every((product) => isProductSelected(product.id))
+      );
     });
 
     const allVariantsSelected = computed(() => {
-      return availableVariants.value.length > 0 && 
-             availableVariants.value.every(variant => isVariantSelected(variant.id));
+      return (
+        availableVariants.value.length > 0 &&
+        availableVariants.value.every((variant) => isVariantSelected(variant.id))
+      );
     });
 
     const allFilteredVariantsSelected = computed(() => {
-      return filteredVariants.value.length > 0 && 
-             filteredVariants.value.every(variant => isVariantSelected(variant.id));
+      return (
+        filteredVariants.value.length > 0 &&
+        filteredVariants.value.every((variant) => isVariantSelected(variant.id))
+      );
     });
 
     const loadProducts = async () => {
+      loadingProducts.value = true;
       try {
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        allProducts.value = fakeProducts;
+        const response = await axios.get(API_BASE_URL, {
+          params: {
+            page: pagination.value.page,
+            size: pagination.value.size,
+            sortBy: pagination.value.sortBy,
+            sortDir: pagination.value.sortDir,
+          },
+        });
+
+        allProducts.value = response.data.content.map(mapProductData);
+        pagination.value.totalElements = response.data.totalElements || 0;
+        pagination.value.totalPages = response.data.totalPages || 0;
+
         toast.success('Đã tải danh sách sản phẩm thành công!');
       } catch (error) {
         console.error('Lỗi khi tải sản phẩm:', error);
@@ -582,31 +648,42 @@ export default {
       }
     };
 
+    const changePage = (newPage) => {
+      pagination.value.page = newPage;
+      loadProducts();
+    };
+
+    const changeSort = (newSortBy, newSortDir) => {
+      pagination.value.sortBy = newSortBy;
+      pagination.value.sortDir = newSortDir;
+      loadProducts();
+    };
+
     const isProductSelected = (productId) => {
-      return selectedProducts.value.some(p => p.id === productId);
+      return selectedProducts.value.some((p) => p.id === productId);
     };
 
     const isVariantSelected = (variantId) => {
-      return selectedProductDetails.value.some(v => v.id === variantId);
+      return selectedProductDetails.value.some((v) => v.id === variantId);
     };
 
     const toggleProductSelection = (product) => {
-      const index = selectedProducts.value.findIndex(p => p.id === product.id);
+      const index = selectedProducts.value.findIndex((p) => p.id === product.id);
       if (index > -1) {
-        // Remove product and its variants
         selectedProducts.value.splice(index, 1);
-        // Remove all variants of this product from selectedProductDetails
         selectedProductDetails.value = selectedProductDetails.value.filter(
-          variant => !product.chiTietSanPhams.some(detail => detail.id === variant.id)
+          (variant) =>
+            !product.chiTietSanPhams.some((detail) => detail.id === variant.id)
         );
       } else {
-        // Add product
         selectedProducts.value.push(product);
       }
     };
 
     const toggleVariantSelection = (variant) => {
-      const index = selectedProductDetails.value.findIndex(v => v.id === variant.id);
+      const index = selectedProductDetails.value.findIndex(
+        (v) => v.id === variant.id
+      );
       if (index > -1) {
         selectedProductDetails.value.splice(index, 1);
       } else {
@@ -626,17 +703,18 @@ export default {
 
     const toggleAllVariants = () => {
       if (allFilteredVariantsSelected.value) {
-        // Deselect all filtered variants
-        const filteredVariantIds = filteredVariants.value.map(v => v.id);
+        const filteredVariantIds = filteredVariants.value.map((v) => v.id);
         selectedProductDetails.value = selectedProductDetails.value.filter(
-          variant => !filteredVariantIds.includes(variant.id)
+          (variant) => !filteredVariantIds.includes(variant.id)
         );
       } else {
-        // Select all filtered variants
         const newVariants = filteredVariants.value.filter(
-          variant => !isVariantSelected(variant.id)
+          (variant) => !isVariantSelected(variant.id)
         );
-        selectedProductDetails.value = [...selectedProductDetails.value, ...newVariants];
+        selectedProductDetails.value = [
+          ...selectedProductDetails.value,
+          ...newVariants,
+        ];
       }
     };
 
@@ -647,50 +725,69 @@ export default {
 
     const addCampaign = async () => {
       try {
-        if (discountConfig.value.applyTo === 'selected' && selectedProductDetails.value.length === 0) {
-          toast.error('Vui lòng chọn ít nhất một chi tiết sản phẩm để áp dụng giảm giá.');
+        if (
+          discountConfig.value.applyTo === 'selected' &&
+          selectedProductDetails.value.length === 0
+        ) {
+          toast.error(
+            'Vui lòng chọn ít nhất một chi tiết sản phẩm để áp dụng giảm giá.'
+          );
           return;
         }
 
-        // Validate discount configuration
         if (!discountConfig.value.value || discountConfig.value.value <= 0) {
           toast.error('Vui lòng nhập giá trị giảm giá hợp lệ.');
           return;
         }
 
-        if (discountConfig.value.type === 'percentage' && discountConfig.value.value > 100) {
-          toast.error('Giá trị giảm giá theo phần trăm không được vượt quá 100%.');
+        if (
+          discountConfig.value.type === 'percentage' &&
+          discountConfig.value.value > 100
+        ) {
+          toast.error(
+            'Giá trị giảm giá theo phần trăm không được vượt quá 100%.'
+          );
           return;
         }
 
-        const targetProducts = discountConfig.value.applyTo === 'all' 
-          ? availableVariants.value 
-          : selectedProductDetails.value;
+        // Tạo mã tự động nếu không nhập
+        if (!newCampaign.value.ma) {
+          newCampaign.value.ma = `DOT${new Date().getFullYear()}-${Math.floor(
+            Math.random() * 100
+          )
+            .toString()
+            .padStart(2, '0')}`;
+        }
+
+        const targetVariants =
+          discountConfig.value.applyTo === 'all'
+            ? availableVariants.value
+            : selectedProductDetails.value;
 
         const payload = {
-          ...newCampaign.value,
-          loaiGiamGia: discountConfig.value.type,
-          giaTriGiam: discountConfig.value.value,
-          apDungCho: discountConfig.value.applyTo,
-          chiTietSanPhams: targetProducts.map(detail => ({
-            id: detail.id,
-            tenSanPham: detail.tenSanPham,
-            mauSac: detail.mauSac,
-            kichThuoc: detail.kichThuoc,
-            giaBan: detail.giaBan
-          }))
+          ma: newCampaign.value.ma,
+          tenDotGiamGia: newCampaign.value.tenDotGiamGia,
+          loaiGiamGiaApDung:
+            discountConfig.value.type === 'percentage' ? 'PHAN_TRAM' : 'TIEN',
+          giaTriGiamGia: discountConfig.value.value,
+          soTienGiamToiDa: discountConfig.value.soTienGiamToiDa || null,
+          ngayBatDau: newCampaign.value.thoiGianBatDau,
+          ngayKetThuc: newCampaign.value.thoiGianKetThuc,
+          listSanPhamId: targetVariants.map((variant) => variant.id),
         };
 
-        console.log('Payload:', payload);
-        
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        toast.success(`Đã tạo đợt giảm giá mới thành công! Áp dụng cho ${targetProducts.length} chi tiết sản phẩm.`);
+        const response = await axios.post(API_CAMPAIGN_URL, payload);
+
+        toast.success(
+          `Đã tạo đợt giảm giá mới thành công! Áp dụng cho ${targetVariants.length} biến thể.`
+        );
         router.push({ name: 'DotGiamGia' });
       } catch (error) {
         console.error('Lỗi khi tạo đợt giảm giá:', error);
-        toast.error('Không thể tạo đợt giảm giá. Vui lòng thử lại.');
+        toast.error(
+          error.response?.data?.message ||
+            'Không thể tạo đợt giảm giá. Vui lòng thử lại.'
+        );
       }
     };
 
@@ -740,12 +837,18 @@ export default {
       addCampaign,
       cancelAdd,
       formatCurrency,
+      pagination,
+      changePage,
+      changeSort,
       isFormValid: computed(() => {
-        return newCampaign.value.tenDotGiamGia && 
-               newCampaign.value.thoiGianBatDau && 
-               newCampaign.value.thoiGianKetThuc &&
-               selectedProductDetails.value.length > 0;
-      })
+        return (
+          newCampaign.value.ma &&
+          newCampaign.value.tenDotGiamGia &&
+          newCampaign.value.thoiGianBatDau &&
+          newCampaign.value.thoiGianKetThuc &&
+          selectedProductDetails.value.length > 0
+        );
+      }),
     };
   },
 };

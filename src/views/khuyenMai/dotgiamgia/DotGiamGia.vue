@@ -265,7 +265,7 @@ export default {
       { key: 'stt', label: 'STT', class: 'text-center' },
       { key: 'maDotGiamGia', label: 'Mã đợt', class: 'font-weight-bold' },
       { key: 'tenDotGiamGia', label: 'Tên đợt' },
-      { key: 'giaTri', label: 'Giá trị (%)', class: 'text-right' },
+      { key: 'giaTri', label: 'Giá trị', class: 'text-right' }, // Updated label to reflect both % and VNĐ
       { key: 'thoiGianBatDau', label: 'Ngày bắt đầu', class: 'text-center' },
       { key: 'thoiGianKetThuc', label: 'Ngày kết thúc', class: 'text-center' },
       { key: 'trangThai', label: 'Trạng thái', class: 'text-center' },
@@ -282,80 +282,25 @@ export default {
     const loadAllCampaigns = async () => {
       loadingTable.value = true;
       errorMessage.value = '';
-      
+
       try {
-        // Fake data for testing
-        await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API delay
-        
-        const fakeCampaigns = [
-          {
-            id: 1,
-            ma: 'DGG001',
-            tenDotGiamGia: 'Khuyến mãi Black Friday 2024',
-            giaTri: 30,
-            thoiGianBatDau: '2024-11-20T00:00:00',
-            thoiGianKetThuc: '2024-11-30T23:59:59',
-            trangThai: true
-          },
-          {
-            id: 2,
-            ma: 'DGG002',
-            tenDotGiamGia: 'Giảm giá cuối năm',
-            giaTri: 25,
-            thoiGianBatDau: '2024-12-15T00:00:00',
-            thoiGianKetThuc: '2024-12-31T23:59:59',
-            trangThai: true
-          },
-          {
-            id: 3,
-            ma: 'DGG003',
-            tenDotGiamGia: 'Khuyến mãi Tết Nguyên Đán',
-            giaTri: 40,
-            thoiGianBatDau: '2025-01-20T00:00:00',
-            thoiGianKetThuc: '2025-02-05T23:59:59',
-            trangThai: false
-          },
-          {
-            id: 4,
-            ma: 'DGG004',
-            tenDotGiamGia: 'Flash Sale 12.12',
-            giaTri: 50,
-            thoiGianBatDau: '2024-12-12T00:00:00',
-            thoiGianKetThuc: '2024-12-12T23:59:59',
-            trangThai: false
-          },
-          {
-            id: 5,
-            ma: 'DGG005',
-            tenDotGiamGia: 'Khuyến mãi sinh nhật thương hiệu',
-            giaTri: 35,
-            thoiGianBatDau: '2024-10-01T00:00:00',
-            thoiGianKetThuc: '2024-10-15T23:59:59',
-            trangThai: false
-          },
-          {
-            id: 6,
-            ma: 'DGG006',
-            tenDotGiamGia: 'Giảm giá mùa hè',
-            giaTri: 20,
-            thoiGianBatDau: '2024-06-01T00:00:00',
-            thoiGianKetThuc: '2024-08-31T23:59:59',
-            trangThai: false
-          }
-        ];
-        
-        allCampaigns.value = fakeCampaigns.map(campaign => ({
+        // Gửi yêu cầu API tới endpoint backend
+        const response = await axios.get('http://localhost:8080/api/dot-giam-gia');
+
+        // Ánh xạ dữ liệu từ backend sang định dạng frontend
+        allCampaigns.value = response.data.map(campaign => ({
           id: campaign.id,
           maDotGiamGia: campaign.ma,
           tenDotGiamGia: campaign.tenDotGiamGia,
-          giaTri: campaign.giaTri,
-          thoiGianBatDau: campaign.thoiGianBatDau,
-          thoiGianKetThuc: campaign.thoiGianKetThuc,
+          giaTri: campaign.loaiGiamGiaApDung === 'PHAN_TRAM' 
+            ? `${campaign.giaTriGiamGia}%` 
+            : new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(campaign.giaTriGiamGia),
+          thoiGianBatDau: campaign.ngayBatDau,
+          thoiGianKetThuc: campaign.ngayKetThuc,
           tenTrangThai: campaign.trangThai ? 'DANG_DIEN_RA' : 'DA_KET_THUC',
         }));
 
         toast.success('Dữ liệu đợt giảm giá đã được tải thành công!', { timeout: 3000 });
-        
       } catch (error) {
         console.error('Lỗi khi tải đợt giảm giá:', error);
         errorMessage.value = `Lỗi khi tải dữ liệu đợt giảm giá: ${error.message}`;
@@ -373,7 +318,7 @@ export default {
       filters.value.endDate = tempFilters.value.endDate;
       filters.value.sortBy = tempFilters.value.sortBy;
       currentPage.value = 0;
-      
+
       toast.success('Đã áp dụng bộ lọc!', { timeout: 2000 });
     };
 
@@ -392,21 +337,26 @@ export default {
       router.push({ name: 'EditDotGiamGia', params: { id: campaign.id } });
     };
 
-
     const toggleCampaignStatus = async (campaign) => {
       try {
         const index = allCampaigns.value.findIndex(c => c.id === campaign.id);
         if (index !== -1) {
           const newStatus = campaign.tenTrangThai === 'DANG_DIEN_RA' ? 'DA_KET_THUC' : 'DANG_DIEN_RA';
+
+          // Gửi yêu cầu cập nhật trạng thái tới backend (nếu có endpoint)
+          await axios.put(`http://localhost:8080/api/dot-giam-gia/${campaign.id}/status`, {
+            trangThai: newStatus === 'DANG_DIEN_RA'
+          });
+
           allCampaigns.value[index] = {
             ...allCampaigns.value[index],
             tenTrangThai: newStatus,
             ngayCapNhat: new Date().toISOString()
           };
+
+          const statusText = newStatus === 'DANG_DIEN_RA' ? 'kích hoạt' : 'vô hiệu hóa';
+          toast.success(`Đã ${statusText} đợt giảm giá ${campaign.tenDotGiamGia}!`);
         }
-        
-        const statusText = campaign.tenTrangThai === 'DANG_DIEN_RA' ? 'vô hiệu hóa' : 'kích hoạt';
-        toast.success(`Đã ${statusText} đợt giảm giá ${campaign.tenDotGiamGia}!`);
       } catch (error) {
         console.error('Lỗi khi cập nhật trạng thái đợt giảm giá:', error);
         toast.error(`Không thể cập nhật trạng thái: ${error.message}`);
@@ -475,7 +425,7 @@ export default {
           handler: () => createCampaign()
         }
       ];
-      
+
       loadAllCampaigns();
       startPolling();
     });
@@ -500,7 +450,6 @@ export default {
       pageStats,
       tableColumns,
       trangThaiTypes,
-      // Computed properties
       filteredCampaigns: computed(() => {
         let result = [...allCampaigns.value];
 
@@ -532,9 +481,9 @@ export default {
         if (filters.value.sortBy) {
           result = [...result];
           if (filters.value.sortBy === 'newest') {
-            result.sort((a, b) => new Date(b.ngayTao || b.thoiGianBatDau) - new Date(a.ngayTao || a.thoiGianBatDau));
+            result.sort((a, b) => new Date(b.thoiGianBatDau) - new Date(a.thoiGianBatDau));
           } else if (filters.value.sortBy === 'oldest') {
-            result.sort((a, b) => new Date(a.ngayTao || a.thoiGianBatDau) - new Date(b.ngayTao || b.thoiGianBatDau));
+            result.sort((a, b) => new Date(a.thoiGianBatDau) - new Date(b.thoiGianBatDau));
           } else if (filters.value.sortBy === 'name_asc') {
             result.sort((a, b) => a.tenDotGiamGia.localeCompare(b.tenDotGiamGia));
           } else if (filters.value.sortBy === 'name_desc') {
@@ -547,7 +496,6 @@ export default {
       totalPages: computed(() => {
         return Math.ceil(allCampaigns.value.length / pageSize.value) || 1;
       }),
-      // Methods
       loadAllCampaigns,
       filterCampaigns,
       resetFilters,
