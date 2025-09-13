@@ -1,3 +1,4 @@
+```vue
 <template>
   <div class="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900 p-4 md:p-6 font-roboto transition-colors duration-300">
     <!-- Breadcrumb -->
@@ -24,7 +25,7 @@
               Mã Đợt Giảm Giá
             </label>
             <input
-              v-model="campaign.maDotGiamGia"
+              v-model="campaign.ma"
               type="text"
               disabled
               class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed transition-colors"
@@ -43,18 +44,8 @@
               placeholder="Nhập tên đợt giảm giá"
             />
           </div>
-          
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Mô Tả
-            </label>
-            <input
-              v-model="campaign.moTa"
-              type="text"
-              class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors"
-              placeholder="Mô tả đợt giảm giá"
-            />
-          </div>
+
+          <!-- ĐÃ XÓA MÔ TẢ -->
           
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -84,7 +75,7 @@
         <!-- Discount Configuration -->
         <div class="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
           <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">Cấu Hình Giảm Giá</h3>
-          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div>
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Loại Giảm Giá *
@@ -116,15 +107,28 @@
             
             <div>
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Trạng Thái
+                Số Tiền Giảm Tối Đa
+              </label>
+              <input
+                v-model.number="discountConfig.soTienGiamToiDa"
+                type="number"
+                :min="0"
+                :step="1000"
+                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors"
+                placeholder="Nhập số tiền giảm tối đa (VNĐ)"
+              />
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Áp Dụng Cho
               </label>
               <select
-                v-model="campaign.trangThai"
+                v-model="discountConfig.applyTo"
                 class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors"
               >
-                <option value="DANG_DIEN_RA">Đang diễn ra</option>
-                <option value="DA_KET_THUC">Đã kết thúc</option>
-                <option value="CHUA_DIEN_RA">Chưa diễn ra</option>
+                <option value="selected">Biến thể đã chọn</option>
+                <option value="all">Tất cả biến thể</option>
               </select>
             </div>
           </div>
@@ -209,7 +213,6 @@
               key-field="id"
               :max-height="400"
             >
-              <!-- Custom column templates -->
               <template #selection="{ item }">
                 <input
                   type="checkbox"
@@ -243,14 +246,40 @@
               <template #giaThapNhat="{ item }">
                 <span class="font-semibold text-right">{{ formatCurrency(item.giaThapNhat) }}</span>
               </template>
-              
-              <template #trangThai="{ item }">
-                <span :class="item.trangThai ? 'inline-flex items-center text-green-700 bg-green-100 px-2.5 py-1 rounded-full font-medium text-xs' : 'inline-flex items-center text-red-700 bg-red-100 px-2.5 py-1 rounded-full font-medium text-xs'">
-                  <iconify-icon :icon="item.trangThai ? 'solar:check-circle-bold' : 'solar:close-circle-bold'" class="w-3 h-3 mr-1"></iconify-icon>
-                  {{ item.trangThai ? 'Hoạt động' : 'Ngừng bán' }}
-                </span>
-              </template>
             </DataTable>
+
+            <!-- Pagination Controls -->
+            <div class="flex justify-between items-center mt-4">
+              <div class="text-sm text-gray-600 dark:text-gray-400">
+                Hiển thị {{ pagination.totalElements ? (pagination.page * pagination.size + 1) : 0 }} - 
+                {{ Math.min((pagination.page + 1) * pagination.size, pagination.totalElements) }} 
+                / {{ pagination.totalElements }} sản phẩm
+              </div>
+              <div class="flex gap-2">
+                <button
+                  :disabled="pagination.page === 0"
+                  @click="changePage(pagination.page - 1)"
+                  class="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+                >
+                  Trước
+                </button>
+                <button
+                  v-for="page in Array.from({ length: pagination.totalPages }, (_, i) => i)"
+                  :key="page"
+                  @click="changePage(page)"
+                  :class="['px-3 py-2 text-sm rounded-lg', pagination.page === page ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200']"
+                >
+                  {{ page + 1 }}
+                </button>
+                <button
+                  :disabled="pagination.page >= pagination.totalPages - 1"
+                  @click="changePage(pagination.page + 1)"
+                  class="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50"
+                >
+                  Sau
+                </button>
+              </div>
+            </div>
           </div>
 
           <!-- Right Table: Product Variants -->
@@ -308,7 +337,6 @@
                 key-field="id"
                 :max-height="400"
               >
-                <!-- Custom column templates -->
                 <template #selection="{ item }">
                   <input
                     type="checkbox"
@@ -343,15 +371,12 @@
                   <span class="font-semibold text-right">{{ formatCurrency(item.giaBan) }}</span>
                 </template>
                 
-                <template #soLuong="{ item }">
-                  <span class="text-center">{{ item.soLuong }}</span>
+                <template #giaSauKhiGiam="{ item }">
+                  <span class="font-semibold text-right text-green-600">{{ formatCurrency(item.giaSauKhiGiam) }}</span>
                 </template>
                 
-                <template #trangThai="{ item }">
-                  <span :class="item.trangThai ? 'inline-flex items-center text-green-700 bg-green-100 px-2.5 py-1 rounded-full font-medium text-xs' : 'inline-flex items-center text-red-700 bg-red-100 px-2.5 py-1 rounded-full font-medium text-xs'">
-                    <iconify-icon :icon="item.trangThai ? 'solar:check-circle-bold' : 'solar:close-circle-bold'" class="w-3 h-3 mr-1"></iconify-icon>
-                    {{ item.trangThai ? 'Hoạt động' : 'Ngừng bán' }}
-                  </span>
+                <template #soLuong="{ item }">
+                  <span class="text-center">{{ item.soLuong }}</span>
                 </template>
               </DataTable>
             </div>
@@ -382,10 +407,11 @@
 
 <script>
 import { ref, computed, onMounted } from 'vue';
-import { useRouter, useRoute } from "vue-router";
-import { useToast } from "vue-toastification";
+import { useRouter, useRoute } from 'vue-router';
+import { useToast } from 'vue-toastification';
 import Breadcrumb from '@/components/Breadcrumb.vue';
 import DataTable from '@/components/DataTable.vue';
+import axios from 'axios';
 
 export default {
   name: 'EditDotGiamGia',
@@ -398,6 +424,9 @@ export default {
     const router = useRouter();
     const route = useRoute();
     const campaignId = route.params.id;
+
+    const API_BASE_URL = 'http://localhost:8080/api/san-pham';
+    const API_CAMPAIGN_URL = 'http://localhost:8080/api/dot-giam-gia/detail';
 
     // Breadcrumb configuration
     const breadcrumbItems = ref([
@@ -419,12 +448,12 @@ export default {
     ]);
 
     const campaign = ref({
-      maDotGiamGia: '',
+      id: null,
+      ma: '',
       tenDotGiamGia: '',
-      moTa: '',
       thoiGianBatDau: '',
       thoiGianKetThuc: '',
-      trangThai: 'DANG_DIEN_RA',
+      // trangThai: 'DANG_DIEN_RA', // XÓA DÒNG NÀY
     });
 
     const loadingProducts = ref(false);
@@ -434,84 +463,27 @@ export default {
       productSearch: '',
       productStatus: '',
       variantSearch: '',
-      variantStatus: ''
+      variantStatus: '',
     });
 
     const discountConfig = ref({
       type: 'percentage',
       value: 10,
-      applyTo: 'selected'
+      soTienGiamToiDa: null,
+      applyTo: 'selected',
     });
 
-    // Fake data for testing - same as ThemDotGiamGia
-    const fakeProducts = [
-      {
-        id: 1,
-        maSanPham: 'SP001',
-        tenSanPham: 'Giày Nike Air Max 270',
-        anhSanPham: '/sneakers/sneakers-1.jpg',
-        trangThai: true,
-        giaThapNhat: 2500000,
-        chiTietSanPhams: [
-          { id: 101, tenSanPham: 'Giày Nike Air Max 270', anhSanPham: '/sneakers/sneakers-1.jpg', mauSac: 'Đen', kichThuoc: '42', giaBan: 2500000, soLuong: 10, trangThai: true },
-          { id: 102, tenSanPham: 'Giày Nike Air Max 270', anhSanPham: '/sneakers/sneakers-1-alt1.jpg', mauSac: 'Trắng', kichThuoc: '43', giaBan: 2600000, soLuong: 8, trangThai: true },
-          { id: 103, tenSanPham: 'Giày Nike Air Max 270', anhSanPham: '/sneakers/sneakers-1-alt2.jpg', mauSac: 'Xanh', kichThuoc: '41', giaBan: 2550000, soLuong: 5, trangThai: true }
-        ]
-      },
-      {
-        id: 2,
-        maSanPham: 'SP002',
-        tenSanPham: 'Giày Adidas Ultraboost',
-        anhSanPham: '/sneakers/sneakers-2.jpg',
-        trangThai: true,
-        giaThapNhat: 3200000,
-        chiTietSanPhams: [
-          { id: 201, tenSanPham: 'Giày Adidas Ultraboost', anhSanPham: '/sneakers/sneakers-2.jpg', mauSac: 'Xanh', kichThuoc: '41', giaBan: 3200000, soLuong: 12, trangThai: true },
-          { id: 202, tenSanPham: 'Giày Adidas Ultraboost', anhSanPham: '/sneakers/sneakers-2-alt1.jpg', mauSac: 'Đỏ', kichThuoc: '42', giaBan: 3300000, soLuong: 6, trangThai: true },
-          { id: 203, tenSanPham: 'Giày Adidas Ultraboost', anhSanPham: '/sneakers/sneakers-2-alt2.jpg', mauSac: 'Xanh', kichThuoc: '43', giaBan: 3400000, soLuong: 9, trangThai: true }
-        ]
-      },
-      {
-        id: 3,
-        maSanPham: 'SP003',
-        tenSanPham: 'Giày Converse Chuck Taylor',
-        anhSanPham: '/sneakers/sneakers-3.jpg',
-        trangThai: false,
-        giaThapNhat: 1800000,
-        chiTietSanPhams: [
-          { id: 301, tenSanPham: 'Giày Converse Chuck Taylor', anhSanPham: '/sneakers/sneakers-3.jpg', mauSac: 'Đen', kichThuoc: '40', giaBan: 1800000, soLuong: 15, trangThai: false },
-          { id: 302, tenSanPham: 'Giày Converse Chuck Taylor', anhSanPham: '/sneakers/sneakers-3-alt1.jpg', mauSac: 'Trắng', kichThuoc: '41', giaBan: 1900000, soLuong: 20, trangThai: false }
-        ]
-      },
-      {
-        id: 4,
-        maSanPham: 'SP004',
-        tenSanPham: 'Giày Vans Old Skool',
-        anhSanPham: '/sneakers/sneakers-4.jpg',
-        trangThai: true,
-        giaThapNhat: 2200000,
-        chiTietSanPhams: [
-          { id: 401, tenSanPham: 'Giày Vans Old Skool', anhSanPham: '/sneakers/sneakers-4.jpg', mauSac: 'Đen/Trắng', kichThuoc: '40', giaBan: 2200000, soLuong: 18, trangThai: true },
-          { id: 402, tenSanPham: 'Giày Vans Old Skool', anhSanPham: '/sneakers/sneakers-4-alt1.jpg', mauSac: 'Xanh Navy', kichThuoc: '42', giaBan: 2300000, soLuong: 11, trangThai: true }
-        ]
-      },
-      {
-        id: 5,
-        maSanPham: 'SP005',
-        tenSanPham: 'Giày Puma RS-X',
-        anhSanPham: '/sneakers/sneakers-5.jpg',
-        trangThai: true,
-        giaThapNhat: 2800000,
-        chiTietSanPhams: [
-          { id: 501, tenSanPham: 'Giày Puma RS-X', anhSanPham: '/sneakers/sneakers-5.jpg', mauSac: 'Trắng/Xanh', kichThuoc: '41', giaBan: 2800000, soLuong: 14, trangThai: true },
-          { id: 502, tenSanPham: 'Giày Puma RS-X', anhSanPham: '/sneakers/sneakers-5-alt1.jpg', mauSac: 'Đen/Đỏ', kichThuoc: '42', giaBan: 2900000, soLuong: 9, trangThai: true }
-        ]
-      }
-    ];
+    const pagination = ref({
+      page: 0,
+      size: 10,
+      sortBy: 'id',
+      sortDir: 'asc',
+      totalElements: 0,
+      totalPages: 0,
+    });
 
     const allProducts = ref([]);
 
-    // DataTable columns configuration
     const productTableColumns = ref([
       { key: 'selection', label: '', class: 'text-center', width: '50px' },
       { key: 'anhSanPham', label: 'Ảnh', class: 'text-center', width: '80px' },
@@ -519,7 +491,7 @@ export default {
       { key: 'tenSanPham', label: 'Tên Sản Phẩm' },
       { key: 'soLuongBienThe', label: 'Biến Thể', class: 'text-center' },
       { key: 'giaThapNhat', label: 'Giá Từ', class: 'text-right' },
-      { key: 'trangThai', label: 'Trạng Thái', class: 'text-center' }
+      // { key: 'trangThai', label: 'Trạng Thái', class: 'text-center' }, // XÓA DÒNG NÀY
     ]);
 
     const variantTableColumns = ref([
@@ -529,61 +501,10 @@ export default {
       { key: 'mauSac', label: 'Màu Sắc' },
       { key: 'kichThuoc', label: 'Size' },
       { key: 'giaBan', label: 'Giá Bán', class: 'text-right' },
+      { key: 'giaSauKhiGiam', label: 'Giá Sau Giảm', class: 'text-right' },
       { key: 'soLuong', label: 'SL', class: 'text-center' },
-      { key: 'trangThai', label: 'Trạng Thái', class: 'text-center' }
+      // { key: 'trangThai', label: 'Trạng Thái', class: 'text-center' }, // XÓA DÒNG NÀY
     ]);
-
-    const filteredProducts = computed(() => {
-      return fakeProducts.filter(product => {
-        const matchesSearch = !filters.value.productSearch || 
-          product.tenSanPham.toLowerCase().includes(filters.value.productSearch.toLowerCase()) ||
-          product.maSanPham.toLowerCase().includes(filters.value.productSearch.toLowerCase());
-        
-        const matchesStatus = !filters.value.productStatus || 
-          (filters.value.productStatus === 'active' && product.trangThai) ||
-          (filters.value.productStatus === 'inactive' && !product.trangThai);
-        
-        return matchesSearch && matchesStatus;
-      });
-    });
-
-    const availableVariants = computed(() => {
-      const variants = [];
-      selectedProducts.value.forEach(product => {
-        variants.push(...product.chiTietSanPhams);
-      });
-      return variants;
-    });
-
-    const filteredVariants = computed(() => {
-      return availableVariants.value.filter(variant => {
-        const matchesSearch = !filters.value.variantSearch || 
-          variant.tenSanPham.toLowerCase().includes(filters.value.variantSearch.toLowerCase()) ||
-          variant.mauSac.toLowerCase().includes(filters.value.variantSearch.toLowerCase()) ||
-          variant.kichThuoc.toLowerCase().includes(filters.value.variantSearch.toLowerCase());
-        
-        const matchesStatus = !filters.value.variantStatus || 
-          (filters.value.variantStatus === 'active' && variant.trangThai) ||
-          (filters.value.variantStatus === 'inactive' && !variant.trangThai);
-        
-        return matchesSearch && matchesStatus;
-      });
-    });
-
-    const allProductsSelected = computed(() => {
-      return filteredProducts.value.length > 0 && 
-             filteredProducts.value.every(product => isProductSelected(product.id));
-    });
-
-    const allVariantsSelected = computed(() => {
-      return availableVariants.value.length > 0 && 
-             availableVariants.value.every(variant => isVariantSelected(variant.id));
-    });
-
-    const allFilteredVariantsSelected = computed(() => {
-      return filteredVariants.value.length > 0 && 
-             filteredVariants.value.every(variant => isVariantSelected(variant.id));
-    });
 
     const formatDateForInput = (dateTimeString) => {
       if (!dateTimeString) return '';
@@ -597,11 +518,137 @@ export default {
       return `${year}-${month}-${day}T${hours}:${minutes}`;
     };
 
+    const mapProductData = (apiProduct) => {
+      return {
+        id: apiProduct.id,
+        maSanPham: apiProduct.ma,
+        tenSanPham: apiProduct.tenSanPham,
+        anhSanPham: apiProduct.idAnhSanPham?.urlAnh || '/default-product.png',
+        trangThai: !apiProduct.deleted,
+        giaThapNhat: apiProduct.chiTietSanPhams?.length
+          ? Math.min(
+              ...apiProduct.chiTietSanPhams
+                .filter((variant) => !variant.deleted)
+                .map((variant) => variant.giaBan)
+            )
+          : 0,
+        chiTietSanPhams: apiProduct.chiTietSanPhams
+          .filter((variant) => !variant.deleted)
+          .map((variant) => ({
+            id: variant.id,
+            tenSanPham: apiProduct.tenSanPham,
+            anhSanPham: apiProduct.idAnhSanPham?.urlAnh || '/default-product.png',
+            mauSac: variant.idMauSac?.tenMauSac || 'N/A',
+            kichThuoc: variant.idKichCo?.tenKichCo || 'N/A',
+            giaBan: variant.giaBan,
+            giaSauKhiGiam: variant.giaSauKhiGiam || variant.giaBan,
+            soLuong: variant.soLuongTonKho,
+            trangThai: !variant.deleted,
+          })),
+      };
+    };
+
+    const mapCampaignVariantData = (variant) => ({
+      id: variant.idSanPham,
+      tenSanPham: variant.tenSanPham,
+      maSanPham: variant.maSanPham,
+      giaBan: variant.giaBanDau,
+      giaSauKhiGiam: variant.giaSauKhiGiam,
+      trangThai: true, // Assume active since it's part of the campaign
+      anhSanPham: '/default-product.png', // Fallback, as API doesn't provide image
+      mauSac: 'N/A', // API doesn't provide color/size, set as N/A
+      kichThuoc: 'N/A',
+      soLuong: 0, // API doesn't provide quantity, set as 0
+    });
+
+    const filteredProducts = computed(() => {
+      return allProducts.value.filter((product) => {
+        const matchesSearch =
+          !filters.value.productSearch ||
+          product.tenSanPham
+            .toLowerCase()
+            .includes(filters.value.productSearch.toLowerCase()) ||
+          product.maSanPham
+            .toLowerCase()
+            .includes(filters.value.productSearch.toLowerCase());
+        
+        const matchesStatus =
+          !filters.value.productStatus ||
+          (filters.value.productStatus === 'active' && product.trangThai) ||
+          (filters.value.productStatus === 'inactive' && !product.trangThai);
+        
+        return matchesSearch && matchesStatus;
+      });
+    });
+
+    const availableVariants = computed(() => {
+      const variants = [];
+      selectedProducts.value.forEach((product) => {
+        variants.push(...(product.chiTietSanPhams || []));
+      });
+      return variants;
+    });
+
+    const filteredVariants = computed(() => {
+      return availableVariants.value.filter((variant) => {
+        const matchesSearch =
+          !filters.value.variantSearch ||
+          variant.tenSanPham
+            .toLowerCase()
+            .includes(filters.value.variantSearch.toLowerCase()) ||
+          variant.mauSac
+            .toLowerCase()
+            .includes(filters.value.variantSearch.toLowerCase()) ||
+          variant.kichThuoc
+            .toLowerCase()
+            .includes(filters.value.variantSearch.toLowerCase());
+        
+        const matchesStatus =
+          !filters.value.variantStatus ||
+          (filters.value.variantStatus === 'active' && variant.trangThai) ||
+          (filters.value.variantStatus === 'inactive' && !variant.trangThai);
+        
+        return matchesSearch && matchesStatus;
+      });
+    });
+
+    const allProductsSelected = computed(() => {
+      return (
+        filteredProducts.value.length > 0 &&
+        filteredProducts.value.every((product) => isProductSelected(product.id))
+      );
+    });
+
+    const allVariantsSelected = computed(() => {
+      return (
+        availableVariants.value.length > 0 &&
+        availableVariants.value.every((variant) => isVariantSelected(variant.id))
+      );
+    });
+
+    const allFilteredVariantsSelected = computed(() => {
+      return (
+        filteredVariants.value.length > 0 &&
+        filteredVariants.value.every((variant) => isVariantSelected(variant.id))
+      );
+    });
+
     const loadProducts = async () => {
+      loadingProducts.value = true;
       try {
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        allProducts.value = fakeProducts;
+        const response = await axios.get(API_BASE_URL, {
+          params: {
+            page: pagination.value.page,
+            size: pagination.value.size,
+            sortBy: pagination.value.sortBy,
+            sortDir: pagination.value.sortDir,
+          },
+        });
+
+        allProducts.value = response.data.content.map(mapProductData);
+        pagination.value.totalElements = response.data.totalElements || 0;
+        pagination.value.totalPages = response.data.totalPages || 0;
+
         toast.success('Đã tải danh sách sản phẩm thành công!');
       } catch (error) {
         console.error('Lỗi khi tải sản phẩm:', error);
@@ -611,69 +658,83 @@ export default {
       }
     };
 
+    const changePage = (newPage) => {
+      pagination.value.page = newPage;
+      loadProducts();
+    };
+
     const fetchCampaignDetails = async () => {
       try {
-        // Simulate loading existing campaign data
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Mock data for existing campaign
-        const mockCampaign = {
-          maDotGiamGia: 'DGG001',
-          tenDotGiamGia: 'Khuyến mãi Black Friday 2024',
-          moTa: 'Đợt giảm giá lớn nhất trong năm',
-          thoiGianBatDau: '2024-11-20T00:00',
-          thoiGianKetThuc: '2024-11-30T23:59',
-          trangThai: 'DANG_DIEN_RA'
+        const response = await axios.get(`${API_CAMPAIGN_URL}/${campaignId}`);
+        const data = response.data;
+
+        campaign.value = {
+          id: data.id,
+          ma: data.ma,
+          tenDotGiamGia: data.tenDotGiamGia,
+          thoiGianBatDau: formatDateForInput(data.ngayBatDau),
+          thoiGianKetThuc: formatDateForInput(data.ngayKetThuc),
+          // trangThai: data.trangThai, // XÓA DÒNG NÀY
         };
-        
-        campaign.value = mockCampaign;
+
         discountConfig.value = {
-          type: 'percentage',
-          value: 30,
-          applyTo: 'selected'
+          type: data.loaiGiamGiaApDung === 'PHAN_TRAM' ? 'percentage' : 'fixed',
+          value: data.giaTriGiamGia,
+          soTienGiamToiDa: data.soTienGiamToiDa || null,
+          applyTo: data.danhSachSanPham.length === availableVariants.value.length ? 'all' : 'selected',
         };
-        
-        // Pre-select some products and variants for demo
-        selectedProducts.value = [fakeProducts[0], fakeProducts[1]];
-        selectedProductDetails.value = [
-          fakeProducts[0].chiTietSanPhams[0],
-          fakeProducts[0].chiTietSanPhams[1],
-          fakeProducts[1].chiTietSanPhams[0]
-        ];
-        
+
+        // Pre-select variants from danhSachSanPham
+        selectedProductDetails.value = data.danhSachSanPham.map(mapCampaignVariantData);
+
+        // Pre-select products that contain selected variants
+        selectedProducts.value = [];
+        await loadProducts(); // Ensure products are loaded before mapping
+        selectedProductDetails.value.forEach((variant) => {
+          const product = allProducts.value.find((p) =>
+            p.chiTietSanPhams.some((v) => v.id === variant.id)
+          );
+          if (product && !selectedProducts.value.some((p) => p.id === product.id)) {
+            selectedProducts.value.push(product);
+          }
+        });
+
         toast.success('Đã tải thông tin đợt giảm giá thành công!');
       } catch (error) {
         console.error('Lỗi khi tải chi tiết đợt giảm giá:', error);
-        toast.error(`Không thể tải chi tiết đợt giảm giá: ${error.message || 'Lỗi không xác định'}`);
+        toast.error(
+          error.response?.data?.message ||
+            'Không thể tải chi tiết đợt giảm giá. Vui lòng thử lại.'
+        );
         router.push({ name: 'DotGiamGia' });
       }
     };
 
     const isProductSelected = (productId) => {
-      return selectedProducts.value.some(p => p.id === productId);
+      return selectedProducts.value.some((p) => p.id === productId);
     };
 
     const isVariantSelected = (variantId) => {
-      return selectedProductDetails.value.some(v => v.id === variantId);
+      return selectedProductDetails.value.some((v) => v.id === variantId);
     };
 
     const toggleProductSelection = (product) => {
-      const index = selectedProducts.value.findIndex(p => p.id === product.id);
+      const index = selectedProducts.value.findIndex((p) => p.id === product.id);
       if (index > -1) {
-        // Remove product and its variants
         selectedProducts.value.splice(index, 1);
-        // Remove all variants of this product from selectedProductDetails
         selectedProductDetails.value = selectedProductDetails.value.filter(
-          variant => !product.chiTietSanPhams.some(detail => detail.id === variant.id)
+          (variant) =>
+            !product.chiTietSanPhams.some((detail) => detail.id === variant.id)
         );
       } else {
-        // Add product
         selectedProducts.value.push(product);
       }
     };
 
     const toggleVariantSelection = (variant) => {
-      const index = selectedProductDetails.value.findIndex(v => v.id === variant.id);
+      const index = selectedProductDetails.value.findIndex(
+        (v) => v.id === variant.id
+      );
       if (index > -1) {
         selectedProductDetails.value.splice(index, 1);
       } else {
@@ -693,17 +754,18 @@ export default {
 
     const toggleAllVariants = () => {
       if (allFilteredVariantsSelected.value) {
-        // Deselect all filtered variants
-        const filteredVariantIds = filteredVariants.value.map(v => v.id);
+        const filteredVariantIds = filteredVariants.value.map((v) => v.id);
         selectedProductDetails.value = selectedProductDetails.value.filter(
-          variant => !filteredVariantIds.includes(variant.id)
+          (variant) => !filteredVariantIds.includes(variant.id)
         );
       } else {
-        // Select all filtered variants
         const newVariants = filteredVariants.value.filter(
-          variant => !isVariantSelected(variant.id)
+          (variant) => !isVariantSelected(variant.id)
         );
-        selectedProductDetails.value = [...selectedProductDetails.value, ...newVariants];
+        selectedProductDetails.value = [
+          ...selectedProductDetails.value,
+          ...newVariants,
+        ];
       }
     };
 
@@ -714,50 +776,70 @@ export default {
 
     const saveChanges = async () => {
       try {
-        if (discountConfig.value.applyTo === 'selected' && selectedProductDetails.value.length === 0) {
-          toast.error('Vui lòng chọn ít nhất một chi tiết sản phẩm để áp dụng giảm giá.');
+        if (
+          discountConfig.value.applyTo === 'selected' &&
+          selectedProductDetails.value.length === 0
+        ) {
+          toast.error(
+            'Vui lòng chọn ít nhất một chi tiết sản phẩm để áp dụng giảm giá.'
+          );
           return;
         }
 
-        // Validate discount configuration
         if (!discountConfig.value.value || discountConfig.value.value <= 0) {
           toast.error('Vui lòng nhập giá trị giảm giá hợp lệ.');
           return;
         }
 
-        if (discountConfig.value.type === 'percentage' && discountConfig.value.value > 100) {
-          toast.error('Giá trị giảm giá theo phần trăm không được vượt quá 100%.');
+        if (
+          discountConfig.value.type === 'percentage' &&
+          discountConfig.value.value > 100
+        ) {
+          toast.error(
+            'Giá trị giảm giá theo phần trăm không được vượt quá 100%.'
+          );
           return;
         }
 
-        const targetProducts = discountConfig.value.applyTo === 'all' 
-          ? availableVariants.value 
-          : selectedProductDetails.value;
+        if (
+          discountConfig.value.soTienGiamToiDa &&
+          discountConfig.value.soTienGiamToiDa < 0
+        ) {
+          toast.error('Số tiền giảm tối đa không được nhỏ hơn 0.');
+          return;
+        }
+
+        const targetVariants =
+          discountConfig.value.applyTo === 'all'
+            ? availableVariants.value
+            : selectedProductDetails.value;
 
         const payload = {
-          ...campaign.value,
-          loaiGiamGia: discountConfig.value.type,
-          giaTriGiam: discountConfig.value.value,
-          apDungCho: discountConfig.value.applyTo,
-          chiTietSanPhams: targetProducts.map(detail => ({
-            id: detail.id,
-            tenSanPham: detail.tenSanPham,
-            mauSac: detail.mauSac,
-            kichThuoc: detail.kichThuoc,
-            giaBan: detail.giaBan
-          }))
+          id: campaign.value.id,
+          ma: campaign.value.ma,
+          tenDotGiamGia: campaign.value.tenDotGiamGia,
+          loaiGiamGiaApDung:
+            discountConfig.value.type === 'percentage' ? 'PHAN_TRAM' : 'TIEN',
+          giaTriGiamGia: discountConfig.value.value,
+          soTienGiamToiDa: discountConfig.value.soTienGiamToiDa || null,
+          ngayBatDau: campaign.value.thoiGianBatDau,
+          ngayKetThuc: campaign.value.thoiGianKetThuc,
+          // trangThai: campaign.value.trangThai, // XÓA DÒNG NÀY
+          listSanPhamId: targetVariants.map((variant) => variant.id),
         };
 
-        console.log('Payload:', payload);
-        
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        toast.success(`Đã cập nhật đợt giảm giá thành công! Áp dụng cho ${targetProducts.length} chi tiết sản phẩm.`);
+        const response = await axios.put(`${API_CAMPAIGN_URL}/update`, payload);
+
+        toast.success(
+          `Đã cập nhật đợt giảm giá thành công! Áp dụng cho ${targetVariants.length} biến thể.`
+        );
         router.push({ name: 'DotGiamGia' });
       } catch (error) {
         console.error('Lỗi khi cập nhật đợt giảm giá:', error);
-        toast.error('Không thể cập nhật đợt giảm giá. Vui lòng thử lại.');
+        toast.error(
+          error.response?.data?.message ||
+            'Không thể cập nhật đợt giảm giá. Vui lòng thử lại.'
+        );
       }
     };
 
@@ -778,7 +860,6 @@ export default {
     onMounted(() => {
       if (campaignId) {
         fetchCampaignDetails();
-        loadProducts();
       } else {
         toast.error('Không tìm thấy ID đợt giảm giá để chỉnh sửa.');
         router.push({ name: 'DotGiamGia' });
@@ -813,12 +894,17 @@ export default {
       saveChanges,
       cancelEdit,
       formatCurrency,
+      pagination,
+      changePage,
       isFormValid: computed(() => {
-        return campaign.value.tenDotGiamGia && 
-               campaign.value.thoiGianBatDau && 
-               campaign.value.thoiGianKetThuc &&
-               selectedProductDetails.value.length > 0;
-      })
+        return (
+          campaign.value.tenDotGiamGia &&
+          campaign.value.thoiGianBatDau &&
+          campaign.value.thoiGianKetThuc &&
+          (discountConfig.value.applyTo === 'all' ||
+            selectedProductDetails.value.length > 0)
+        );
+      }),
     };
   },
 };
@@ -879,5 +965,118 @@ export default {
   cursor: not-allowed;
   box-shadow: none;
   transform: none;
+}
+
+.custom-input,
+.custom-select {
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.custom-input:focus,
+.custom-select:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  outline: none;
+}
+
+.section-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dark .section-title {
+  color: #e5e7eb;
+}
+
+.product-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1.5rem;
+  background-color: #ffffff;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.dark .product-card {
+  background-color: #374151;
+  border-color: #4b5563;
+}
+
+.product-card:hover {
+  border-color: #3b82f6;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+  transform: translateY(-2px);
+}
+
+.product-card.selected {
+  border-color: #3b82f6;
+  background-color: #eff6ff;
+}
+
+.dark .product-card.selected {
+  background-color: #1e3a8a;
+  border-color: #3b82f6;
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.product-details-container input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  vertical-align: middle;
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .container-fluid {
+    padding: 1rem;
+  }
+
+  .card {
+    padding: 1rem;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+  }
+
+  .custom-input,
+  .custom-select {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+  }
+
+  .btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+  }
+
+  .custom-table th,
+  .custom-table td {
+    padding: 0.5rem;
+    font-size: 0.8rem;
+  }
 }
 </style>
