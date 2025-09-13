@@ -545,8 +545,9 @@
     </div>
 
     <!-- Color Selection Modal -->
-    <div v-if="showColorModal" class="modal-overlay" @click="closeColorModal">
-      <div class="modal-content color-modal" @click.stop>
+    <Teleport to="body">
+      <div v-if="showColorModal" class="modal-overlay" @click="closeColorModal">
+        <div class="modal-content color-modal" @click.stop>
         <div class="modal-header">
           <h3>Chọn Màu Sắc</h3>
           <button @click="closeColorModal" class="close-modal">
@@ -620,12 +621,14 @@
           <button @click="closeColorModal" class="btn secondary">Hủy</button>
           <button @click="confirmColorSelection" class="btn primary">Xác nhận</button>
         </div>
+        </div>
       </div>
-    </div>
+    </Teleport>
 
     <!-- Size Selection Modal -->
-    <div v-if="showSizeModal" class="modal-overlay" @click="closeSizeModal">
-      <div class="modal-content size-modal" @click.stop>
+    <Teleport to="body">
+      <div v-if="showSizeModal" class="modal-overlay" @click="closeSizeModal">
+        <div class="modal-content size-modal" @click.stop>
         <div class="modal-header">
           <h3>Chọn Kích Cỡ</h3>
           <button @click="closeSizeModal" class="close-modal">
@@ -695,12 +698,14 @@
           <button @click="closeSizeModal" class="btn secondary">Hủy</button>
           <button @click="confirmSizeSelection" class="btn primary">Xác nhận</button>
         </div>
+        </div>
       </div>
-    </div>
+    </Teleport>
 
     <!-- Delete Confirmation Modal -->
-    <div v-if="showDeleteConfirmModal" class="modal-overlay" @click="closeDeleteConfirmModal">
-      <div class="modal-content delete-confirm-modal" @click.stop>
+    <Teleport to="body">
+      <div v-if="showDeleteConfirmModal" class="modal-overlay" @click="closeDeleteConfirmModal">
+        <div class="modal-content delete-confirm-modal" @click.stop>
         <div class="modal-header">
           <h3 class="modal-title">
             <iconify-icon icon="solar:danger-triangle-bold-duotone" class="warning-icon"></iconify-icon>
@@ -724,12 +729,14 @@
             Xác nhận xóa
           </button>
         </div>
+        </div>
       </div>
-    </div>
+    </Teleport>
 
     <!-- Quick Add Attribute Modal -->
-    <div v-if="showQuickAddModal" class="modal-overlay" @click="closeQuickAddModal">
-      <div class="modal-content quick-add-modal" @click.stop>
+    <Teleport to="body">
+      <div v-if="showQuickAddModal" class="modal-overlay" @click="closeQuickAddModal">
+        <div class="modal-content quick-add-modal" @click.stop>
         <div class="modal-header">
           <h3>{{ quickAddModalTitle }}</h3>
           <button @click="closeQuickAddModal" class="close-modal">
@@ -781,13 +788,14 @@
         </div>
         <div class="modal-footer">
           <button @click="closeQuickAddModal" class="btn secondary" :disabled="quickAddLoading">Hủy</button>
-          <button @click="saveQuickAddAttribute" class="btn primary" :disabled="quickAddLoading || !quickAddForm.name.trim()">
-            <span v-if="quickAddLoading">Đang lưu...</span>
-            <span v-else>Lưu</span>
+          <button type="submit" class="btn primary" :disabled="quickAddLoading">
+            <span v-if="quickAddLoading" class="loading-spinner"></span>
+            {{ quickAddLoading ? 'Đang lưu...' : 'Lưu' }}
           </button>
         </div>
+        </div>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>
 
@@ -999,8 +1007,10 @@ export default {
         console.log('Loading products...');
         const response = await productService.getProductsWithDetailsPaged({ size: 1000 });
         console.log('Products response:', response);
-        allProducts.value = response.data?.content || response.content || [];
-        console.log('Loaded products:', allProducts.value);
+        const allProductsData = response.data?.content || response.content || [];
+        // Filter out deleted products (deleted = true means stopped selling)
+        allProducts.value = allProductsData.filter(product => !product.deleted);
+        console.log('Loaded products (excluding deleted):', allProducts.value);
       } catch (error) {
         console.error('Error loading products:', error);
         toast.error('Lỗi khi tải danh sách sản phẩm: ' + error.message);
@@ -3229,27 +3239,31 @@ export default {
 
 /* Modal Styles */
 .modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  backdrop-filter: blur(4px);
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background-color: rgba(0, 0, 0, 0.5) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 99999 !important;
+  backdrop-filter: blur(4px) !important;
 }
 
 .modal-content {
-  background: white;
+  background: white !important;
   border-radius: 16px;
   padding: 24px;
   max-width: 500px;
   width: 90%;
   max-height: 80vh;
   overflow-y: auto;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  animation: modalSlideIn 0.3s ease-out;
+  position: relative !important;
+  z-index: 100000 !important;
 }
 
 .color-modal,
