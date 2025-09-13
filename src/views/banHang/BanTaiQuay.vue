@@ -379,8 +379,9 @@
 
     <!-- Modals -->
     <!-- Delete Confirmation Modal -->
-    <div v-if="showXacNhanXoaModal" class="modal-overlay" @click="showXacNhanXoaModal = false">
-      <div class="modal-container small" @click.stop>
+    <Teleport to="body">
+      <div v-if="showXacNhanXoaModal" class="modal-overlay" @click="showXacNhanXoaModal = false">
+        <div class="modal-container small" @click.stop>
         <div class="modal-header">
           <h3 class="modal-title">Xác nhận xóa hóa đơn</h3>
           <button class="modal-close" @click="showXacNhanXoaModal = false">
@@ -394,12 +395,14 @@
           <button class="btn secondary" @click="showXacNhanXoaModal = false">Hủy bỏ</button>
           <button class="btn danger" @click="xoaHoaDon">Xác nhận xóa</button>
         </div>
+        </div>
       </div>
-    </div>
+    </Teleport>
 
     <!-- Customer Select Modal -->
-    <div v-if="showModal" class="modal-overlay" @click="showModal = false">
-      <div class="modal-container large" @click.stop>
+    <Teleport to="body">
+      <div v-if="showModal" class="modal-overlay" @click="showModal = false">
+        <div class="modal-container large" @click.stop>
         <div class="modal-header">
           <h3 class="modal-title">
             <iconify-icon icon="solar:users-group-rounded-bold-duotone"></iconify-icon>
@@ -459,12 +462,14 @@
             </table>
           </div>
         </div>
+        </div>
       </div>
-    </div>
+    </Teleport>
 
     <!-- Product Select Modal -->
-    <div v-if="showThemSanPhamModal" class="modal-overlay" @click="showThemSanPhamModal = false">
-      <div class="modal-container large" @click.stop>
+    <Teleport to="body">
+      <div v-if="showThemSanPhamModal" class="modal-overlay" @click="showThemSanPhamModal = false">
+        <div class="modal-container large" @click.stop>
         <div class="modal-header">
           <h3 class="modal-title">
             <iconify-icon icon="solar:box-bold-duotone"></iconify-icon>
@@ -536,8 +541,9 @@
             </table>
           </div>
         </div>
+        </div>
       </div>
-    </div>
+    </Teleport>
 
     <!-- Payment Modal -->
     <div v-if="showThanhToanModal" class="modal-overlay" @click="showThanhToanModal = false">
@@ -2107,17 +2113,18 @@ export default {
 
 /* ===== MODAL STYLES ===== */
 .modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  background: rgba(0, 0, 0, 0.5) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   padding: 20px;
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px) !important;
+  z-index: 99999 !important;
 }
 
 .modal-container {

@@ -90,14 +90,14 @@
               <div class="status-indicator"></div>
             </div>
             <div class="user-info">
-              <div class="user-name">Admin User</div>
-              <div class="user-role">Quản trị viên</div>
+              <div class="user-name">{{ currentUser?.name || 'Admin User' }}</div>
+              <div class="user-role">{{ getUserRoleText(currentUser?.role) }}</div>
             </div>
             <div class="user-actions">
               <button class="action-btn" title="Cài đặt">
                 <iconify-icon icon="solar:settings-outline"></iconify-icon>
               </button>
-              <button class="action-btn logout-btn" title="Đăng xuất">
+              <button class="action-btn logout-btn" title="Đăng xuất" @click="handleLogout">
                 <iconify-icon icon="solar:logout-2-outline"></iconify-icon>
               </button>
             </div>
@@ -108,10 +108,13 @@
         </div>
       </div>
     </div>
+
   </aside>
 </template>
 
 <script>
+import authService from '@/services/authService.js'
+
 export default {
   props: {
     isSidebarActive: {
@@ -119,9 +122,10 @@ export default {
       default: false,
     },
   },
-  emits: ['toggle-sidebar'],
+  emits: ['toggle-sidebar', 'show-logout-modal'],
   data() {
     return {
+      currentUser: null,
       menuItems: [
         { path: '/thong-ke', label: 'Thống kê', icon: 'solar:home-smile-outline' },
         { path: '/ban-tai-quay', label: 'Bán Tại Quầy', icon: 'solar:shop-outline' },
@@ -170,6 +174,24 @@ export default {
       // Đảo ngược trạng thái mở rộng của submenu
       item.expanded = !item.expanded;
     },
+
+    handleLogout() {
+      // Emit event để AdminLayout xử lý modal
+      this.$emit('show-logout-modal');
+    },
+
+    getUserRoleText(role) {
+      const roleMap = {
+        'admin': 'Quản trị viên',
+        'manager': 'Quản lý',
+        'employee': 'Nhân viên'
+      };
+      return roleMap[role] || 'Quản trị viên';
+    },
+
+    loadCurrentUser() {
+      this.currentUser = authService.getUser();
+    }
   },
   watch: {
     // Đóng tất cả các submenu khi route thay đổi
@@ -188,6 +210,10 @@ export default {
       immediate: true, // Chạy ngay khi component được tạo
     },
   },
+  mounted() {
+    // Load thông tin user khi component được mount
+    this.loadCurrentUser();
+  }
 };
 </script>
 
@@ -851,6 +877,216 @@ export default {
   }
 }
 
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: fadeIn 0.3s ease;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  animation: slideUp 0.3s ease;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.logout-confirm-modal {
+  max-width: 450px;
+  width: 90%;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f9fafb;
+}
+
+.modal-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0;
+}
+
+.logout-icon {
+  color: #f59e0b;
+  font-size: 20px;
+}
+
+.close-modal {
+  background: none;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  font-size: 20px;
+  padding: 4px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.close-modal:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.modal-body {
+  padding: 24px;
+}
+
+.confirm-message {
+  font-size: 16px;
+  color: #374151;
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+.warning-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #92400e;
+}
+
+.warning-note iconify-icon {
+  color: #f59e0b;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  padding: 20px 24px;
+  background: #f9fafb;
+  border-top: 1px solid #e5e7eb;
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 100px;
+  justify-content: center;
+}
+
+.btn.secondary {
+  background: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+
+.btn.secondary:hover {
+  background: #e5e7eb;
+  color: #1f2937;
+}
+
+.btn.danger {
+  background: #dc2626;
+  color: white;
+}
+
+.btn.danger:hover {
+  background: #b91c1c;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Dark theme for modal
+.dark .modal-content {
+  background: #1f2937;
+  color: #f9fafb;
+}
+
+.dark .modal-header {
+  background: #111827;
+  border-bottom: 1px solid #374151;
+}
+
+.dark .modal-title {
+  color: #f9fafb;
+}
+
+.dark .close-modal {
+  color: #9ca3af;
+}
+
+.dark .close-modal:hover {
+  background: #374151;
+  color: #f3f4f6;
+}
+
+.dark .confirm-message {
+  color: #d1d5db;
+}
+
+.dark .warning-note {
+  background: #451a03;
+  border: 1px solid #92400e;
+  color: #fbbf24;
+}
+
+.dark .modal-footer {
+  background: #111827;
+  border-top: 1px solid #374151;
+}
+
+.dark .btn.secondary {
+  background: #374151;
+  color: #d1d5db;
+  border: 1px solid #4b5563;
+}
+
+.dark .btn.secondary:hover {
+  background: #4b5563;
+  color: #f9fafb;
+}
+
 // Responsive design
 @media (max-width: 768px) {
   .modern-sidebar {
@@ -864,6 +1100,19 @@ export default {
     &.sidebar-open {
       transform: translateX(0);
     }
+  }
+
+  .modal-content {
+    margin: 20px;
+    width: calc(100% - 40px);
+  }
+
+  .modal-footer {
+    flex-direction: column;
+  }
+
+  .btn {
+    width: 100%;
   }
 }
 </style>

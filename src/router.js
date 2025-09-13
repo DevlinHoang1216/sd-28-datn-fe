@@ -1,4 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import authService from './services/authService.js'
+
+// Auth views
+import Login from './views/auth/Login.vue'
 
 // Main views
 import ThongKe from './views/tongKet/ThongKe.vue'
@@ -41,15 +45,19 @@ import SuaSanPham from '@/views/sanPham/SuaSanPham.vue';
 import SuaChiTietSanPham from '@/views/sanPham/SuaChiTietSanPham.vue';
 
 const routes = [
+  // Auth routes
+  { path: '/login', name: 'Login', component: Login, meta: { requiresGuest: true } },
+  
   // Main routes
   { path: '/', name: 'Home', redirect: '/thong-ke' },
-  { path: '/thong-ke', name: 'ThongKe', component: ThongKe },
+  { path: '/thong-ke', name: 'ThongKe', component: ThongKe, meta: { requiresAuth: true } },
 
   // Product management routes
   {
     path: '/san-pham',
     name: 'SanPham',
-    component: SanPham
+    component: SanPham,
+    meta: { requiresAuth: true }
   },
   {
     path: '/san-pham/chi-tiet/:id',
@@ -115,6 +123,34 @@ const routes = [
 const router = createRouter({
   history: createWebHistory(),
   routes
+})
+
+// Navigation guards
+router.beforeEach((to, from, next) => {
+  const isAuthenticated = authService.isAuthenticated()
+  
+  // Check if route requires authentication
+  if (to.matched.some(record => record.meta.requiresAuth)) {
+    if (!isAuthenticated) {
+      // Redirect to login if not authenticated
+      next({
+        name: 'Login',
+        query: { redirect: to.fullPath }
+      })
+      return
+    }
+  }
+  
+  // Check if route requires guest (not authenticated)
+  if (to.matched.some(record => record.meta.requiresGuest)) {
+    if (isAuthenticated) {
+      // Redirect to dashboard if already authenticated
+      next({ name: 'ThongKe' })
+      return
+    }
+  }
+  
+  next()
 })
 
 export default router
