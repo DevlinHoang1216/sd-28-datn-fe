@@ -1,15 +1,9 @@
 <template>
   <div class="customer-edit-container">
     <!-- Breadcrumb -->
-    <Breadcrumb
-      :items="breadcrumbItems"
-      :show-page-info="true"
-      page-title="Chỉnh Sửa Khách Hàng"
-      page-description="Cập nhật thông tin khách hàng trong hệ thống"
-      page-icon="solar:settings-bold-duotone"
-      :page-stats="pageStats"
-      :actions="breadcrumbActions"
-    />
+    <Breadcrumb :items="breadcrumbItems" :show-page-info="true" page-title="Chỉnh Sửa Khách Hàng"
+      page-description="Cập nhật thông tin khách hàng trong hệ thống" page-icon="solar:settings-bold-duotone"
+      :page-stats="pageStats" :actions="breadcrumbActions" />
 
     <!-- Main Content -->
     <div class="main-content">
@@ -32,35 +26,33 @@
 
                   <div class="form-grid personal-info">
                     <!-- Tên khách hàng -->
-                    <div class="form-group col-span-2">
+                    <div class="form-group col-span-full">
                       <label class="form-label">
                         <Icon icon="solar:user-bold-duotone" class="label-icon" />
                         Tên khách hàng <span class="required">*</span>
                       </label>
-                      <input
-                        v-model="customer.tenKhachHang"
-                        type="text"
-                        class="form-input"
-                        placeholder="Nhập họ và tên đầy đủ"
-                        required
-                      />
+                      <input v-model="customer.tenKhachHang" type="text" class="form-input"
+                        placeholder="Nhập họ và tên đầy đủ" required />
                     </div>
 
-                    <!-- Ngày sinh -->
+                    <!-- Row with Ngày sinh, CCCD, and Giới tính -->
                     <div class="form-group">
                       <label class="form-label">
                         <Icon icon="solar:calendar-bold-duotone" class="label-icon" />
                         Ngày sinh <span class="required">*</span>
                       </label>
-                      <input
-                        v-model="customer.ngaySinh"
-                        type="date"
-                        class="form-input"
-                        required
-                      />
+                      <input v-model="customer.ngaySinh" type="date" class="form-input" required />
                     </div>
 
-                    <!-- Giới tính -->
+                    <div class="form-group">
+                      <label class="form-label">
+                        <Icon icon="solar:card-bold-duotone" class="label-icon" />
+                        CCCD
+                      </label>
+                      <input v-model="customer.cccd" type="text" class="form-input"
+                        placeholder="Số căn cước công dân" />
+                    </div>
+
                     <div class="form-group">
                       <label class="form-label">
                         <Icon icon="solar:user-speak-bold-duotone" class="label-icon" />
@@ -91,13 +83,17 @@
                         <Icon icon="solar:phone-calling-bold-duotone" class="label-icon" />
                         Số điện thoại <span class="required">*</span>
                       </label>
-                      <input
-                        v-model="customer.soDienThoai"
-                        type="text"
-                        class="form-input"
-                        placeholder="0123456789"
-                        required
-                      />
+                      <input v-model="customer.soDienThoai" type="text" class="form-input" placeholder="0123456789"
+                        required />
+                    </div>
+
+                    <!-- Email -->
+                    <div class="form-group">
+                      <label class="form-label">
+                        <Icon icon="solar:letter-bold-duotone" class="label-icon" />
+                        Email
+                      </label>
+                      <input v-model="customer.email" type="email" class="form-input" placeholder="example@email.com" />
                     </div>
 
                     <!-- Trạng thái -->
@@ -123,7 +119,7 @@
                     </h3>
                     <p class="section-description">Địa chỉ nơi khách hàng đang sinh sống</p>
                   </div>
-                  
+
                   <div class="form-grid address-grid">
                     <!-- Số nhà, tên đường -->
                     <div class="form-group col-span-full">
@@ -131,43 +127,8 @@
                         <Icon icon="solar:home-bold-duotone" class="label-icon" />
                         Số nhà, tên đường <span class="required">*</span>
                       </label>
-                      <input
-                        v-model="customer.diaChiSoNhaTenDuong"
-                        type="text"
-                        class="form-input"
-                        placeholder="Ví dụ: 123 Nguyễn Văn Linh"
-                        required
-                      />
-                    </div>
-
-                    <!-- Phường/Xã -->
-                    <div class="form-group">
-                      <label class="form-label">
-                        <Icon icon="solar:buildings-bold-duotone" class="label-icon" />
-                        Phường/Xã <span class="required">*</span>
-                      </label>
-                      <input
-                        v-model="customer.diaChiPhuongXa"
-                        type="text"
-                        class="form-input"
-                        placeholder="Phường ABC"
-                        required
-                      />
-                    </div>
-
-                    <!-- Quận/Huyện -->
-                    <div class="form-group">
-                      <label class="form-label">
-                        <Icon icon="solar:city-bold-duotone" class="label-icon" />
-                        Quận/Huyện <span class="required">*</span>
-                      </label>
-                      <input
-                        v-model="customer.diaChiQuanHuyen"
-                        type="text"
-                        class="form-input"
-                        placeholder="Quận XYZ"
-                        required
-                      />
+                      <input v-model="customer.diaChiSoNhaTenDuong" type="text" class="form-input"
+                        placeholder="Ví dụ: 123 Nguyễn Văn Linh" required />
                     </div>
 
                     <!-- Tỉnh/Thành phố -->
@@ -176,13 +137,76 @@
                         <Icon icon="solar:global-bold-duotone" class="label-icon" />
                         Tỉnh/Thành phố <span class="required">*</span>
                       </label>
-                      <input
-                        v-model="customer.diaChiTinhThanh"
-                        type="text"
-                        class="form-input"
-                        placeholder="Hà Nội"
-                        required
-                      />
+                      <div class="address-select-wrapper">
+                        <input v-model="provinceSearch" type="text" class="form-input address-search"
+                          placeholder="Tìm kiếm tỉnh/thành phố..." @focus="showProvinceDropdown = true"
+                          @blur="hideProvinceDropdown" />
+                        <div v-if="showProvinceDropdown" class="address-dropdown">
+                          <div v-if="addressLoading.provinces" class="dropdown-loading">
+                            <Icon icon="solar:loading-bold" class="animate-spin" />
+                            Đang tải...
+                          </div>
+                          <div v-for="province in filteredProvinces" :key="province.code" class="dropdown-item"
+                            @mousedown="selectProvince(province); showProvinceDropdown = false">
+                            {{ province.name }}
+                          </div>
+                          <div v-if="!filteredProvinces.length && !addressLoading.provinces" class="dropdown-empty">
+                            Không tìm thấy tỉnh/thành phố
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Quận/Huyện -->
+                    <div class="form-group">
+                      <label class="form-label">
+                        <Icon icon="solar:city-bold-duotone" class="label-icon" />
+                        Quận/Huyện <span class="required">*</span>
+                      </label>
+                      <div class="address-select-wrapper">
+                        <input v-model="districtSearch" type="text" class="form-input address-search"
+                          placeholder="Tìm kiếm quận/huyện..." :disabled="!selectedProvince"
+                          @focus="showDistrictDropdown = true" @blur="hideDistrictDropdown" />
+                        <div v-if="showDistrictDropdown && selectedProvince" class="address-dropdown">
+                          <div v-if="addressLoading.districts" class="dropdown-loading">
+                            <Icon icon="solar:loading-bold" class="animate-spin" />
+                            Đang tải...
+                          </div>
+                          <div v-for="district in filteredDistricts" :key="district.code" class="dropdown-item"
+                            @mousedown="selectDistrict(district); showDistrictDropdown = false">
+                            {{ district.name }}
+                          </div>
+                          <div v-if="!filteredDistricts.length && !addressLoading.districts" class="dropdown-empty">
+                            Không tìm thấy quận/huyện
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Phường/Xã -->
+                    <div class="form-group">
+                      <label class="form-label">
+                        <Icon icon="solar:buildings-bold-duotone" class="label-icon" />
+                        Phường/Xã <span class="required">*</span>
+                      </label>
+                      <div class="address-select-wrapper">
+                        <input v-model="wardSearch" type="text" class="form-input address-search"
+                          placeholder="Tìm kiếm phường/xã..." :disabled="!selectedDistrict"
+                          @focus="showWardDropdown = true" @blur="hideWardDropdown" />
+                        <div v-if="showWardDropdown && selectedDistrict" class="address-dropdown">
+                          <div v-if="addressLoading.wards" class="dropdown-loading">
+                            <Icon icon="solar:loading-bold" class="animate-spin" />
+                            Đang tải...
+                          </div>
+                          <div v-for="ward in filteredWards" :key="ward.code" class="dropdown-item"
+                            @mousedown="selectWard(ward); showWardDropdown = false">
+                            {{ ward.name }}
+                          </div>
+                          <div v-if="!filteredWards.length && !addressLoading.wards" class="dropdown-empty">
+                            Không tìm thấy phường/xã
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -190,19 +214,10 @@
                 <!-- Action Buttons -->
                 <div class="action-section">
                   <div class="action-buttons">
-                    <button
-                      type="button"
-                      class="btn-secondary"
-                      @click="goBack"
-                      :disabled="loading"
-                    >
+                    <button type="button" class="btn-secondary" @click="goBack" :disabled="loading">
                       Quay lại
                     </button>
-                    <button
-                      type="submit"
-                      class="btn-primary"
-                      :disabled="loading"
-                    >
+                    <button type="submit" class="btn-primary" :disabled="loading">
                       <Icon v-if="loading" icon="solar:loading-bold" class="animate-spin btn-icon" />
                       Cập nhật khách hàng
                     </button>
@@ -223,27 +238,61 @@ import { useToast } from 'vue-toastification'
 import { useRouter, useRoute } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import Breadcrumb from '@/components/Breadcrumb.vue'
+import khachHangService from '@/services/khachHangService'
+import { useKhachHangAddressSelection } from '@/services/khachHangService/addressService.js'
 
 // Composables
 const toast = useToast()
 const router = useRouter()
 const route = useRoute()
+const {
+  provinces,
+  districts,
+  wards,
+  selectedProvince,
+  selectedDistrict,
+  selectedWard,
+  filteredProvinces,
+  filteredDistricts,
+  filteredWards,
+  provinceSearch,
+  districtSearch,
+  wardSearch,
+  loading: addressLoading,
+  loadDistricts,
+  loadWards,
+  selectProvince,
+  selectDistrict,
+  selectWard,
+  hideProvinceDropdown,
+  hideDistrictDropdown,
+  hideWardDropdown,
+  setAddressFromData
+} = useKhachHangAddressSelection()
 
 // State
 const loading = ref(false)
 const customerId = ref(route.params.id)
+const showProvinceDropdown = ref(false)
+const showDistrictDropdown = ref(false)
+const showWardDropdown = ref(false)
 
 const customer = ref({
   id: null,
   taiKhoanID: null,
   tenKhachHang: '',
+  email: '',
   ngaySinh: '',
   gioiTinh: true,
   soDienThoai: '',
+  cccd: '',
   diaChiSoNhaTenDuong: '',
   diaChiPhuongXa: '',
   diaChiQuanHuyen: '',
   diaChiTinhThanh: '',
+  provinceCode: null,
+  districtCode: null,
+  wardCode: null,
   trangThai: true
 })
 
@@ -283,93 +332,173 @@ const pageStats = ref([
 // Load customer data
 const loadCustomerData = async () => {
   if (!customerId.value) return
-  
+
   loading.value = true
   try {
-    // Here you would normally fetch customer data from API
-    // For now, we'll simulate with mock data
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    console.log('Loading customer data for ID:', customerId.value)
     
-    // Mock customer data
-    const mockCustomer = {
-      id: customerId.value,
-      taiKhoanID: 1,
-      tenKhachHang: 'Nguyễn Văn A',
-      ngaySinh: '1990-01-15',
-      gioiTinh: true,
-      soDienThoai: '0123456789',
-      diaChiSoNhaTenDuong: '123 Nguyễn Văn Linh',
-      diaChiPhuongXa: 'Phường Tân Bình',
-      diaChiQuanHuyen: 'Quận 1',
-      diaChiTinhThanh: 'TP. Hồ Chí Minh',
-      trangThai: true
+    // Import and call API directly to get customer by ID (similar to employee edit)
+    const { default: khachHangAPI } = await import('@/services/api/APIKhachHang/KhachHangAPI.js')
+    const response = await khachHangAPI.getKhachHangById(customerId.value)
+    console.log('API Response:', response)
+    
+    if (response && response.data) {
+      const customerData = response.data
+      console.log('Customer data received:', customerData)
+      
+      // Map backend data to frontend format (similar to employee mapping)
+      customer.value = {
+        id: customerData.id,
+        taiKhoanID: customerData.taiKhoanId || null,
+        tenKhachHang: customerData.ten || '',
+        email: customerData.email || '',
+        ngaySinh: customerData.ngaySinh ? (typeof customerData.ngaySinh === 'string' && customerData.ngaySinh.includes('T') ? customerData.ngaySinh.split('T')[0] : customerData.ngaySinh) : '',
+        gioiTinh: customerData.gioiTinh === 1 || customerData.gioiTinh === true,
+        soDienThoai: customerData.soDienThoai || '',
+        cccd: customerData.cccd || '',
+        diaChiSoNhaTenDuong: customerData.diaChiCuThe || '',
+        diaChiPhuongXa: customerData.phuong || '',
+        diaChiQuanHuyen: customerData.quan || '',
+        diaChiTinhThanh: customerData.thanhPho || '',
+        provinceCode: null, // Will be set from address lookup
+        districtCode: null, // Will be set from address lookup
+        wardCode: null, // Will be set from address lookup
+        trangThai: customerData.deleted !== undefined ? customerData.deleted : true
+      }
+      
+      console.log('Mapped customer data:', customer.value)
+      
+      // Set address selections based on loaded data (similar to employee edit)
+      setTimeout(async () => {
+        if (customerData.thanhPho) {
+          try {
+            console.log('Setting address data:', {
+              province: customerData.thanhPho,
+              district: customerData.quan,
+              ward: customerData.phuong
+            })
+            
+            // Find and set address selections by name (similar to employee edit)
+            // Find province by name
+            const province = provinces.value.find(p => 
+              p.name.toLowerCase() === customerData.thanhPho.toLowerCase()
+            )
+            
+            if (province) {
+              selectedProvince.value = province
+              provinceSearch.value = province.name
+              console.log('Province selected:', province.name)
+              
+              // Load districts for this province and wait for completion
+              await loadDistricts(province.code)
+              console.log('Districts loaded:', districts.value.length)
+              
+              // Find district by name after districts are loaded
+              if (customerData.quan && districts.value.length > 0) {
+                setTimeout(async () => {
+                  const district = districts.value.find(d => 
+                    d.name.toLowerCase() === customerData.quan.toLowerCase()
+                  )
+                  
+                  if (district) {
+                    selectedDistrict.value = district
+                    districtSearch.value = district.name
+                    console.log('District selected:', district.name)
+                    
+                    // Load wards for this district and wait for completion
+                    await loadWards(district.code)
+                    console.log('Wards loaded:', wards.value.length)
+                    
+                    // Find ward by name after wards are loaded
+                    if (customerData.phuong && wards.value.length > 0) {
+                      setTimeout(() => {
+                        const ward = wards.value.find(w => 
+                          w.name.toLowerCase() === customerData.phuong.toLowerCase()
+                        )
+                        
+                        if (ward) {
+                          selectedWard.value = ward
+                          wardSearch.value = ward.name
+                          console.log('Ward selected:', ward.name)
+                        } else {
+                          wardSearch.value = customerData.phuong
+                          console.log('Ward not found, setting search value:', customerData.phuong)
+                        }
+                      }, 100)
+                    }
+                  } else {
+                    districtSearch.value = customerData.quan
+                    console.log('District not found, setting search value:', customerData.quan)
+                  }
+                }, 100)
+              }
+            } else {
+              provinceSearch.value = customerData.thanhPho
+              console.log('Province not found, setting search value:', customerData.thanhPho)
+            }
+          } catch (addressError) {
+            console.warn('Could not load address data:', addressError)
+            // Fallback to setting search values directly
+            provinceSearch.value = customerData.thanhPho || ''
+            districtSearch.value = customerData.quan || ''
+            wardSearch.value = customerData.phuong || ''
+          }
+        }
+      }, 200)
+
+      toast.success('Tải thông tin khách hàng thành công!')
+    } else {
+      throw new Error('Không nhận được dữ liệu từ server')
     }
-    
-    customer.value = mockCustomer
-    toast.success('Tải thông tin khách hàng thành công!')
   } catch (error) {
     console.error('Lỗi khi tải thông tin khách hàng:', error)
-    toast.error('Lỗi khi tải thông tin khách hàng.')
+    console.error('Error details:', error.response?.data)
+    const errorMessage = error.response?.data?.error || error.message || 'Lỗi khi tải thông tin khách hàng'
+    toast.error(errorMessage)
+    
+    // Navigate back to customer list if customer not found
+    if (error.response?.status === 404) {
+      setTimeout(() => {
+        router.push('/khach-hang')
+      }, 2000)
+    }
   } finally {
     loading.value = false
   }
 }
 
-// Validation function
-const validateCustomer = (cust) => {
-  const requiredFields = [
-    { field: cust.tenKhachHang, label: 'Tên khách hàng' },
-    { field: cust.ngaySinh, label: 'Ngày sinh' },
-    { field: cust.soDienThoai, label: 'Số điện thoại' },
-    { field: cust.diaChiSoNhaTenDuong, label: 'Số nhà, tên đường' },
-    { field: cust.diaChiPhuongXa, label: 'Phường/Xã' },
-    { field: cust.diaChiQuanHuyen, label: 'Quận/Huyện' },
-    { field: cust.diaChiTinhThanh, label: 'Tỉnh/Thành phố' }
-  ]
-
-  for (const item of requiredFields) {
-    if (!item.field || String(item.field).trim() === '') {
-      toast.error(`Vui lòng nhập ${item.label}.`)
-      return false
-    }
-  }
-
-  const nameRegex = /^[\p{L}\s]+$/u
-  if (!nameRegex.test(cust.tenKhachHang.trim())) {
-    toast.error('Tên khách hàng chỉ được chứa chữ cái và khoảng trắng.')
-    return false
-  }
-
-  const phoneRegex = /^0\d{9}$/
-  if (!phoneRegex.test(cust.soDienThoai)) {
-    toast.error('Số điện thoại phải bắt đầu bằng 0 và có đúng 10 chữ số.')
-    return false
-  }
-
-  return true
-}
-
 // Form submission
 const submitForm = async () => {
-  if (!validateCustomer(customer.value)) return
+  // Update address fields from selected values
+  if (selectedProvince.value) {
+    customer.value.diaChiTinhThanh = selectedProvince.value.name
+    customer.value.provinceCode = selectedProvince.value.code
+  }
+  if (selectedDistrict.value) {
+    customer.value.diaChiQuanHuyen = selectedDistrict.value.name
+    customer.value.districtCode = selectedDistrict.value.code
+  }
+  if (selectedWard.value) {
+    customer.value.diaChiPhuongXa = selectedWard.value.name
+    customer.value.wardCode = selectedWard.value.code
+  }
+
+  // Validate using service
+  const validationErrors = khachHangService.validateCustomerData(customer.value, true)
+  if (validationErrors.length > 0) {
+    validationErrors.forEach(error => toast.error(error))
+    return
+  }
 
   loading.value = true
   try {
-    const now = new Date().toISOString()
-    const updatedCustomer = {
-      ...customer.value,
-      ngayCapNhat: now
-    }
-
-    // Here you would normally make an API call to update customer
-    // For now, we'll simulate success
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
+    await khachHangService.updateCustomer(customerId.value, customer.value)
     toast.success('Cập nhật khách hàng thành công!')
     router.push('/khach-hang')
   } catch (error) {
     console.error('Lỗi khi cập nhật khách hàng:', error)
-    toast.error('Lỗi khi cập nhật khách hàng.')
+    const errorMsg = error.response?.data?.error || error.message || 'Lỗi khi cập nhật khách hàng'
+    toast.error(errorMsg)
   } finally {
     loading.value = false
   }
@@ -465,11 +594,11 @@ onMounted(() => {
 }
 
 .personal-info {
-  grid-template-columns: 1fr 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
 }
 
 .contact-info {
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr 1fr;
 }
 
 .address-grid {
@@ -648,6 +777,7 @@ onMounted(() => {
   0% {
     transform: translate(-50%, -50%) rotate(0deg);
   }
+
   100% {
     transform: translate(-50%, -50%) rotate(360deg);
   }
@@ -658,11 +788,11 @@ onMounted(() => {
   .content-wrapper {
     max-width: 800px;
   }
-  
+
   .personal-info {
     grid-template-columns: 1fr 1fr;
   }
-  
+
   .col-span-2 {
     grid-column: 1 / -1;
   }
@@ -687,6 +817,7 @@ onMounted(() => {
   .col-span-full {
     grid-column: 1;
   }
+
 
   .action-buttons {
     flex-direction: column-reverse;
@@ -739,5 +870,69 @@ onMounted(() => {
     margin-top: 32px;
     padding-top: 24px;
   }
+}
+
+/* ===== ADDRESS DROPDOWN STYLES ===== */
+.address-select-wrapper {
+  position: relative;
+}
+
+.address-search {
+  width: 100%;
+}
+
+.address-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-top: none;
+  border-radius: 0 0 16px 16px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.dropdown-item {
+  padding: 12px 18px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.dropdown-item:hover {
+  background-color: #f8fafc;
+}
+
+.dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.dropdown-loading,
+.dropdown-empty {
+  padding: 12px 18px;
+  color: #6b7280;
+  font-style: italic;
+  text-align: center;
+}
+
+.dropdown-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.form-input:disabled {
+  background-color: #f9fafb;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
 }
 </style>
