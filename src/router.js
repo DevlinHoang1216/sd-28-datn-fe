@@ -38,6 +38,7 @@ import ThemSuaThuongHieu from './views/thuocTinhSanPham/themVaChinhSuaThuocTinh/
 import ThemSuaDeGiay from './views/thuocTinhSanPham/themVaChinhSuaThuocTinh/ThemSuaDeGiay.vue'
 import ThemSanPham from '@/views/sanPham/ThemSanPham.vue';
 import SuaSanPham from '@/views/sanPham/SuaSanPham.vue';
+import SuaChiTietSanPham from '@/views/sanPham/SuaChiTietSanPham.vue';
 
 const routes = [
   // Main routes
@@ -64,6 +65,11 @@ const routes = [
     path: '/san-pham/sua/:id',
     name: 'SuaSanPham',
     component: SuaSanPham
+  },
+  {
+    path: '/san-pham/chi-tiet/sua/:id',
+    name: 'SuaChiTietSanPham',
+    component: SuaChiTietSanPham
   },
 
   // Invoice and order management

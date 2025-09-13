@@ -72,29 +72,6 @@
           </div>
         </div>
         <div class="filter-row">
-          <div class="filter-group price-filter-group">
-            <label class="filter-label">Khoảng giá</label>
-            <div class="price-inputs">
-              <div class="price-input-wrapper">
-                <label class="price-sub-label">Từ</label>
-                <input type="number" v-model="filters.priceFrom" class="filter-input" placeholder="0" />
-              </div>
-              <div class="price-input-wrapper">
-                <label class="price-sub-label">Đến</label>
-                <input type="number" v-model="filters.priceTo" class="filter-input" placeholder="10,000,000" />
-              </div>
-            </div>
-          </div>
-          <div class="filter-group">
-            <label class="filter-label">Số lượng tồn</label>
-            <select v-model="filters.stockLevel" class="filter-select">
-              <option value="">Tất cả</option>
-              <option value="high">Tồn kho cao (>50)</option>
-              <option value="medium">Tồn kho trung bình (10-50)</option>
-              <option value="low">Tồn kho thấp (1-10)</option>
-              <option value="out">Hết hàng (0)</option>
-            </select>
-          </div>
           <div class="filter-group">
             <label class="filter-label">Sắp xếp theo</label>
             <select v-model="filters.sortBy" class="filter-select">
@@ -102,10 +79,6 @@
               <option value="oldest">Cũ nhất</option>
               <option value="name_asc">Tên A-Z</option>
               <option value="name_desc">Tên Z-A</option>
-              <option value="price_asc">Giá tăng dần</option>
-              <option value="price_desc">Giá giảm dần</option>
-              <option value="stock_asc">Tồn kho tăng dần</option>
-              <option value="stock_desc">Tồn kho giảm dần</option>
             </select>
           </div>
         </div>
@@ -198,7 +171,7 @@
                 <button @click="viewProduct(item)" class="action-btn view" title="Xem chi tiết sản phẩm">
                   <iconify-icon icon="solar:eye-bold"></iconify-icon>
                 </button>
-                <button @click="editProduct(item)" class="action-btn edit" title="Chỉnh sửa">
+                <button @click="editProduct(item)" class="action-btn edit" :disabled="item.status === 'inactive'" :title="item.status === 'inactive' ? 'Không thể sửa sản phẩm ngừng bán' : 'Chỉnh sửa'">
                   <iconify-icon icon="solar:pen-bold"></iconify-icon>
                 </button>
                 <label class="toggle-switch" :title="item.status === 'active' ? 'Tạm ngưng bán' : 'Tiếp tục bán'">
@@ -566,30 +539,13 @@ export default {
       material: '',
       sole: '',
       status: '',
-      priceFrom: '',
-      priceTo: '',
-      stockLevel: '',
       sortBy: 'newest'
     });
 
 
-    // Sample data
-    const categories = ref([
-      { id: 1, name: 'Giày thể thao' },
-      { id: 2, name: 'Giày công sở' },
-      { id: 3, name: 'Giày boot' },
-      { id: 4, name: 'Sandal' },
-      { id: 5, name: 'Giày lười' }
-    ]);
-
-    const brands = ref([
-      { id: 1, name: 'Nike' },
-      { id: 2, name: 'Adidas' },
-      { id: 3, name: 'Converse' },
-      { id: 4, name: 'Vans' },
-      { id: 5, name: 'New Balance' },
-      { id: 6, name: 'Puma' }
-    ]);
+    // API data
+    const categories = ref([]);
+    const brands = ref([]);
 
     const materials = ref([]);
     const soles = ref([]);
@@ -661,11 +617,7 @@ export default {
         'newest': 'ngayTao',
         'oldest': 'ngayTao',
         'name_asc': 'tenSanPham',
-        'name_desc': 'tenSanPham',
-        'price_asc': 'id', // Default to id since price not in main entity
-        'price_desc': 'id',
-        'stock_asc': 'id',
-        'stock_desc': 'id'
+        'name_desc': 'tenSanPham'
       };
       return sortMap[filters.value.sortBy] || 'id';
     };
@@ -675,11 +627,7 @@ export default {
         'newest': 'desc',
         'oldest': 'asc',
         'name_asc': 'asc',
-        'name_desc': 'desc',
-        'price_asc': 'asc',
-        'price_desc': 'desc',
-        'stock_asc': 'asc',
-        'stock_desc': 'desc'
+        'name_desc': 'desc'
       };
       return dirMap[filters.value.sortBy] || 'asc';
     };
@@ -780,9 +728,6 @@ export default {
         material: '',
         sole: '',
         status: '',
-        priceFrom: '',
-        priceTo: '',
-        stockLevel: '',
         sortBy: 'newest'
       };
       toast.info('Đã đặt lại bộ lọc');
@@ -792,12 +737,14 @@ export default {
       toast.success(`Tìm thấy ${filteredProducts.value.length} sản phẩm phù hợp`);
     };
 
-    // Load materials and soles data
+    // Load all attributes data
     const loadAttributes = async () => {
       try {
-        const [materialsRes, solesRes] = await Promise.all([
+        const [materialsRes, solesRes, categoriesRes, brandsRes] = await Promise.all([
           productService.getAllMaterials(),
-          productService.getAllSoles()
+          productService.getAllSoles(),
+          productService.getAllCategories(),
+          productService.getAllBrands()
         ]);
 
         materials.value = (materialsRes.data || []).map(material => ({
@@ -808,6 +755,16 @@ export default {
         soles.value = (solesRes.data || []).map(sole => ({
           id: sole.id,
           name: sole.tenDeGiay || sole.name
+        }));
+
+        categories.value = (categoriesRes.data || []).map(category => ({
+          id: category.id,
+          name: category.tenDanhMuc || category.name
+        }));
+
+        brands.value = (brandsRes.data || []).map(brand => ({
+          id: brand.id,
+          name: brand.tenThuongHieu || brand.name
         }));
       } catch (error) {
         console.error('Error loading attributes:', error);
@@ -928,23 +885,32 @@ export default {
     };
 
     const toggleProductStatus = async (product) => {
-  try {
-    const index = products.value.findIndex(p => p.id === product.id)
-    if (index !== -1) {
-      const newStatus = product.status === 'active' ? 'inactive' : 'active'
-      products.value[index] = {
-        ...products.value[index],
-        status: newStatus
+      try {
+        // Call the backend API to toggle product status
+        const response = await productService.toggleProductStatus(product.id);
+        
+        if (response.data) {
+          // Update the local state with the response from backend
+          const index = products.value.findIndex(p => p.id === product.id);
+          if (index !== -1) {
+            const newStatus = response.data.deleted ? 'inactive' : 'active';
+            products.value[index] = {
+              ...products.value[index],
+              status: newStatus
+            };
+            
+            const statusText = newStatus === 'active' ? 'tiếp tục bán' : 'tạm ngưng bán';
+            toast.success(`Đã ${statusText} sản phẩm "${product.name}"! Tất cả chi tiết sản phẩm đã được đồng bộ.`);
+          }
+        }
+      } catch (error) {
+        console.error('Lỗi khi cập nhật trạng thái sản phẩm:', error);
+        toast.error('Lỗi khi cập nhật trạng thái sản phẩm. Vui lòng thử lại.');
+        
+        // Revert the toggle switch state on error
+        // The switch will automatically revert since we're not updating the local state
       }
-      
-      const statusText = newStatus === 'active' ? 'tiếp tục bán' : 'tạm ngưng bán'
-      toast.success(`Đã ${statusText} sản phẩm "${product.name}"!`)
-    }
-  } catch (error) {
-    console.error('Lỗi khi cập nhật trạng thái sản phẩm:', error)
-    toast.error('Lỗi khi cập nhật trạng thái sản phẩm.')
-  }
-};
+    };
 
     const confirmDelete = () => {
       if (productToDelete.value) {
@@ -1083,6 +1049,7 @@ export default {
       selectProduct,
       viewProduct,
       editProduct,
+      toggleProductStatus,
 
       // Other functions
       deleteProduct,
@@ -1665,8 +1632,15 @@ export default {
   color: #dc2626;
 }
 
-.action-btn:hover {
+.action-btn:hover:not(:disabled) {
   transform: scale(1.1);
+}
+
+.action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f3f4f6 !important;
+  color: #9ca3af !important;
 }
 
 .toggle-switch {

@@ -1,46 +1,47 @@
 <template>
-  <div class="sua-san-pham-container">
+  <div class="sua-chi-tiet-san-pham-container">
     <!-- Breadcrumb -->
-    <Breadcrumb :items="breadcrumbItems" :show-page-info="true" page-title="Chỉnh Sửa Sản Phẩm"
-      page-description="Chỉnh sửa thông tin sản phẩm" page-icon="solar:widget-4-bold-duotone" />
+    <Breadcrumb :items="breadcrumbItems" :show-page-info="true" page-title="Chỉnh Sửa Chi Tiết Sản Phẩm"
+      page-description="Chỉnh sửa thông tin chi tiết sản phẩm" page-icon="solar:widget-4-bold-duotone" />
 
     <!-- Form Section -->
     <div class="form-section">
       <div class="form-header">
         <h3 class="form-title">
-          Chỉnh Sửa Sản Phẩm
+          Chỉnh Sửa Chi Tiết Sản Phẩm
         </h3>
       </div>
 
-      <form @submit.prevent="saveProduct" class="product-form">
+      <form @submit.prevent="saveChiTietSanPham" class="product-detail-form">
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label required">Tên sản phẩm</label>
-            <input type="text" v-model="productForm.name" class="form-input" placeholder="Nhập tên sản phẩm" required />
+            <label class="form-label">Mã chi tiết sản phẩm</label>
+            <input type="text" v-model="productDetailForm.code" class="form-input disabled-input" placeholder="Mã chi tiết sản phẩm"
+              readonly disabled />
           </div>
           <div class="form-group">
-            <label class="form-label">Mã sản phẩm</label>
-            <input type="text" v-model="productForm.code" class="form-input disabled-input" placeholder="Mã sản phẩm"
+            <label class="form-label">Tên sản phẩm</label>
+            <input type="text" v-model="productDetailForm.productName" class="form-input disabled-input" placeholder="Tên sản phẩm"
               readonly disabled />
           </div>
         </div>
 
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label required">Danh mục</label>
-            <select v-model="productForm.categoryId" class="form-input" required>
-              <option value="">Chọn danh mục</option>
-              <option v-for="category in categories" :key="category.id" :value="category.id">
-                {{ category.name }}
+            <label class="form-label required">Màu sắc</label>
+            <select v-model="productDetailForm.colorId" class="form-input" required>
+              <option value="">Chọn màu sắc</option>
+              <option v-for="color in colors" :key="color.id" :value="color.id">
+                {{ color.name }}
               </option>
             </select>
           </div>
           <div class="form-group">
-            <label class="form-label required">Thương hiệu</label>
-            <select v-model="productForm.brandId" class="form-input" required>
-              <option value="">Chọn thương hiệu</option>
-              <option v-for="brand in brands" :key="brand.id" :value="brand.id">
-                {{ brand.name }}
+            <label class="form-label required">Kích cỡ</label>
+            <select v-model="productDetailForm.sizeId" class="form-input" required>
+              <option value="">Chọn kích cỡ</option>
+              <option v-for="size in sizes" :key="size.id" :value="size.id">
+                {{ size.name }}
               </option>
             </select>
           </div>
@@ -48,48 +49,39 @@
 
         <div class="form-row">
           <div class="form-group">
-            <label class="form-label required">Chất liệu</label>
-            <select v-model="productForm.materialId" class="form-input" required>
-              <option value="">Chọn chất liệu</option>
-              <option v-for="material in materials" :key="material.id" :value="material.id">
-                {{ material.name }}
-              </option>
-            </select>
+            <label class="form-label required">Số lượng tồn kho</label>
+            <input type="number" v-model="productDetailForm.stockQuantity" class="form-input" 
+              placeholder="Nhập số lượng tồn kho" min="0" required />
           </div>
           <div class="form-group">
-            <label class="form-label required">Đế giày</label>
-            <select v-model="productForm.soleId" class="form-input" required>
-              <option value="">Chọn đế giày</option>
-              <option v-for="sole in soles" :key="sole.id" :value="sole.id">
-                {{ sole.name }}
-              </option>
-            </select>
+            <label class="form-label required">Giá nhập</label>
+            <input type="number" v-model="productDetailForm.importPrice" class="form-input" 
+              placeholder="Nhập giá nhập" min="0" step="0.01" required />
           </div>
         </div>
 
         <div class="form-row">
-            <div class="form-group">
-              <label class="form-label">Quốc gia sản xuất</label>
-              <select v-model="productForm.country" class="form-input">
-                <option value="">Chọn quốc gia sản xuất</option>
-                <option v-for="country in countries" :key="country.code" :value="country.name">
-                  {{ country.label }}
-                </option>
-              </select>
-            </div>
+          <div class="form-group">
+            <label class="form-label required">Giá bán</label>
+            <input type="number" v-model="productDetailForm.sellPrice" class="form-input" 
+              placeholder="Nhập giá bán" min="0" step="0.01" required />
+          </div>
+          <div class="form-group">
+            <!-- Empty space for alignment -->
+          </div>
         </div>
 
         <div class="form-group full-width">
-          <label class="form-label">Mô tả sản phẩm</label>
-          <textarea v-model="productForm.description" class="form-textarea" placeholder="Nhập mô tả sản phẩm"
+          <label class="form-label">Mô tả chi tiết</label>
+          <textarea v-model="productDetailForm.description" class="form-textarea" placeholder="Nhập mô tả chi tiết"
             rows="4"></textarea>
         </div>
 
         <div class="form-group full-width">
-          <label class="form-label">Hình ảnh đại diện</label>
+          <label class="form-label">Hình ảnh sản phẩm</label>
           <div class="image-upload-wrapper">
             <!-- Upload Area -->
-            <div class="upload-area" :class="{ 'has-image': productForm.imageUrl, 'uploading': imageUploading }">
+            <div class="upload-area" :class="{ 'has-image': productDetailForm.imageUrl, 'uploading': imageUploading }">
               <input 
                 type="file" 
                 ref="imageInput" 
@@ -100,8 +92,8 @@
               />
               
               <!-- Image Preview -->
-              <div v-if="productForm.imageUrl && !imageUploading" class="image-preview">
-                <img :src="productForm.imageUrl" alt="Product image" class="preview-img" />
+              <div v-if="productDetailForm.imageUrl && !imageUploading" class="image-preview">
+                <img :src="productDetailForm.imageUrl" alt="Product detail image" class="preview-img" />
                 <div class="image-overlay">
                   <button type="button" class="change-image-btn" @click="$refs.imageInput.click()">
                     <iconify-icon icon="solar:camera-bold"></iconify-icon>
@@ -156,10 +148,9 @@ import { useRouter, useRoute } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import Breadcrumb from '@/components/Breadcrumb.vue';
 import { productService } from '@/services/api/productAPI.js';
-import { countryService } from '@/services/countryService.js';
 
 export default {
-  name: 'SuaSanPham',
+  name: 'SuaChiTietSanPham',
   components: {
     Breadcrumb
   },
@@ -169,7 +160,7 @@ export default {
     const toast = useToast();
 
     const loading = ref(false);
-    const productId = ref(null);
+    const productDetailId = ref(null);
     const imageUploading = ref(false);
     const imageInput = ref(null);
 
@@ -177,50 +168,54 @@ export default {
     const breadcrumbItems = ref([
       { label: 'Quản lý', path: '/quan-ly' },
       { label: 'Sản phẩm', path: '/san-pham' },
-      { label: 'Chỉnh sửa', path: `/san-pham/sua/${route.params.id}` }
+      { label: 'Chi tiết sản phẩm', path: `/san-pham/${route.params.productId}/chi-tiet` },
+      { label: 'Chỉnh sửa', path: `/san-pham/chi-tiet/sua/${route.params.id}` }
     ]);
 
     // Form data
-    const productForm = ref({
-      name: '',
+    const productDetailForm = ref({
       code: '',
-      categoryId: '',
-      brandId: '',
-      materialId: '',
-      soleId: '',
+      productName: '',
+      colorId: '',
+      sizeId: '',
+      stockQuantity: 0,
+      importPrice: 0,
+      sellPrice: 0,
       description: '',
-      country: '',
       imageUrl: ''
     });
 
+    // Store product ID for navigation
+    const productId = ref(null);
+
     // Data from API
-    const categories = ref([]);
-    const brands = ref([]);
-    const materials = ref([]);
-    const soles = ref([]);
-    const countries = ref([]);
+    const colors = ref([]);
+    const sizes = ref([]);
 
     // Methods
-    const loadProduct = async (id) => {
+    const loadProductDetail = async (id) => {
       try {
         loading.value = true;
-        const response = await productService.getProductById(id);
-        const product = response.data;
+        const response = await productService.getChiTietSanPhamById(id);
+        const productDetail = response.data;
 
-        productForm.value = {
-          name: product.tenSanPham || '',
-          code: product.ma || '',
-          categoryId: product.idDanhMuc?.id || '',
-          brandId: product.idThuongHieu?.id || '',
-          materialId: product.idChatLieu?.id || '',
-          soleId: product.idDeGiay?.id || '',
-          description: product.moTaSanPham || '',
-          country: product.quocGiaSanXuat || '',
-          imageUrl: product.idAnhSanPham?.urlAnh || ''
+        productDetailForm.value = {
+          code: productDetail.ma || '',
+          productName: productDetail.idSanPham?.tenSanPham || '',
+          colorId: productDetail.idMauSac?.id || '',
+          sizeId: productDetail.idKichCo?.id || '',
+          stockQuantity: productDetail.soLuongTonKho || 0,
+          importPrice: productDetail.giaNhap || 0,
+          sellPrice: productDetail.giaBan || 0,
+          description: productDetail.moTaChiTiet || '',
+          imageUrl: productDetail.idAnhSanPham?.urlAnh || ''
         };
+
+        // Store the product ID for navigation
+        productId.value = productDetail.idSanPham?.id;
       } catch (error) {
-        toast.error('Lỗi khi tải thông tin sản phẩm');
-        console.error('Error loading product:', error);
+        toast.error('Lỗi khi tải thông tin chi tiết sản phẩm');
+        console.error('Error loading product detail:', error);
         goBack();
       } finally {
         loading.value = false;
@@ -229,31 +224,19 @@ export default {
 
     const loadAttributes = async () => {
       try {
-        const [categoriesRes, brandsRes, materialsRes, solesRes, countriesData] = await Promise.all([
-          productService.getAllCategories(),
-          productService.getAllBrands(),
-          productService.getAllMaterials(),
-          productService.getAllSoles(),
-          countryService.getAllCountries()
+        const [colorsRes, sizesRes] = await Promise.all([
+          productService.getAllColors(),
+          productService.getAllSizes()
         ]);
 
-        categories.value = (categoriesRes.data || []).map(category => ({
-          id: category.id,
-          name: category.tenDanhMuc || category.name
+        colors.value = (colorsRes.data || []).map(color => ({
+          id: color.id,
+          name: color.tenMauSac || color.name
         }));
-        brands.value = (brandsRes.data || []).map(brand => ({
-          id: brand.id,
-          name: brand.tenThuongHieu || brand.name
+        sizes.value = (sizesRes.data || []).map(size => ({
+          id: size.id,
+          name: size.tenKichCo || size.name
         }));
-        materials.value = (materialsRes.data || []).map(material => ({
-          id: material.id,
-          name: material.tenChatLieu || material.name
-        }));
-        soles.value = (solesRes.data || []).map(sole => ({
-          id: sole.id,
-          name: sole.tenDeGiay || sole.name
-        }));
-        countries.value = countriesData;
       } catch (error) {
         toast.error('Lỗi khi tải danh sách thuộc tính');
         console.error('Error loading attributes:', error);
@@ -267,7 +250,7 @@ export default {
       try {
         imageUploading.value = true;
         const imageUrl = await productService.uploadImage(file);
-        productForm.value.imageUrl = imageUrl;
+        productDetailForm.value.imageUrl = imageUrl;
         toast.success('Tải ảnh lên thành công!');
       } catch (error) {
         toast.error('Lỗi khi tải ảnh lên');
@@ -277,66 +260,64 @@ export default {
       }
     };
 
-    const saveProduct = async () => {
+    const saveChiTietSanPham = async () => {
       try {
         loading.value = true;
 
-        const productData = {
-          tenSanPham: productForm.value.name,
-          // Remove ma field from update - code should not be updatable
-          moTaSanPham: productForm.value.description,
-          quocGiaSanXuat: productForm.value.country,
-          idDanhMuc: productForm.value.categoryId ? Number(productForm.value.categoryId) : null,
-          idThuongHieu: productForm.value.brandId ? Number(productForm.value.brandId) : null,
-          idChatLieu: productForm.value.materialId ? Number(productForm.value.materialId) : null,
-          idDeGiay: productForm.value.soleId ? Number(productForm.value.soleId) : null,
-          urlAnhDaiDien: productForm.value.imageUrl
+        const productDetailData = {
+          idMauSac: productDetailForm.value.colorId ? Number(productDetailForm.value.colorId) : null,
+          idKichCo: productDetailForm.value.sizeId ? Number(productDetailForm.value.sizeId) : null,
+          soLuongTonKho: productDetailForm.value.stockQuantity,
+          giaNhap: productDetailForm.value.importPrice,
+          giaBan: productDetailForm.value.sellPrice,
+          moTaChiTiet: productDetailForm.value.description,
+          urlAnhSanPham: productDetailForm.value.imageUrl
         };
 
-        await productService.updateProduct(productId.value, productData);
-        toast.success('Cập nhật sản phẩm thành công!');
+        await productService.updateChiTietSanPham(productDetailId.value, productDetailData);
+        toast.success('Cập nhật chi tiết sản phẩm thành công!');
 
         goBack();
       } catch (error) {
-        toast.error('Lỗi khi cập nhật sản phẩm');
-        console.error('Error saving product:', error);
+        toast.error('Lỗi khi cập nhật chi tiết sản phẩm');
+        console.error('Error saving product detail:', error);
       } finally {
         loading.value = false;
       }
     };
 
-
     const goBack = () => {
-      router.push('/san-pham');
+      if (productId.value) {
+        router.push(`/san-pham/chi-tiet/${productId.value}`);
+      } else {
+        router.push('/san-pham');
+      }
     };
 
     // Initialize
     onMounted(async () => {
-      productId.value = route.params.id;
+      productDetailId.value = route.params.id;
 
-      if (!productId.value) {
-        toast.error('ID sản phẩm không hợp lệ');
+      if (!productDetailId.value) {
+        toast.error('ID chi tiết sản phẩm không hợp lệ');
         goBack();
         return;
       }
 
       await loadAttributes();
-      await loadProduct(productId.value);
+      await loadProductDetail(productDetailId.value);
     });
 
     return {
       loading,
       breadcrumbItems,
-      productForm,
-      categories,
-      brands,
-      materials,
-      soles,
-      countries,
+      productDetailForm,
+      colors,
+      sizes,
       imageUploading,
       imageInput,
       handleImageUpload,
-      saveProduct,
+      saveChiTietSanPham,
       goBack
     };
   }
@@ -345,7 +326,7 @@ export default {
 
 <style scoped>
 /* Container Styles */
-.sua-san-pham-container {
+.sua-chi-tiet-san-pham-container {
   min-height: 100vh;
   font-family: 'Inter', sans-serif;
 }
@@ -377,7 +358,7 @@ export default {
 }
 
 /* Form Styles */
-.product-form {
+.product-detail-form {
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -681,7 +662,7 @@ export default {
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  .sua-san-pham-container {
+  .sua-chi-tiet-san-pham-container {
     padding: 16px;
   }
 

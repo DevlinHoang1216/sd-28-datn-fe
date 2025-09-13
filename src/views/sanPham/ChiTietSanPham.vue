@@ -47,38 +47,49 @@
             <label class="filter-label">Trạng thái</label>
             <select v-model="filters.status" class="filter-select">
               <option value="">Tất cả trạng thái</option>
-              <option value="active">Đang bán</option>
-              <option value="inactive">Ngừng bán</option>
+              <option value="active">Còn hàng</option>
+              <option value="low_stock">Sắp hết hàng</option>
               <option value="out_of_stock">Hết hàng</option>
+              <option value="inactive">Ngừng bán</option>
             </select>
           </div>
-          <div class="filter-group price-filter-group">
-            <label class="filter-label">Khoảng giá</label>
-            <div class="price-inputs">
-              <div class="price-input-wrapper">
-                <label class="price-sub-label">Từ</label>
-                <input type="number" v-model="filters.priceFrom" class="filter-input" placeholder="0" />
-              </div>
-              <div class="price-input-wrapper">
-                <label class="price-sub-label">Đến</label>
-                <input type="number" v-model="filters.priceTo" class="filter-input" placeholder="10,000,000" />
-              </div>
-            </div>
+          <div class="filter-group">
+            <label class="filter-label">Sắp xếp theo</label>
+            <select v-model="filters.sortBy" class="filter-select">
+              <option value="id">Mặc định</option>
+              <option value="ngayTao">Ngày tạo</option>
+              <option value="giaBan">Giá bán</option>
+              <option value="soLuongTonKho">Tồn kho</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <label class="filter-label">Thứ tự</label>
+            <select v-model="filters.sortDir" class="filter-select">
+              <option value="asc">Tăng dần</option>
+              <option value="desc">Giảm dần</option>
+            </select>
           </div>
         </div>
         <div class="filter-row">
           <div class="filter-group">
-            <label class="filter-label">Sắp xếp theo</label>
-            <select v-model="filters.sortBy" class="filter-select">
-              <option value="newest">Mới nhất</option>
-              <option value="oldest">Cũ nhất</option>
-              <option value="name_asc">Tên A-Z</option>
-              <option value="name_desc">Tên Z-A</option>
-              <option value="price_asc">Giá tăng dần</option>
-              <option value="price_desc">Giá giảm dần</option>
-              <option value="stock_asc">Tồn kho tăng dần</option>
-              <option value="stock_desc">Tồn kho giảm dần</option>
-            </select>
+            <label class="filter-label">Giá nhập từ</label>
+            <input type="text" v-model="displayMinImportPrice" @input="updateMinImportPrice" class="filter-input"
+              placeholder="VD: 100,000 VND" />
+          </div>
+          <div class="filter-group">
+            <label class="filter-label">Giá nhập đến</label>
+            <input type="text" v-model="displayMaxImportPrice" @input="updateMaxImportPrice" class="filter-input"
+              placeholder="VD: 500,000 VND" />
+          </div>
+          <div class="filter-group">
+            <label class="filter-label">Giá bán từ</label>
+            <input type="text" v-model="displayMinSellingPrice" @input="updateMinSellingPrice" class="filter-input"
+              placeholder="VD: 150,000 VND" />
+          </div>
+          <div class="filter-group">
+            <label class="filter-label">Giá bán đến</label>
+            <input type="text" v-model="displayMaxSellingPrice" @input="updateMaxSellingPrice" class="filter-input"
+              placeholder="VD: 800,000 VND" />
           </div>
         </div>
       </div>
@@ -141,7 +152,12 @@
           <!-- Image Column -->
           <template #image="{ item }">
             <div class="table-product-image">
-              <img :src="item.idSanPham?.urlAnhDaiDien || '/default-product.jpg'" :alt="item.idSanPham?.tenSanPham || 'Product'" />
+              <img 
+                :src="item.idAnhSanPham?.urlAnh || item.idSanPham?.urlAnhDaiDien || '/default-product.jpg'" 
+                :alt="item.idSanPham?.tenSanPham || 'Product'"
+                @error="handleImageError"
+                class="product-variant-image"
+              />
             </div>
           </template>
 
@@ -168,6 +184,11 @@
           </template>
 
 
+          <!-- Import Price Column -->
+          <template #importPrice="{ item }">
+            <span class="import-price">{{ formatCurrency(item.giaNhap) }}</span>
+          </template>
+
           <!-- Price Column -->
           <template #price="{ item }">
             <span class="price">{{ formatCurrency(item.giaBan) }}</span>
@@ -178,20 +199,25 @@
             <span class="stock" :class="getStockClass(item.soLuongTonKho)">{{ item.soLuongTonKho || 0 }}</span>
           </template>
 
+          <!-- Import Date Column -->
+          <template #importDate="{ item }">
+            <span class="import-date">{{ formatDate(item.ngayNhap) }}</span>
+          </template>
+
           <!-- Status Column -->
           <template #status="{ item }">
-            <span class="status-badge" :class="getStatusClass(item.soLuongTonKho)">
-              {{ getStatusLabel(item.soLuongTonKho) }}
+            <span class="status-badge" :class="getStatusClass(item)">
+              {{ getStatusLabel(item) }}
             </span>
           </template>
 
           <!-- Actions Column -->
           <template #actions="{ item }">
             <div class="actions">
-              <button @click="editVariant(item)" class="action-btn edit" title="Chỉnh sửa">
+              <button @click="editVariant(item)" class="action-btn edit" :disabled="item.deleted" :title="item.deleted ? 'Không thể sửa sản phẩm ngừng bán' : 'Chỉnh sửa'">
                 <iconify-icon icon="solar:pen-bold"></iconify-icon>
               </button>
-              <button @click="downloadQRCode(item)" class="action-btn qr" title="Tải mã QR sản phẩm">
+              <button @click="downloadQRCode(item)" class="action-btn qr" :disabled="item.deleted" :title="item.deleted ? 'Không thể tải QR cho sản phẩm ngừng bán' : 'Tải mã QR sản phẩm'">
                 <iconify-icon icon="solar:qr-code-bold"></iconify-icon>
               </button>
             </div>
@@ -358,6 +384,7 @@ import { useRouter, useRoute } from 'vue-router';
 import Breadcrumb from '@/components/Breadcrumb.vue';
 import DataTable from '@/components/DataTable.vue';
 import { productService } from '@/services/api/productAPI.js';
+import QRCode from 'qrcode';
 
 export default {
   name: 'ChiTietSanPham',
@@ -393,25 +420,37 @@ export default {
       downloadSelectedQRCodes();
     };
 
-    const breadcrumbActions = ref([
-      {
-        label: 'Danh sách sản phẩm',
-        type: 'default',
-        handler: () => router.push('/san-pham')
-      },
-      {
-        label: 'Tải mã QR',
-        type: 'default',
-        handler: downloadBulkQRCodes,
-        disabled: computed(() => selectedItems.value.length === 0)
-      },
-      {
-        label: 'Xuất Excel',
-        type: 'default', 
-        handler: exportToExcel,
-        disabled: computed(() => selectedItems.value.length === 0)
-      }
-    ]);
+    const breadcrumbActions = computed(() => {
+      // Check if any selected items are stopped-selling (deleted)
+      const hasStoppedSellingItems = selectedItems.value.some(itemId => {
+        const item = productDetails.value.find(detail => detail.id === itemId);
+        return item && item.deleted === true;
+      });
+
+      return [
+        {
+          label: 'Danh sách sản phẩm',
+          type: 'default',
+          handler: () => router.push('/san-pham')
+        },
+        {
+          label: 'Tải mã QR',
+          type: 'default',
+          handler: downloadBulkQRCodes,
+          disabled: selectedItems.value.length === 0 || hasStoppedSellingItems,
+          title: hasStoppedSellingItems ? 'Không thể tải QR cho sản phẩm ngừng bán' : 
+                 selectedItems.value.length === 0 ? 'Vui lòng chọn sản phẩm' : ''
+        },
+        {
+          label: 'Xuất Excel',
+          type: 'default', 
+          handler: exportToExcel,
+          disabled: selectedItems.value.length === 0 || hasStoppedSellingItems,
+          title: hasStoppedSellingItems ? 'Không thể xuất Excel cho sản phẩm ngừng bán' : 
+                 selectedItems.value.length === 0 ? 'Vui lòng chọn sản phẩm' : ''
+        }
+      ];
+    });
 
     const pageStats = computed(() => [
       {
@@ -462,9 +501,12 @@ export default {
       size: '',
       color: '',
       status: '',
-      priceFrom: '',
-      priceTo: '',
-      sortBy: 'newest'
+      sortBy: 'id',
+      sortDir: 'asc',
+      minImportPrice: '',
+      maxImportPrice: '',
+      minSellingPrice: '',
+      maxSellingPrice: ''
     });
 
     // Form data
@@ -486,6 +528,12 @@ export default {
     // Product details data from API
     const productDetails = ref([]);
 
+    // Display values for formatted price inputs
+    const displayMinImportPrice = ref('');
+    const displayMaxImportPrice = ref('');
+    const displayMinSellingPrice = ref('');
+    const displayMaxSellingPrice = ref('');
+
     // Table columns configuration - Updated to focus on variant-specific attributes
     const columns = ref([
       { key: 'checkbox', label: '', class: 'text-center', width: '50px' },
@@ -493,8 +541,10 @@ export default {
       { key: 'image', label: 'Hình ảnh', class: 'text-center' },
       { key: 'productInfo', label: 'Thông tin sản phẩm' },
       { key: 'variantAttributes', label: 'Thuộc tính biến thể' },
+      { key: 'importPrice', label: 'Giá nhập', class: 'text-right' },
       { key: 'price', label: 'Giá bán', class: 'text-right' },
       { key: 'stock', label: 'Tồn kho', class: 'text-center' },
+      { key: 'importDate', label: 'Ngày nhập', class: 'text-center' },
       { key: 'status', label: 'Trạng thái', class: 'text-center' },
       { key: 'actions', label: 'Hành động', class: 'text-center' }
     ]);
@@ -528,17 +578,11 @@ export default {
       if (filters.value.status) {
         if (filters.value.status === 'out_of_stock') {
           result = result.filter(item => (item.soLuongTonKho || 0) === 0);
-        } else {
-          result = result.filter(item => item.trangThaiSanPhamRieng === filters.value.status);
+        } else if (filters.value.status === 'active') {
+          result = result.filter(item => !item.deleted && (item.soLuongTonKho || 0) > 0);
+        } else if (filters.value.status === 'inactive') {
+          result = result.filter(item => item.deleted === true);
         }
-      }
-
-      // Price range filter
-      if (filters.value.priceFrom) {
-        result = result.filter(item => (item.giaBan || 0) >= Number(filters.value.priceFrom));
-      }
-      if (filters.value.priceTo) {
-        result = result.filter(item => (item.giaBan || 0) <= Number(filters.value.priceTo));
       }
 
       // Sorting
@@ -555,18 +599,6 @@ export default {
         case 'name_desc':
           result.sort((a, b) => (b.idSanPham?.tenSanPham || '').localeCompare(a.idSanPham?.tenSanPham || ''));
           break;
-        case 'price_asc':
-          result.sort((a, b) => (a.giaBan || 0) - (b.giaBan || 0));
-          break;
-        case 'price_desc':
-          result.sort((a, b) => (b.giaBan || 0) - (a.giaBan || 0));
-          break;
-        case 'stock_asc':
-          result.sort((a, b) => (a.soLuongTonKho || 0) - (b.soLuongTonKho || 0));
-          break;
-        case 'stock_desc':
-          result.sort((a, b) => (b.soLuongTonKho || 0) - (a.soLuongTonKho || 0));
-          break;
       }
 
       return result;
@@ -581,7 +613,12 @@ export default {
     };
 
     const formatDate = (dateString) => {
-      return new Date(dateString).toLocaleDateString('vi-VN');
+      if (!dateString) return 'N/A';
+      const date = new Date(dateString);
+      return date.toLocaleDateString('vi-VN') + ' ' + date.toLocaleTimeString('vi-VN', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      });
     };
 
     const getSizeName = (sizeId) => {
@@ -601,13 +638,27 @@ export default {
 
 
 
-    const getStatusLabel = (stock) => {
+    const getStatusLabel = (item) => {
+      // First check if product is deleted (ngừng bán)
+      if (item.deleted === true) {
+        return 'Ngừng bán';
+      }
+      
+      // If not deleted, check stock level
+      const stock = item.soLuongTonKho || 0;
       if (stock === 0) return 'Hết hàng';
       if (stock <= 5) return 'Sắp hết hàng';
       return 'Còn hàng';
     };
 
-    const getStatusClass = (stock) => {
+    const getStatusClass = (item) => {
+      // First check if product is deleted (ngừng bán)
+      if (item.deleted === true) {
+        return 'stopped-selling';
+      }
+      
+      // If not deleted, check stock level
+      const stock = item.soLuongTonKho || 0;
       if (stock === 0) return 'out-of-stock';
       if (stock <= 5) return 'low-stock';
       return 'in-stock';
@@ -619,6 +670,58 @@ export default {
       return 'in-stock';
     };
 
+    const handleImageError = (event) => {
+      event.target.src = '/default-product.jpg';
+    };
+
+    // Currency formatting functions
+    const formatCurrencyInput = (value) => {
+      if (!value) return '';
+      // Remove all non-digit characters
+      const numericValue = value.toString().replace(/\D/g, '');
+      if (!numericValue) return '';
+      
+      // Format with thousand separators and add VND
+      const formatted = new Intl.NumberFormat('vi-VN').format(parseInt(numericValue));
+      return `${formatted} VND`;
+    };
+
+    const parseCurrencyInput = (value) => {
+      if (!value) return '';
+      // Remove all non-digit characters and return as number
+      const numericValue = value.toString().replace(/\D/g, '');
+      return numericValue ? parseInt(numericValue) : '';
+    };
+
+    // Price input handlers
+    const updateMinImportPrice = (event) => {
+      const rawValue = event.target.value;
+      const numericValue = parseCurrencyInput(rawValue);
+      filters.value.minImportPrice = numericValue;
+      displayMinImportPrice.value = formatCurrencyInput(numericValue);
+    };
+
+    const updateMaxImportPrice = (event) => {
+      const rawValue = event.target.value;
+      const numericValue = parseCurrencyInput(rawValue);
+      filters.value.maxImportPrice = numericValue;
+      displayMaxImportPrice.value = formatCurrencyInput(numericValue);
+    };
+
+    const updateMinSellingPrice = (event) => {
+      const rawValue = event.target.value;
+      const numericValue = parseCurrencyInput(rawValue);
+      filters.value.minSellingPrice = numericValue;
+      displayMinSellingPrice.value = formatCurrencyInput(numericValue);
+    };
+
+    const updateMaxSellingPrice = (event) => {
+      const rawValue = event.target.value;
+      const numericValue = parseCurrencyInput(rawValue);
+      filters.value.maxSellingPrice = numericValue;
+      displayMaxSellingPrice.value = formatCurrencyInput(numericValue);
+    };
+
     // CRUD methods
     const resetFilters = () => {
       filters.value = {
@@ -626,10 +729,22 @@ export default {
         size: '',
         color: '',
         status: '',
-        priceFrom: '',
-        priceTo: '',
-        sortBy: 'newest'
+        sortBy: 'id',
+        sortDir: 'asc',
+        minImportPrice: '',
+        maxImportPrice: '',
+        minSellingPrice: '',
+        maxSellingPrice: ''
       };
+      // Reset display values
+      displayMinImportPrice.value = '';
+      displayMaxImportPrice.value = '';
+      displayMinSellingPrice.value = '';
+      displayMaxSellingPrice.value = '';
+      // Reset to first page and reload data
+      currentPage.value = 0;
+      loadProductDetails(0, pageSize.value);
+      toast.info('Đã đặt lại bộ lọc');
     };
 
     const viewProductDetail = (item) => {
@@ -663,36 +778,53 @@ export default {
     };
 
     const editVariant = (variant) => {
-      selectedProductDetail.value = { ...variant };
-      Object.assign(productDetailForm.value, variant);
-      showEditModal.value = true;
+      // Navigate to the edit page for this product detail
+      router.push(`/san-pham/chi-tiet/sua/${variant.id}`);
     };
 
-    const downloadQRCode = (variant) => {
-      // Create QR code data for product variant
-      const qrData = {
-        productName: variant.productName,
-        variantInfo: `${getSizeName(variant.sizeId)} - ${getColorName(variant.colorId)}`,
-        price: variant.price,
-        stock: variant.stock,
-        sku: `${variant.productCode}-${variant.id}`
-      };
-      
-      // Create QR code content
-      const qrContent = `Sản phẩm: ${qrData.productName}\nBiến thể: ${qrData.variantInfo}\nGiá: ${formatCurrency(qrData.price)}\nTồn kho: ${qrData.stock}\nMã SKU: ${qrData.sku}`;
-      
-      // Create a QR code URL using free QR code API
-      const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrContent)}`;
-      
-      // Create download link
-      const link = document.createElement('a');
-      link.href = qrUrl;
-      link.download = `QR_${qrData.sku}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      toast.success(`Đã tải mã QR cho biến thể: ${getSizeName(variant.sizeId)} - ${getColorName(variant.colorId)}`);
+    const downloadQRCode = async (variant) => {
+      try {
+        // Create QR code content using product code as main identifier
+        const qrContent = variant.ma || variant.productCode || `PRODUCT_${variant.id}`;
+        
+        // Generate QR code as data URL using the qrcode library
+        const qrDataUrl = await QRCode.toDataURL(qrContent, {
+          width: 400,
+          height: 400,
+          margin: 2,
+          color: {
+            dark: '#000000',
+            light: '#FFFFFF'
+          },
+          errorCorrectionLevel: 'M'
+        });
+        
+        // Convert data URL to blob
+        const response = await fetch(qrDataUrl);
+        const blob = await response.blob();
+        
+        // Create download link with blob URL
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = `QR_${qrContent}.png`;
+        link.style.display = 'none';
+        
+        // Add to DOM, click, and remove
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // Clean up blob URL
+        setTimeout(() => {
+          URL.revokeObjectURL(blobUrl);
+        }, 100);
+        
+        toast.success(`Đã tải mã QR cho sản phẩm: ${qrContent}`);
+      } catch (error) {
+        console.error('Error generating QR code:', error);
+        toast.error('Không thể tạo mã QR. Vui lòng thử lại.');
+      }
     };
 
     // Selection functions
@@ -883,18 +1015,30 @@ export default {
     const loadProductDetails = async (page = 0, size = 10) => {
       try {
         loading.value = true;
+        error.value = null;
         
         // Get productId from route params or use a default
         const currentProductId = route.params.id || productId.value;
         
+        // Build filter parameters
+        const filterParams = {
+          page,
+          size,
+          sortBy: filters.value.sortBy || 'id',
+          sortDir: filters.value.sortDir || 'asc',
+          search: filters.value.search.trim().replace(/\s+/g, ' '),
+          sizeId: filters.value.size || '',
+          colorId: filters.value.color || '',
+          status: filters.value.status || '',
+          minImportPrice: filters.value.minImportPrice || '',
+          maxImportPrice: filters.value.maxImportPrice || '',
+          minSellingPrice: filters.value.minSellingPrice || '',
+          maxSellingPrice: filters.value.maxSellingPrice || ''
+        };
+        
         if (!currentProductId) {
-          // If no product ID, load all product details with pagination
-          const response = await productService.getAllProductDetails({
-            page,
-            size,
-            sortBy: 'id',
-            sortDir: 'asc'
-          });
+          // If no product ID, load all product details with pagination and filters
+          const response = await productService.getAllProductDetails(filterParams);
           
           if (response.data) {
             productDetails.value = response.data.content || [];
@@ -903,13 +1047,8 @@ export default {
             currentPage.value = response.data.number || 0;
           }
         } else {
-          // Load product details by product ID with pagination
-          const response = await productService.getProductDetailsPaged(currentProductId, {
-            page,
-            size,
-            sortBy: 'id',
-            sortDir: 'asc'
-          });
+          // Load product details by product ID with pagination and filters
+          const response = await productService.getProductDetailsPaged(currentProductId, filterParams);
           
           if (response.data) {
             productDetails.value = response.data.content || [];
@@ -922,6 +1061,7 @@ export default {
         console.error('Error loading product details:', err);
         error.value = 'Không thể tải danh sách chi tiết sản phẩm';
         toast.error('Không thể tải danh sách chi tiết sản phẩm');
+        productDetails.value = [];
       } finally {
         loading.value = false;
       }
@@ -929,14 +1069,20 @@ export default {
 
     const loadBaseProducts = async () => {
       try {
-        const response = await productService.getAllSimpleProducts();
-        baseProducts.value = (response.data || []).map(product => ({
+        const response = await productService.getProductsWithDetailsPaged({
+          page: 0,
+          size: 1000, // Get all products
+          sortBy: 'tenSanPham',
+          sortDir: 'asc'
+        });
+        baseProducts.value = (response.data.content || []).map(product => ({
           id: product.id,
           name: product.tenSanPham || product.name,
           code: product.ma || product.code
         }));
       } catch (err) {
         console.error('Error loading base products:', err);
+        toast.error('Không thể tải danh sách sản phẩm');
       }
     };
 
@@ -1026,7 +1172,9 @@ export default {
 
     // Watch for filter changes to reload data
     watch(
-      () => [filters.value.search, filters.value.size, filters.value.color, filters.value.material, filters.value.sortBy],
+      () => [filters.value.search, filters.value.size, filters.value.color, filters.value.status, 
+             filters.value.sortBy, filters.value.sortDir, filters.value.minImportPrice, 
+             filters.value.maxImportPrice, filters.value.minSellingPrice, filters.value.maxSellingPrice],
       () => {
         currentPage.value = 0; // Reset to first page when filters change
         loadProductDetails(0, pageSize.value);
@@ -1069,6 +1217,12 @@ export default {
       productDetails,
       columns,
       
+      // Display values for price inputs
+      displayMinImportPrice,
+      displayMaxImportPrice,
+      displayMinSellingPrice,
+      displayMaxSellingPrice,
+      
       // Computed
       filteredProductDetails,
       
@@ -1082,6 +1236,14 @@ export default {
       getStatusClass,
       getStockClass,
       resetFilters,
+      
+      // Price formatting methods
+      formatCurrencyInput,
+      parseCurrencyInput,
+      updateMinImportPrice,
+      updateMaxImportPrice,
+      updateMinSellingPrice,
+      updateMaxSellingPrice,
       
       // CRUD Methods
       addProductDetail,
@@ -1098,6 +1260,7 @@ export default {
       // Selection methods
       toggleItemSelection,
       toggleSelectAll,
+      handleImageError,
       updateSelectAllState,
       downloadSelectedQRCodes,
       exportSelectedToExcel,
@@ -1321,9 +1484,18 @@ export default {
   margin: 0 auto;
 }
 
+.product-variant-image {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background-color: #f9fafb;
+}
+
 .table-product-image img {
-  width: 100%;
-  height: 100%;
+  width: 60px;
+  height: 60px;
   object-fit: cover;
 }
 
@@ -1401,6 +1573,12 @@ export default {
   color: #374151;
 }
 
+.import-price {
+  font-weight: 600;
+  color: #059669;
+  font-size: 16px;
+}
+
 .price {
   font-weight: 600;
   color: #dc2626;
@@ -1453,6 +1631,11 @@ export default {
   color: #991b1b;
 }
 
+.status-badge.stopped-selling {
+  background: #fef3c7;
+  color: #92400e;
+}
+
 .actions {
   display: flex;
   gap: 8px;
@@ -1482,8 +1665,15 @@ export default {
   color: #dc2626;
 }
 
-.action-btn:hover {
+.action-btn:hover:not(:disabled) {
   transform: scale(1.1);
+}
+
+.action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f3f4f6 !important;
+  color: #9ca3af !important;
 }
 
 /* Checkbox Styles */

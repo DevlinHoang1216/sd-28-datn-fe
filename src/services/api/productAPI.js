@@ -61,6 +61,12 @@ export const productService = {
   // Create product
   createProduct: (data) => productAPI.post('/san-pham', data),
 
+  // Create product with variants
+  createProductWithVariants: (data) => productAPI.post('/san-pham/with-variants', data),
+
+  // Toggle product status (deleted field)
+  toggleProductStatus: (id) => productAPI.put(`/san-pham/${id}/toggle-status`),
+
   // Product details API functions
   // Get paginated product details by product ID
   getProductDetailsPaged: (productId, params = {}) => {
@@ -68,7 +74,15 @@ export const productService = {
       page = 0,
       size = 10,
       sortBy = 'id',
-      sortDir = 'asc'
+      sortDir = 'asc',
+      search = '',
+      sizeId = '',
+      colorId = '',
+      status = '',
+      minImportPrice = '',
+      maxImportPrice = '',
+      minSellingPrice = '',
+      maxSellingPrice = ''
     } = params
     
     return productAPI.get(`/chi-tiet-san-pham/product/${productId}`, {
@@ -76,7 +90,15 @@ export const productService = {
         page,
         size,
         sortBy,
-        sortDir
+        sortDir,
+        ...(search && { search }),
+        ...(sizeId && { sizeId }),
+        ...(colorId && { colorId }),
+        ...(status && { status }),
+        ...(minImportPrice && { minImportPrice }),
+        ...(maxImportPrice && { maxImportPrice }),
+        ...(minSellingPrice && { minSellingPrice }),
+        ...(maxSellingPrice && { maxSellingPrice })
       }
     })
   },
@@ -262,6 +284,49 @@ export const productService = {
       return response.data.url
     }
   },
+
+  // Add variants to existing product
+  addVariantsToProduct: async (productId, variants) => {
+    const response = await productAPI.post(`/san-pham/${productId}/variants`, variants)
+    return response.data
+  },
+
+  // Chi Tiet San Pham (Product Details) APIs
+  getAllProductDetails: (params = {}) => {
+    const {
+      page = 0,
+      size = 10,
+      sortBy = 'id',
+      sortDir = 'asc',
+      search = '',
+      sizeId = '',
+      colorId = '',
+      status = '',
+      minImportPrice = '',
+      maxImportPrice = '',
+      minSellingPrice = '',
+      maxSellingPrice = ''
+    } = params
+    
+    return productAPI.get('/chi-tiet-san-pham', {
+      params: {
+        page,
+        size,
+        sortBy,
+        sortDir,
+        ...(search && { search }),
+        ...(sizeId && { sizeId }),
+        ...(colorId && { colorId }),
+        ...(status && { status }),
+        ...(minImportPrice && { minImportPrice }),
+        ...(maxImportPrice && { maxImportPrice }),
+        ...(minSellingPrice && { minSellingPrice }),
+        ...(maxSellingPrice && { maxSellingPrice })
+      }
+    })
+  },
+  getChiTietSanPhamById: (id) => productAPI.get(`/chi-tiet-san-pham/${id}`),
+  updateChiTietSanPham: (id, data) => productAPI.put(`/chi-tiet-san-pham/${id}`, data),
 }
 
 export default productService
