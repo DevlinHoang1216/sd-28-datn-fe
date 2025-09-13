@@ -24,17 +24,57 @@
           <!-- Tên Sản Phẩm -->
           <div class="form-group">
             <label class="form-label required">Tên Sản Phẩm</label>
-            <div class="input-with-button">
+            <div class="input-with-button" :class="{ 'dropdown-active': showProductDropdown }">
               <input 
                 type="text" 
                 v-model="productForm.name" 
                 class="form-input"
-                placeholder="Chọn Sản Phẩm"
+                placeholder="Nhập tên sản phẩm hoặc chọn từ danh sách"
+                @input="handleProductNameInput"
+                @focus="showProductDropdown = true"
+                @blur="handleProductInputBlur"
                 required
               />
-              <button type="button" class="select-btn">
-                <iconify-icon icon="solar:alt-arrow-down-bold"></iconify-icon>
+              <button type="button" class="select-btn" @click="toggleProductDropdown">
+                <iconify-icon :icon="showProductDropdown ? 'solar:alt-arrow-up-bold' : 'solar:alt-arrow-down-bold'"></iconify-icon>
               </button>
+              
+              <!-- Product Dropdown -->
+              <div v-if="showProductDropdown" class="product-dropdown">
+                <div class="dropdown-search">
+                  <input 
+                    type="text" 
+                    v-model="productSearchQuery"
+                    class="dropdown-search-input"
+                    placeholder="Tìm kiếm sản phẩm..."
+                    @click.stop
+                  />
+                </div>
+                <div class="dropdown-options">
+                  <div 
+                    v-for="product in filteredProducts" 
+                    :key="product.id"
+                    class="dropdown-option"
+                    @click="selectExistingProduct(product)"
+                  >
+                    <div class="product-info">
+                      <div class="product-name">{{ product.tenSanPham }}</div>
+                      <div class="product-details">
+                        <span class="product-brand">{{ product.tenThuongHieu }}</span>
+                        <span class="separator">•</span>
+                        <span class="product-category">{{ product.tenDanhMuc }}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div v-if="filteredProducts.length === 0 && productSearchQuery" class="no-results">
+                    Không tìm thấy sản phẩm nào
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div v-if="selectedExistingProduct" class="selected-product-info">
+              <iconify-icon icon="solar:info-circle-bold"></iconify-icon>
+              <span>Đã chọn sản phẩm có sẵn. Các thuộc tính sẽ được tự động điền và không thể chỉnh sửa.</span>
             </div>
           </div>
 
@@ -44,12 +84,15 @@
             <div class="form-group">
               <label class="form-label required">Thể Loại</label>
               <div class="input-with-button">
-                <select v-model="productForm.categoryId" class="form-input" required>
+                <select v-model="productForm.categoryId" class="form-input" :disabled="isAttributesLocked" required>
                   <option value="">Chọn Thể Loại</option>
-                  <option v-for="category in categories" :key="category.id" :value="category.id">
+                  <option v-for="category in categories" :key="category.id" :value="Number(category.id)">
                     {{ category.name }}
                   </option>
                 </select>
+                <button type="button" class="quick-add-btn" @click="openQuickAddModal('category')" :disabled="isAttributesLocked" title="Thêm thể loại mới">
+                  <iconify-icon icon="solar:add-circle-bold"></iconify-icon>
+                </button>
               </div>
             </div>
 
@@ -57,12 +100,15 @@
             <div class="form-group">
               <label class="form-label required">Thương Hiệu</label>
               <div class="input-with-button">
-                <select v-model="productForm.brandId" class="form-input" required>
+                <select v-model="productForm.brandId" class="form-input" :disabled="isAttributesLocked" required>
                   <option value="">Chọn Thương Hiệu</option>
-                  <option v-for="brand in brands" :key="brand.id" :value="brand.id">
+                  <option v-for="brand in brands" :key="brand.id" :value="Number(brand.id)">
                     {{ brand.name }}
                   </option>
                 </select>
+                <button type="button" class="quick-add-btn" @click="openQuickAddModal('brand')" :disabled="isAttributesLocked" title="Thêm thương hiệu mới">
+                  <iconify-icon icon="solar:add-circle-bold"></iconify-icon>
+                </button>
               </div>
             </div>
 
@@ -70,37 +116,43 @@
             <div class="form-group">
               <label class="form-label required">Chất Liệu</label>
               <div class="input-with-button">
-                <select v-model="productForm.materialId" class="form-input" required>
+                <select v-model="productForm.materialId" class="form-input" :disabled="isAttributesLocked" required>
                   <option value="">Chọn Chất Liệu</option>
-                  <option v-for="material in materials" :key="material.id" :value="material.id">
+                  <option v-for="material in materials" :key="material.id" :value="Number(material.id)">
                     {{ material.name }}
                   </option>
                 </select>
+                <button type="button" class="quick-add-btn" @click="openQuickAddModal('material')" :disabled="isAttributesLocked" title="Thêm chất liệu mới">
+                  <iconify-icon icon="solar:add-circle-bold"></iconify-icon>
+                </button>
               </div>
             </div>
 
-            <!-- Cỡ Giày -->
+            <!-- Đế Giày -->
             <div class="form-group">
-              <label class="form-label required">Cỡ Giày</label>
+              <label class="form-label required">Đế Giày</label>
               <div class="input-with-button">
-                <select v-model="productForm.soleId" class="form-input" required>
-                  <option value="">Chọn Cỡ Giày</option>
-                  <option v-for="sole in soles" :key="sole.id" :value="sole.id">
+                <select v-model="productForm.soleId" class="form-input" :disabled="isAttributesLocked" required>
+                  <option value="">Chọn Đế Giày</option>
+                  <option v-for="sole in soles" :key="sole.id" :value="Number(sole.id)">
                     {{ sole.name }}
                   </option>
                 </select>
+                <button type="button" class="quick-add-btn" @click="openQuickAddModal('sole')" :disabled="isAttributesLocked" title="Thêm đế giày mới">
+                  <iconify-icon icon="solar:add-circle-bold"></iconify-icon>
+                </button>
               </div>
             </div>
 
-            <!-- Mũi Giày -->
+            <!-- Quốc Gia Sản Xuất -->
             <div class="form-group">
-              <label class="form-label required">Mũi Giày</label>
+              <label class="form-label">Quốc Gia Sản Xuất</label>
               <div class="input-with-button">
-                <select v-model="productForm.toeType" class="form-input" required>
-                  <option value="">Chọn Mũi Giày</option>
-                  <option value="pointed">Mũi nhọn</option>
-                  <option value="round">Mũi tròn</option>
-                  <option value="square">Mũi vuông</option>
+                <select v-model="productForm.country" class="form-input" :disabled="isAttributesLocked">
+                  <option value="">Chọn quốc gia sản xuất</option>
+                  <option v-for="country in countries" :key="country.code" :value="country.name">
+                    {{ country.label }}
+                  </option>
                 </select>
               </div>
             </div>
@@ -129,6 +181,7 @@
                 class="form-textarea"
                 placeholder="Hãy viết nội dung giới thiệu thật hay nhé..."
                 rows="6"
+                :disabled="isAttributesLocked"
               ></textarea>
             </div>
           </div>
@@ -150,10 +203,20 @@
             <div class="selection-grid">
               <!-- Màu Sắc -->
               <div class="selection-group">
-                <label class="selection-label">
-                  <iconify-icon icon="solar:palette-2-bold"></iconify-icon>
-                  Màu Sắc
-                </label>
+                <div class="selection-header">
+                  <label class="selection-label">
+                    <iconify-icon icon="solar:palette-bold-duotone"></iconify-icon>
+                    Màu Sắc
+                  </label>
+                  <button 
+                    type="button" 
+                    class="quick-add-variant-btn"
+                    @click="openQuickAddModal('color')"
+                    title="Thêm màu sắc mới"
+                  >
+                    <iconify-icon icon="solar:add-circle-bold"></iconify-icon>
+                  </button>
+                </div>
                 <div class="selection-area">
                   <div class="selected-items" v-if="selectedColors.length > 0">
                     <div 
@@ -181,10 +244,20 @@
 
               <!-- Kích Cỡ -->
               <div class="selection-group">
-                <label class="selection-label">
-                  <iconify-icon icon="solar:ruler-bold"></iconify-icon>
-                  Kích Cỡ
-                </label>
+                <div class="selection-header">
+                  <label class="selection-label">
+                    <iconify-icon icon="solar:ruler-bold"></iconify-icon>
+                    Kích Cỡ
+                  </label>
+                  <button 
+                    type="button" 
+                    class="quick-add-variant-btn"
+                    @click="openQuickAddModal('size')"
+                    title="Thêm kích cỡ mới"
+                  >
+                    <iconify-icon icon="solar:add-circle-bold"></iconify-icon>
+                  </button>
+                </div>
                 <div class="selection-area">
                   <div class="selected-items" v-if="selectedSizes.length > 0">
                     <div 
@@ -432,13 +505,6 @@
                       <td class="actions-cell">
                         <div class="action-buttons">
                           <button 
-                            @click="editVariant(index)" 
-                            class="action-btn edit-btn"
-                            title="Sửa"
-                          >
-                            <iconify-icon icon="solar:pen-bold"></iconify-icon>
-                          </button>
-                          <button 
                             @click="removeVariantImage(index)" 
                             class="action-btn image-btn"
                             v-if="variant.imageUrl"
@@ -491,11 +557,10 @@
           <!-- Search Bar -->
           <div class="search-section">
             <div class="search-input-container">
-              <iconify-icon icon="solar:magnifer-bold" class="search-icon"></iconify-icon>
               <input 
                 type="text" 
                 v-model="colorSearchQuery"
-                class="search-input"
+                class="search-input no-icon"
                 placeholder="Tìm kiếm màu sắc..."
               />
             </div>
@@ -525,8 +590,9 @@
                   :key="color.id"
                   class="selection-row"
                   :class="{ 'selected': tempSelectedColors.includes(color.id) }"
+                  @click="toggleColorSelection(color.id)"
                 >
-                  <td class="checkbox-cell">
+                  <td class="checkbox-cell" @click.stop>
                     <input 
                       type="checkbox" 
                       :checked="tempSelectedColors.includes(color.id)"
@@ -570,11 +636,10 @@
           <!-- Search Bar -->
           <div class="search-section">
             <div class="search-input-container">
-              <iconify-icon icon="solar:magnifer-bold" class="search-icon"></iconify-icon>
               <input 
                 type="text" 
                 v-model="sizeSearchQuery"
-                class="search-input"
+                class="search-input no-icon"
                 placeholder="Tìm kiếm kích cỡ..."
               />
             </div>
@@ -603,8 +668,9 @@
                   :key="size.id"
                   class="selection-row"
                   :class="{ 'selected': tempSelectedSizes.includes(size.id) }"
+                  @click="toggleSizeSelection(size.id)"
                 >
-                  <td class="checkbox-cell">
+                  <td class="checkbox-cell" @click.stop>
                     <input 
                       type="checkbox" 
                       :checked="tempSelectedSizes.includes(size.id)"
@@ -660,6 +726,68 @@
         </div>
       </div>
     </div>
+
+    <!-- Quick Add Attribute Modal -->
+    <div v-if="showQuickAddModal" class="modal-overlay" @click="closeQuickAddModal">
+      <div class="modal-content quick-add-modal" @click.stop>
+        <div class="modal-header">
+          <h3>{{ quickAddModalTitle }}</h3>
+          <button @click="closeQuickAddModal" class="close-modal">
+            <iconify-icon icon="solar:close-circle-bold"></iconify-icon>
+          </button>
+        </div>
+        <div class="modal-body">
+          <form @submit.prevent="saveQuickAddAttribute">
+            <div class="form-group">
+              <label class="form-label required">Tên {{ getAttributeTypeLabel() }}</label>
+              <input 
+                type="text" 
+                v-model="quickAddForm.name" 
+                class="form-input"
+                :placeholder="'Nhập tên ' + getAttributeTypePlaceholder()"
+                required
+                ref="quickAddInput"
+              />
+            </div>
+            <div v-if="quickAddAttributeType === 'color'" class="form-group">
+              <label class="form-label required">Mã Màu</label>
+              <div class="color-input-group">
+                <div class="color-picker-container">
+                  <input 
+                    type="color" 
+                    v-model="quickAddForm.hex" 
+                    class="color-picker"
+                    @input="updateHexFromPicker"
+                    required
+                  />
+                  <div class="color-preview" :style="{ backgroundColor: quickAddForm.hex }"></div>
+                </div>
+                <input 
+                  type="text" 
+                  v-model="quickAddForm.hex" 
+                  class="hex-input"
+                  placeholder="#000000"
+                  @input="validateHexInput"
+                  pattern="^#[0-9A-Fa-f]{6}$"
+                  maxlength="7"
+                  required
+                />
+              </div>
+              <div class="color-help-text">
+                Chọn màu bằng bảng màu hoặc nhập mã hex (ví dụ: #FF0000)
+              </div>
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button @click="closeQuickAddModal" class="btn secondary" :disabled="quickAddLoading">Hủy</button>
+          <button @click="saveQuickAddAttribute" class="btn primary" :disabled="quickAddLoading || !quickAddForm.name.trim()">
+            <span v-if="quickAddLoading">Đang lưu...</span>
+            <span v-else>Lưu</span>
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -669,6 +797,7 @@ import { useRouter } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import Breadcrumb from '@/components/Breadcrumb.vue';
 import { productService } from '@/services/api/productAPI.js';
+import { countryService } from '@/services/countryService.js';
 
 export default {
   name: 'ThemSanPham',
@@ -688,6 +817,10 @@ export default {
     const showSizeModal = ref(false);
     const showDeleteConfirmModal = ref(false);
     const deleteConfirmData = ref({ type: '', index: null, message: '' });
+    const showQuickAddModal = ref(false);
+    const quickAddAttributeType = ref('');
+    const quickAddLoading = ref(false);
+    const quickAddForm = ref({ name: '', hex: '#000000' });
 
     // Breadcrumb data
     const breadcrumbItems = ref([
@@ -704,7 +837,7 @@ export default {
       brandId: '',
       materialId: '',
       soleId: '',
-      toeType: '',
+      country: '',
       description: '',
       imageUrl: '',
       status: 'active'
@@ -727,6 +860,13 @@ export default {
     const bulkSalePrice = ref('');
     const bulkQuantity = ref('');
 
+    // Product selection data
+    const showProductDropdown = ref(false);
+    const productSearchQuery = ref('');
+    const allProducts = ref([]);
+    const selectedExistingProduct = ref(null);
+    const isAttributesLocked = ref(false);
+
     // Data from API
     const categories = ref([]);
     const brands = ref([]);
@@ -734,6 +874,69 @@ export default {
     const soles = ref([]);
     const colors = ref([]);
     const sizes = ref([]);
+    const countries = ref([]);
+
+    // Quick add computed properties
+    const quickAddModalTitle = computed(() => {
+      const titles = {
+        category: 'Thêm Thể Loại Mới',
+        brand: 'Thêm Thương Hiệu Mới',
+        material: 'Thêm Chất Liệu Mới',
+        sole: 'Thêm Đế Giày Mới',
+        color: 'Thêm Màu Sắc Mới',
+        size: 'Thêm Kích Cỡ Mới'
+      };
+      return titles[quickAddAttributeType.value] || 'Thêm Thuộc Tính Mới';
+    });
+
+    // Helper functions for attribute type labels
+    const getAttributeTypeLabel = () => {
+      const labels = {
+        category: 'Thể Loại',
+        brand: 'Thương Hiệu',
+        material: 'Chất Liệu',
+        sole: 'Đế Giày',
+        color: 'Màu Sắc',
+        size: 'Kích Cỡ'
+      };
+      return labels[quickAddAttributeType.value] || 'Thuộc Tính';
+    };
+
+    const getAttributeTypePlaceholder = () => {
+      const placeholders = {
+        category: 'thể loại',
+        brand: 'thương hiệu',
+        material: 'chất liệu',
+        sole: 'đế giày',
+        color: 'màu sắc',
+        size: 'kích cỡ'
+      };
+      return placeholders[quickAddAttributeType.value] || 'thuộc tính';
+    };
+
+    // Color input validation functions
+    const validateHexInput = (event) => {
+      let value = event.target.value;
+      
+      // Add # if not present
+      if (value && !value.startsWith('#')) {
+        value = '#' + value;
+      }
+      
+      // Validate hex format
+      const hexRegex = /^#[0-9A-Fa-f]{0,6}$/;
+      if (hexRegex.test(value) || value === '') {
+        quickAddForm.value.hex = value;
+      } else {
+        // Revert to previous valid value
+        event.target.value = quickAddForm.value.hex;
+      }
+    };
+
+    const updateHexFromPicker = () => {
+      // Color picker automatically provides valid hex format
+      // No additional validation needed
+    };
 
     // Currency formatting methods
     const formatCurrency = (value) => {
@@ -777,47 +980,362 @@ export default {
       event.target.value = formatCurrency(numericValue);
     };
 
+    // Product selection computed properties
+    const filteredProducts = computed(() => {
+      if (!productSearchQuery.value.trim()) {
+        return allProducts.value;
+      }
+      const query = productSearchQuery.value.toLowerCase().trim();
+      return allProducts.value.filter(product => 
+        product.tenSanPham.toLowerCase().includes(query) ||
+        product.tenThuongHieu?.toLowerCase().includes(query) ||
+        product.tenDanhMuc?.toLowerCase().includes(query)
+      );
+    });
+
+    // Product selection methods
+    const loadProducts = async () => {
+      try {
+        console.log('Loading products...');
+        const response = await productService.getProductsWithDetailsPaged({ size: 1000 });
+        console.log('Products response:', response);
+        allProducts.value = response.data?.content || response.content || [];
+        console.log('Loaded products:', allProducts.value);
+      } catch (error) {
+        console.error('Error loading products:', error);
+        toast.error('Lỗi khi tải danh sách sản phẩm: ' + error.message);
+      }
+    };
+
+    const toggleProductDropdown = () => {
+      showProductDropdown.value = !showProductDropdown.value;
+      if (showProductDropdown.value) {
+        productSearchQuery.value = '';
+      }
+    };
+
+    const handleProductNameInput = () => {
+      // Reset selected product when user types
+      if (selectedExistingProduct.value) {
+        selectedExistingProduct.value = null;
+        isAttributesLocked.value = false;
+        resetProductForm();
+      }
+      showProductDropdown.value = true;
+    };
+
+    const handleProductInputBlur = () => {
+      // Delay hiding dropdown to allow clicks
+      setTimeout(() => {
+        showProductDropdown.value = false;
+      }, 200);
+    };
+
+    const selectExistingProduct = (product) => {
+      selectedExistingProduct.value = product;
+      productForm.value.name = product.tenSanPham;
+      isAttributesLocked.value = true;
+      showProductDropdown.value = false;
+      
+      // Backend trả về các đối tượng relationship, không phải chỉ ID
+      // Truy cập ID từ các đối tượng relationship
+      const categoryId = product.idDanhMuc?.id;
+      const brandId = product.idThuongHieu?.id;
+      const materialId = product.idChatLieu?.id;
+      const soleId = product.idDeGiay?.id;
+      
+      // Auto-fill product attributes với ID từ relationship objects
+      productForm.value.categoryId = categoryId ? Number(categoryId) : '';
+      productForm.value.brandId = brandId ? Number(brandId) : '';
+      productForm.value.materialId = materialId ? Number(materialId) : '';
+      productForm.value.soleId = soleId ? Number(soleId) : '';
+      productForm.value.country = product.quocGiaSanXuat || '';
+      productForm.value.description = product.moTaSanPham || '';
+      
+      // Xử lý ảnh đại diện từ relationship idAnhSanPham
+      productForm.value.imageUrl = product.idAnhSanPham?.urlAnh || '';
+      
+      // Debug logging để kiểm tra cấu trúc dữ liệu
+      console.log('Selected product data:', product);
+      console.log('Relationship objects:', {
+        idDanhMuc: product.idDanhMuc,
+        idThuongHieu: product.idThuongHieu,
+        idChatLieu: product.idChatLieu,
+        idDeGiay: product.idDeGiay,
+        idAnhSanPham: product.idAnhSanPham
+      });
+      console.log('Setting form values:', {
+        categoryId: productForm.value.categoryId,
+        brandId: productForm.value.brandId,
+        materialId: productForm.value.materialId,
+        soleId: productForm.value.soleId
+      });
+      
+      // Verify that the IDs exist in the loaded attributes
+      const categoryExists = categories.value.find(c => c.id === productForm.value.categoryId);
+      const brandExists = brands.value.find(b => b.id === productForm.value.brandId);
+      const materialExists = materials.value.find(m => m.id === productForm.value.materialId);
+      const soleExists = soles.value.find(s => s.id === productForm.value.soleId);
+      
+      console.log('Attribute verification:', {
+        categoryExists: categoryExists?.name,
+        brandExists: brandExists?.name,
+        materialExists: materialExists?.name,
+        soleExists: soleExists?.name
+      });
+      
+      toast.success('Đã chọn sản phẩm có sẵn. Các thuộc tính đã được tự động điền.');
+    };
+
+    const resetProductForm = () => {
+      productForm.value = {
+        name: productForm.value.name, // Keep the name
+        code: '',
+        categoryId: '',
+        brandId: '',
+        materialId: '',
+        soleId: '',
+        toeType: '',
+        description: '',
+        imageUrl: '',
+        status: 'active'
+      };
+    };
+
+    // Quick add methods
+    const openQuickAddModal = (attributeType) => {
+      quickAddAttributeType.value = attributeType;
+      quickAddForm.value = { name: '', hex: '#000000' };
+      showQuickAddModal.value = true;
+      // Focus input after modal opens
+      setTimeout(() => {
+        const input = document.querySelector('.quick-add-modal input[type="text"]');
+        if (input) input.focus();
+      }, 100);
+    };
+
+    const closeQuickAddModal = () => {
+      showQuickAddModal.value = false;
+      quickAddAttributeType.value = '';
+      quickAddForm.value = { name: '', hex: '#000000' };
+      quickAddLoading.value = false;
+    };
+
+    const saveQuickAddAttribute = async () => {
+      if (!quickAddForm.value.name.trim()) {
+        toast.error('Vui lòng nhập tên thuộc tính');
+        return;
+      }
+
+      try {
+        quickAddLoading.value = true;
+        let newAttribute;
+        const trimmedName = quickAddForm.value.name.trim();
+        
+        // Check for duplicate name before creating
+        try {
+          let checkResponse;
+          switch (quickAddAttributeType.value) {
+            case 'category':
+              checkResponse = await productService.checkCategoryNameExists(trimmedName);
+              break;
+            case 'brand':
+              checkResponse = await productService.checkBrandNameExists(trimmedName);
+              break;
+            case 'material':
+              checkResponse = await productService.checkMaterialNameExists(trimmedName);
+              break;
+            case 'sole':
+              checkResponse = await productService.checkSoleNameExists(trimmedName);
+              break;
+            case 'color':
+              checkResponse = await productService.checkColorNameAndHexExists(trimmedName, quickAddForm.value.hex);
+              break;
+            case 'size':
+              checkResponse = await productService.checkSizeNameExists(trimmedName);
+              break;
+          }
+          
+          if (checkResponse?.data?.exists) {
+            const attributeTypeName = {
+              category: 'thể loại',
+              brand: 'thương hiệu', 
+              material: 'chất liệu',
+              sole: 'đế giày',
+              color: 'màu sắc',
+              size: 'kích cỡ'
+            }[quickAddAttributeType.value];
+            toast.error(`Tên ${attributeTypeName} đã tồn tại`);
+            return;
+          }
+        } catch (checkError) {
+          console.error('Error checking duplicate name:', checkError);
+          // Continue with save if check fails
+        }
+
+        switch (quickAddAttributeType.value) {
+          case 'category':
+            const categoryData = { tenDanhMuc: trimmedName };
+            newAttribute = await productService.createCategory(categoryData);
+            categories.value.push({
+              id: newAttribute.data?.id || newAttribute.id,
+              name: newAttribute.data?.tenDanhMuc || newAttribute.tenDanhMuc || trimmedName
+            });
+            // Auto-select the new category
+            productForm.value.categoryId = Number(newAttribute.data?.id || newAttribute.id);
+            toast.success('Đã thêm thể loại mới thành công!');
+            break;
+            
+          case 'brand':
+            const brandData = { tenThuongHieu: trimmedName };
+            newAttribute = await productService.createBrand(brandData);
+            brands.value.push({
+              id: newAttribute.data?.id || newAttribute.id,
+              name: newAttribute.data?.tenThuongHieu || newAttribute.tenThuongHieu || trimmedName
+            });
+            // Auto-select the new brand
+            productForm.value.brandId = Number(newAttribute.data?.id || newAttribute.id);
+            toast.success('Đã thêm thương hiệu mới thành công!');
+            break;
+            
+          case 'material':
+            const materialData = { tenChatLieu: trimmedName };
+            newAttribute = await productService.createMaterial(materialData);
+            materials.value.push({
+              id: newAttribute.data?.id || newAttribute.id,
+              name: newAttribute.data?.tenChatLieu || newAttribute.tenChatLieu || trimmedName
+            });
+            // Auto-select the new material
+            productForm.value.materialId = Number(newAttribute.data?.id || newAttribute.id);
+            toast.success('Đã thêm chất liệu mới thành công!');
+            break;
+            
+          case 'sole':
+            const soleData = { tenDeGiay: trimmedName };
+            newAttribute = await productService.createSole(soleData);
+            soles.value.push({
+              id: newAttribute.data?.id || newAttribute.id,
+              name: newAttribute.data?.tenDeGiay || newAttribute.tenDeGiay || trimmedName
+            });
+            // Auto-select the new sole
+            productForm.value.soleId = Number(newAttribute.data?.id || newAttribute.id);
+            toast.success('Đã thêm đế giày mới thành công!');
+            break;
+            
+          case 'color':
+            const colorData = { 
+              tenMauSac: trimmedName,
+              hex: quickAddForm.value.hex
+            };
+            newAttribute = await productService.createColor(colorData);
+            colors.value.push({
+              id: newAttribute.data?.id || newAttribute.id,
+              name: newAttribute.data?.tenMauSac || newAttribute.tenMauSac || trimmedName,
+              hex: newAttribute.data?.hex || newAttribute.hex || quickAddForm.value.hex
+            });
+            toast.success('Đã thêm màu sắc mới thành công!');
+            break;
+            
+          case 'size':
+            const sizeData = { tenKichCo: trimmedName };
+            newAttribute = await productService.createSize(sizeData);
+            sizes.value.push({
+              id: newAttribute.data?.id || newAttribute.id,
+              name: newAttribute.data?.tenKichCo || newAttribute.tenKichCo || trimmedName
+            });
+            toast.success('Đã thêm kích cỡ mới thành công!');
+            break;
+        }
+        
+        closeQuickAddModal();
+      } catch (error) {
+        console.error('Error creating attribute:', error);
+        const errorMessage = error.response?.data?.message || error.response?.data || error.message;
+        toast.error('Lỗi khi thêm thuộc tính: ' + errorMessage);
+      } finally {
+        quickAddLoading.value = false;
+      }
+    };
+
     // Methods
     const loadAttributes = async () => {
       try {
-        const [categoriesRes, brandsRes, materialsRes, solesRes, colorsRes, sizesRes] = await Promise.all([
+        console.log('Loading attributes...');
+        
+        const [categoriesRes, brandsRes, materialsRes, solesRes, colorsRes, sizesRes, countriesRes] = await Promise.all([
           productService.getAllCategories(),
           productService.getAllBrands(),
           productService.getAllMaterials(),
           productService.getAllSoles(),
           productService.getAllColors(),
-          productService.getAllSizes()
+          productService.getAllSizes(),
+          countryService.getAllCountries()
         ]);
 
-        categories.value = (categoriesRes.data || []).map(category => ({
+        console.log('API Responses:', {
+          categories: categoriesRes,
+          brands: brandsRes,
+          materials: materialsRes,
+          soles: solesRes,
+          colors: colorsRes,
+          sizes: sizesRes
+        });
+
+        // Handle different response structures
+        categories.value = (categoriesRes.data || categoriesRes || []).map(category => ({
           id: category.id,
-          name: category.tenDanhMuc || category.name
+          name: category.tenDanhMuc || category.name || category.ten
         }));
-        brands.value = (brandsRes.data || []).map(brand => ({
+        
+        brands.value = (brandsRes.data || brandsRes || []).map(brand => ({
           id: brand.id,
-          name: brand.tenThuongHieu || brand.name
+          name: brand.tenThuongHieu || brand.name || brand.ten
         }));
-        materials.value = (materialsRes.data || []).map(material => ({
+        
+        materials.value = (materialsRes.data || materialsRes || []).map(material => ({
           id: material.id,
-          name: material.tenChatLieu || material.name
+          name: material.tenChatLieu || material.name || material.ten
         }));
-        soles.value = (solesRes.data || []).map(sole => ({
+        
+        soles.value = (solesRes.data || solesRes || []).map(sole => ({
           id: sole.id,
-          name: sole.tenDeGiay || sole.name
+          name: sole.tenDeGiay || sole.name || sole.ten
         }));
-        colors.value = (colorsRes.data || []).map(color => ({
+        
+        colors.value = (colorsRes.data || colorsRes || []).map(color => ({
           id: color.id,
-          name: color.tenMauSac || color.name,
-          hex: color.hex || '#000000'
+          name: color.tenMauSac || color.name || color.ten,
+          hex: color.hex || color.mauHex || '#000000'
         }));
-        sizes.value = (sizesRes.data || []).map(size => ({
+        
+        sizes.value = (sizesRes.data || sizesRes || []).map(size => ({
           id: size.id,
-          name: size.tenKichCo || size.name
+          name: size.tenKichCo || size.name || size.ten
         }));
+
+        countries.value = countriesRes || [];
+
+        console.log('Processed data:', {
+          categories: categories.value,
+          brands: brands.value,
+          materials: materials.value,
+          soles: soles.value,
+          colors: colors.value,
+          sizes: sizes.value,
+          countries: countries.value
+        });
+
       } catch (error) {
-        toast.error('Lỗi khi tải danh sách thuộc tính');
         console.error('Error loading attributes:', error);
+        toast.error('Lỗi khi tải danh sách thuộc tính: ' + error.message);
       }
+    };
+
+    const loadData = async () => {
+      await Promise.all([
+        loadAttributes(),
+        loadProducts()
+      ]);
     };
 
     // Computed properties for modal filtering
@@ -1170,27 +1688,123 @@ export default {
 
     const saveProduct = async () => {
       try {
+        console.log('Starting product save process...');
+        
+        // Check if existing product is selected
+        const isExistingProduct = selectedExistingProduct.value !== null;
+        
+        if (!isExistingProduct) {
+          // Validate required fields for new product
+          if (!productForm.value.name.trim()) {
+            toast.error('Vui lòng nhập tên sản phẩm');
+            return;
+          }
+          
+          if (!productForm.value.categoryId) {
+            toast.error('Vui lòng chọn danh mục');
+            return;
+          }
+          
+          if (!productForm.value.brandId) {
+            toast.error('Vui lòng chọn thương hiệu');
+            return;
+          }
+          
+          if (!productForm.value.materialId) {
+            toast.error('Vui lòng chọn chất liệu');
+            return;
+          }
+          
+          if (!productForm.value.soleId) {
+            toast.error('Vui lòng chọn đế giày');
+            return;
+          }
+        }
+        
+        if (productVariants.value.length === 0) {
+          toast.error('Vui lòng tạo ít nhất một biến thể sản phẩm');
+          return;
+        }
+        
+        // Validate variants
+        for (let i = 0; i < productVariants.value.length; i++) {
+          const variant = productVariants.value[i];
+          if (!variant.importPrice || variant.importPrice <= 0) {
+            toast.error(`Giá nhập phải lớn hơn 0 cho biến thể ${i + 1} (${variant.colorName} - ${variant.sizeName})`);
+            return;
+          }
+          if (!variant.salePrice || variant.salePrice <= 0) {
+            toast.error(`Giá bán phải lớn hơn 0 cho biến thể ${i + 1} (${variant.colorName} - ${variant.sizeName})`);
+            return;
+          }
+          if (variant.quantity < 0) {
+            toast.error(`Số lượng không được âm cho biến thể ${i + 1} (${variant.colorName} - ${variant.sizeName})`);
+            return;
+          }
+        }
+        
+        // Prepare variants data
+        const chiTietSanPhams = productVariants.value.map(variant => ({
+          idMauSac: Number(variant.colorId),
+          idKichCo: Number(variant.sizeId),
+          soLuongTonKho: Number(variant.quantity),
+          giaNhap: Number(variant.importPrice),
+          giaBan: Number(variant.salePrice),
+          moTaChiTiet: variant.description || null,
+          urlAnhSanPham: variant.imageUrl || null
+        }));
+        
         loading.value = true;
         
-        const productData = {
-          tenSanPham: productForm.value.name,
-          moTaSanPham: productForm.value.description,
-          idDanhMuc: productForm.value.categoryId ? Number(productForm.value.categoryId) : null,
-          idThuongHieu: productForm.value.brandId ? Number(productForm.value.brandId) : null,
-          idChatLieu: productForm.value.materialId ? Number(productForm.value.materialId) : null,
-          idDeGiay: productForm.value.soleId ? Number(productForm.value.soleId) : null,
-          urlAnhDaiDien: productForm.value.imageUrl,
-          trangThai: productForm.value.status,
-          variants: productVariants.value
-        };
-
-        await productService.createProduct(productData);
-        toast.success('Thêm sản phẩm thành công!');
+        if (isExistingProduct) {
+          // Add variants to existing product
+          console.log('Adding variants to existing product:', selectedExistingProduct.value.id);
+          console.log('Variants data:', JSON.stringify(chiTietSanPhams, null, 2));
+          
+          const response = await productService.addVariantsToProduct(selectedExistingProduct.value.id, chiTietSanPhams);
+          console.log('Variants added successfully:', response);
+          toast.success('Thêm chi tiết sản phẩm thành công!');
+        } else {
+          // Create new product with variants
+          const sanPhamData = {
+            tenSanPham: productForm.value.name.trim(),
+            moTaSanPham: productForm.value.description || null,
+            quocGiaSanXuat: productForm.value.country || null,
+            idDanhMuc: Number(productForm.value.categoryId),
+            idThuongHieu: Number(productForm.value.brandId),
+            idChatLieu: Number(productForm.value.materialId),
+            idDeGiay: Number(productForm.value.soleId),
+            urlAnhDaiDien: productForm.value.imageUrl || null,
+            trangThai: productForm.value.status || 'active'
+          };
+          
+          const requestData = {
+            sanPham: sanPhamData,
+            chiTietSanPhams: chiTietSanPhams
+          };
+          
+          console.log('Creating new product with variants:', JSON.stringify(requestData, null, 2));
+          
+          const response = await productService.createProductWithVariants(requestData);
+          console.log('Product created successfully:', response);
+          toast.success('Thêm sản phẩm thành công!');
+        }
         
-        goBack();
+        // Navigate back to product list
+        router.push('/san-pham');
+        
       } catch (error) {
-        toast.error('Lỗi khi thêm sản phẩm');
         console.error('Error saving product:', error);
+        console.error('Error response:', error.response?.data);
+        
+        if (error.response?.data?.message) {
+          toast.error('Lỗi: ' + error.response.data.message);
+        } else if (error.response?.data?.errors) {
+          const errorMessages = Object.values(error.response.data.errors).flat();
+          toast.error('Lỗi: ' + errorMessages.join(', '));
+        } else {
+          toast.error('Có lỗi xảy ra: ' + error.message);
+        }
       } finally {
         loading.value = false;
       }
@@ -1202,7 +1816,7 @@ export default {
 
     // Initialize
     onMounted(async () => {
-      await loadAttributes();
+      await loadData();
     });
 
     return {
@@ -1215,10 +1829,22 @@ export default {
       soles,
       colors,
       sizes,
+      countries,
       imageUploading,
       imageInput,
+      
+      // Modal states
       showColorModal,
       showSizeModal,
+      showDeleteConfirmModal,
+      deleteConfirmData,
+      showQuickAddModal,
+      quickAddAttributeType,
+      quickAddModalTitle,
+      quickAddForm,
+      quickAddLoading,
+      
+      // Selection data
       selectedColors,
       selectedSizes,
       productVariants,
@@ -1227,7 +1853,8 @@ export default {
       bulkSalePrice,
       bulkQuantity,
       isAllSelected,
-      // Modal data
+      
+      // Modal search data
       colorSearchQuery,
       sizeSearchQuery,
       tempSelectedColors,
@@ -1236,44 +1863,75 @@ export default {
       filteredSizes,
       isAllColorsSelected,
       isAllSizesSelected,
-      showDeleteConfirmModal,
-      deleteConfirmData,
+      
+      // Product dropdown data
+      showProductDropdown,
+      productSearchQuery,
+      allProducts,
+      selectedExistingProduct,
+      isAttributesLocked,
+      filteredProducts,
+      
+      // Currency methods
+      formatCurrency,
+      handlePriceInput,
+      handleBulkPriceInput,
+      
+      // Product selection methods
+      toggleProductDropdown,
+      handleProductNameInput,
+      handleProductInputBlur,
+      selectExistingProduct,
+      
       // Modal methods
       openColorModal,
       closeColorModal,
       openSizeModal,
       closeSizeModal,
+      
+      // Selection methods
       toggleColorSelection,
       toggleSizeSelection,
       toggleSelectAllColors,
       toggleSelectAllSizes,
       confirmColorSelection,
       confirmSizeSelection,
-      confirmDelete,
-      closeDeleteConfirmModal,
-      // Currency formatting methods
-      formatCurrency,
-      parseCurrency,
-      handlePriceInput,
-      handleBulkPriceInput,
-      // Original methods
+      
+      // Color and size methods
       removeColor,
       removeSize,
-      generateVariants,
+      
+      // Image methods
       handleImageUpload,
       removeMainImage,
       handleVariantImageUpload,
       removeVariantImage,
+      
+      // Bulk operations methods
       toggleSelectAll,
       toggleVariantSelection,
       applyBulkImportPrice,
       applyBulkSalePrice,
       applyBulkQuantity,
       deleteSelectedVariants,
-      editVariant,
       deleteVariant,
-      saveProduct,
-      goBack
+      
+      // Delete confirmation methods
+      closeDeleteConfirmModal,
+      confirmDelete,
+      
+      // Quick add methods
+      openQuickAddModal,
+      closeQuickAddModal,
+      saveQuickAddAttribute,
+      getAttributeTypeLabel,
+      getAttributeTypePlaceholder,
+      validateHexInput,
+      updateHexFromPicker,
+      
+      // Navigation
+      goBack,
+      saveProduct
     };
   }
 };
@@ -1369,11 +2027,12 @@ export default {
   position: relative;
   display: flex;
   align-items: center;
+  gap: 8px;
 }
 
 .form-input,
 .form-textarea {
-  width: 100%;
+  flex: 1;
   padding: 12px 16px;
   border: 2px solid #e5e7eb;
   border-radius: 12px;
@@ -1403,6 +2062,146 @@ export default {
   color: #007bff;
 }
 
+/* Quick Add Button Styles */
+.quick-add-btn {
+  background: #007bff;
+  border: none;
+  color: white;
+  padding: 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  height: 44px;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.quick-add-btn:hover:not(:disabled) {
+  background: #0056b3;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+.quick-add-btn:disabled {
+  background: #e5e7eb;
+  color: #9ca3af;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.quick-add-btn iconify-icon {
+  font-size: 18px;
+}
+
+/* Variant Selection Styles */
+.selection-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.quick-add-variant-btn {
+  background: #007bff;
+  border: none;
+  color: white;
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.quick-add-variant-btn:hover {
+  background: #0056b3;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+}
+
+.quick-add-variant-btn iconify-icon {
+  font-size: 16px;
+}
+
+/* Color Input Styles */
+.color-input-group {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.color-picker-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.color-picker {
+  width: 50px;
+  height: 44px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 0;
+  background: none;
+}
+
+.color-picker::-webkit-color-swatch-wrapper {
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+}
+
+.color-picker::-webkit-color-swatch {
+  border: none;
+  border-radius: 6px;
+}
+
+.color-preview {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+.hex-input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  font-size: 14px;
+  font-family: 'Courier New', monospace;
+  text-transform: uppercase;
+  transition: all 0.3s ease;
+  background: #f9fafb;
+}
+
+.hex-input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.1);
+  background: white;
+}
+
+.color-help-text {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 4px;
+  font-style: italic;
+}
+
 .form-input:focus,
 .form-textarea:focus {
   outline: none;
@@ -1411,9 +2210,29 @@ export default {
   box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.1);
 }
 
+.form-input:disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.form-input:disabled::placeholder {
+  color: #d1d5db;
+}
+
 .form-textarea {
   resize: vertical;
   min-height: 120px;
+}
+
+.form-textarea:disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.form-textarea:disabled::placeholder {
+  color: #d1d5db;
 }
 
 /* Rich Text Editor */
@@ -1637,6 +2456,19 @@ export default {
   border: 1px solid #e2e8f0;
 }
 
+.btn.secondary {
+  background: #f8fafc;
+  color: #64748b;
+  border: 2px solid #e2e8f0;
+}
+
+.btn.secondary:hover {
+  background: #f1f5f9;
+  color: #ffffff;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+}
+
 /* New Variants Styles */
 .variants-content {
   padding: 0;
@@ -1688,12 +2520,11 @@ export default {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
   background: #f8fafc;
   border: 1px solid #e2e8f0;
   border-radius: 20px;
-  font-size: 13px;
-  font-weight: 500;
+  padding: 8px 14px;
+  font-size: 15px;
   color: #374151;
   transition: all 0.2s ease;
 }
@@ -1718,12 +2549,14 @@ export default {
   border: none;
   color: #6b7280;
   cursor: pointer;
-  padding: 2px;
+  padding: 0;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
-  transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 18px;
 }
 
 .remove-btn:hover {
@@ -1997,7 +2830,7 @@ export default {
 }
 
 .apply-btn {
-  background: #10b981;
+  background: #007bff;
   color: white;
   border: none;
   border-radius: 6px;
@@ -2010,7 +2843,7 @@ export default {
 }
 
 .apply-btn:hover {
-  background: #059669;
+  background: #0056b3;
 }
 
 .bulk-delete-btn {
@@ -2120,12 +2953,13 @@ export default {
   text-align: center;
   border-bottom: 1px solid #f1f5f9;
   vertical-align: middle;
+  font-size: 14px;
 }
 
 .variants-table th {
   background: #f8fafc;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 15px;
   color: #374151;
   position: sticky;
   top: 0;
@@ -2258,16 +3092,17 @@ export default {
 }
 
 .action-btn {
-  background: none;
+  width: 36px;
+  height: 36px;
   border: none;
   border-radius: 6px;
-  padding: 6px;
   cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  margin: 0 2px;
   transition: all 0.2s ease;
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .edit-btn {
@@ -2404,6 +3239,7 @@ export default {
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  backdrop-filter: blur(4px);
 }
 
 .modal-content {
@@ -2479,25 +3315,34 @@ export default {
   align-items: center;
 }
 
-.search-icon {
-  position: absolute;
-  left: 12px;
-  color: #6b7280;
-  font-size: 16px;
-  z-index: 1;
-}
-
-.search-input {
+.dropdown-search-input {
   width: 100%;
-  padding: 12px 16px 12px 40px;
-  border: 2px solid #e5e7eb;
-  border-radius: 12px;
+  padding: 12px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
   font-size: 14px;
-  background: #f9fafb;
-  transition: all 0.3s ease;
+  outline: none;
+  transition: all 0.2s ease;
 }
 
-.search-input:focus {
+.dropdown-search-input.no-icon {
+  width: 100%;
+  padding: 12px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.dropdown-search-input.no-icon:focus {
+  outline: none;
+  border-color: #007bff;
+  background: white;
+  box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.1);
+}
+
+.dropdown-search-input:focus {
   outline: none;
   border-color: #007bff;
   background: white;
@@ -2714,15 +3559,130 @@ export default {
   box-shadow: 0 8px 20px rgba(0, 123, 255, 0.3);
 }
 
-.btn.secondary {
-  background: #6c757d;
-  color: white;
+/* Product Dropdown Styles */
+.dropdown-active {
+  z-index: 1000;
 }
 
-.btn.secondary:hover {
-  background: #545b62;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(108, 117, 125, 0.3);
+.product-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-top: none;
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  z-index: 1001;
+  max-height: 400px;
+  overflow: hidden;
+}
+
+.dropdown-search {
+  position: relative;
+  padding: 12px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.dropdown-search .search-icon {
+  position: absolute;
+  left: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #6b7280;
+  font-size: 16px;
+}
+
+.dropdown-search-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  background: #f9fafb;
+}
+
+.dropdown-search-input:focus {
+  outline: none;
+  border-color: #007bff;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.dropdown-options {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.dropdown-option {
+  padding: 12px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid #f3f4f6;
+  transition: all 0.2s ease;
+}
+
+.dropdown-option:hover {
+  background: #f8fafc;
+}
+
+.dropdown-option:last-child {
+  border-bottom: none;
+}
+
+.product-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.product-name {
+  font-weight: 600;
+  color: #1f2937;
+  font-size: 14px;
+}
+
+.product-details {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.product-brand,
+.product-category {
+  font-weight: 500;
+}
+
+.separator {
+  color: #d1d5db;
+}
+
+.no-results {
+  padding: 20px;
+  text-align: center;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.selected-product-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: #dbeafe;
+  border: 1px solid #93c5fd;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #1e40af;
+}
+
+.selected-product-info iconify-icon {
+  color: #3b82f6;
+  font-size: 16px;
+  flex-shrink: 0;
 }
 
 .btn.secondary:hover:not(.btn.danger) {
@@ -2797,5 +3757,23 @@ export default {
   .table-row {
     min-width: 600px;
   }
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  transition: all 0.2s ease;
+  background: #f9fafb;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #007bff;
+  background: white;
+  box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.1);
 }
 </style>
