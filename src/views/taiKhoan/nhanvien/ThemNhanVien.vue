@@ -100,6 +100,21 @@
                       />
                     </div>
 
+                    <!-- Email -->
+                    <div class="form-group col-span-2">
+                      <label class="form-label">
+                        <Icon icon="solar:letter-bold-duotone" class="label-icon" />
+                        Email <span class="required">*</span>
+                      </label>
+                      <input
+                        v-model="employee.email"
+                        type="email"
+                        class="form-input"
+                        placeholder="example@company.com"
+                        required
+                      />
+                    </div>
+
                     <!-- CCCD -->
                     <div class="form-group col-span-2">
                       <label class="form-label">
@@ -116,7 +131,7 @@
                     </div>
 
                     <!-- Trạng thái -->
-                    <div class="form-group col-span-full">
+                    <div class="form-group col-span-2">
                       <label class="form-label">
                         <Icon icon="solar:shield-check-bold-duotone" class="label-icon" />
                         Trạng thái
@@ -155,19 +170,39 @@
                       />
                     </div>
 
-                    <!-- Phường/Xã -->
+                    <!-- Tỉnh/Thành phố -->
                     <div class="form-group">
                       <label class="form-label">
-                        <Icon icon="solar:buildings-bold-duotone" class="label-icon" />
-                        Phường/Xã <span class="required">*</span>
+                        <Icon icon="solar:global-bold-duotone" class="label-icon" />
+                        Tỉnh/Thành phố <span class="required">*</span>
                       </label>
-                      <input
-                        v-model="employee.diaChiPhuongXa"
-                        type="text"
-                        class="form-input"
-                        placeholder="Phường ABC"
-                        required
-                      />
+                      <div class="address-select-wrapper">
+                        <input
+                          v-model="provinceSearch"
+                          type="text"
+                          class="form-input address-search"
+                          placeholder="Tìm kiếm tỉnh/thành phố..."
+                          @focus="showProvinceDropdown = true"
+                          @blur="hideProvinceDropdown"
+                        />
+                        <div v-if="showProvinceDropdown" class="address-dropdown">
+                          <div v-if="addressLoading.provinces" class="dropdown-loading">
+                            <Icon icon="solar:loading-bold" class="animate-spin" />
+                            Đang tải...
+                          </div>
+                          <div
+                            v-for="province in filteredProvinces"
+                            :key="province.code"
+                            class="dropdown-item"
+                            @mousedown="selectProvince(province)"
+                          >
+                            {{ province.name }}
+                          </div>
+                          <div v-if="!filteredProvinces.length && !addressLoading.provinces" class="dropdown-empty">
+                            Không tìm thấy tỉnh/thành phố
+                          </div>
+                        </div>
+                      </div>
                     </div>
 
                     <!-- Quận/Huyện -->
@@ -176,28 +211,70 @@
                         <Icon icon="solar:city-bold-duotone" class="label-icon" />
                         Quận/Huyện <span class="required">*</span>
                       </label>
-                      <input
-                        v-model="employee.diaChiQuanHuyen"
-                        type="text"
-                        class="form-input"
-                        placeholder="Quận XYZ"
-                        required
-                      />
+                      <div class="address-select-wrapper">
+                        <input
+                          v-model="districtSearch"
+                          type="text"
+                          class="form-input address-search"
+                          placeholder="Tìm kiếm quận/huyện..."
+                          :disabled="!selectedProvince"
+                          @focus="showDistrictDropdown = true"
+                          @blur="hideDistrictDropdown"
+                        />
+                        <div v-if="showDistrictDropdown && selectedProvince" class="address-dropdown">
+                          <div v-if="addressLoading.districts" class="dropdown-loading">
+                            <Icon icon="solar:loading-bold" class="animate-spin" />
+                            Đang tải...
+                          </div>
+                          <div
+                            v-for="district in filteredDistricts"
+                            :key="district.code"
+                            class="dropdown-item"
+                            @mousedown="selectDistrict(district)"
+                          >
+                            {{ district.name }}
+                          </div>
+                          <div v-if="!filteredDistricts.length && !addressLoading.districts" class="dropdown-empty">
+                            Không tìm thấy quận/huyện
+                          </div>
+                        </div>
+                      </div>
                     </div>
 
-                    <!-- Tỉnh/Thành phố -->
+                    <!-- Phường/Xã -->
                     <div class="form-group">
                       <label class="form-label">
-                        <Icon icon="solar:global-bold-duotone" class="label-icon" />
-                        Tỉnh/Thành phố <span class="required">*</span>
+                        <Icon icon="solar:buildings-bold-duotone" class="label-icon" />
+                        Phường/Xã <span class="required">*</span>
                       </label>
-                      <input
-                        v-model="employee.diaChiTinhThanh"
-                        type="text"
-                        class="form-input"
-                        placeholder="Hà Nội"
-                        required
-                      />
+                      <div class="address-select-wrapper">
+                        <input
+                          v-model="wardSearch"
+                          type="text"
+                          class="form-input address-search"
+                          placeholder="Tìm kiếm phường/xã..."
+                          :disabled="!selectedDistrict"
+                          @focus="showWardDropdown = true"
+                          @blur="hideWardDropdown"
+                        />
+                        <div v-if="showWardDropdown && selectedDistrict" class="address-dropdown">
+                          <div v-if="addressLoading.wards" class="dropdown-loading">
+                            <Icon icon="solar:loading-bold" class="animate-spin" />
+                            Đang tải...
+                          </div>
+                          <div
+                            v-for="ward in filteredWards"
+                            :key="ward.code"
+                            class="dropdown-item"
+                            @mousedown="selectWard(ward)"
+                          >
+                            {{ ward.name }}
+                          </div>
+                          <div v-if="!filteredWards.length && !addressLoading.wards" class="dropdown-empty">
+                            Không tìm thấy phường/xã
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -238,13 +315,30 @@ import { useToast } from 'vue-toastification'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import Breadcrumb from '@/components/Breadcrumb.vue'
+import { useAddressSelection } from '@/services/nhanVienService/addressService.js'
 
 // Composables
 const toast = useToast()
 const router = useRouter()
+const {
+  selectedProvince,
+  selectedDistrict,
+  selectedWard,
+  filteredProvinces,
+  filteredDistricts,
+  filteredWards,
+  provinceSearch,
+  districtSearch,
+  wardSearch,
+  loading: addressLoading,
+  getFullAddress
+} = useAddressSelection()
 
 // State
 const loading = ref(false)
+const showProvinceDropdown = ref(false)
+const showDistrictDropdown = ref(false)
+const showWardDropdown = ref(false)
 
 const employee = ref({
   chucVuID: null,
@@ -254,10 +348,14 @@ const employee = ref({
   gioiTinh: true,
   soDienThoai: '',
   cccd: '',
+  email: '',
   diaChiSoNhaTenDuong: '',
   diaChiPhuongXa: '',
   diaChiQuanHuyen: '',
   diaChiTinhThanh: '',
+  provinceCode: null,
+  districtCode: null,
+  wardCode: null,
   trangThai: true
 })
 
@@ -299,69 +397,114 @@ const pageStats = ref([
   }
 ])
 
-// Validation function
-const validateEmployee = (emp) => {
-  const requiredFields = [
-    { field: emp.tenNhanVien, label: 'Tên nhân viên' },
-    { field: emp.ngaySinh, label: 'Ngày sinh' },
-    { field: emp.soDienThoai, label: 'Số điện thoại' },
-    { field: emp.cccd, label: 'CCCD' },
-    { field: emp.diaChiSoNhaTenDuong, label: 'Số nhà, tên đường' },
-    { field: emp.diaChiPhuongXa, label: 'Phường/Xã' },
-    { field: emp.diaChiQuanHuyen, label: 'Quận/Huyện' },
-    { field: emp.diaChiTinhThanh, label: 'Tỉnh/Thành phố' }
-  ]
-
-  for (const item of requiredFields) {
-    if (!item.field || String(item.field).trim() === '') {
-      toast.error(`Vui lòng nhập ${item.label}.`)
+// Backend validation function
+const validateEmployee = async (emp) => {
+  try {
+    // Check address selections first (client-side check)
+    if (!selectedProvince.value) {
+      toast.error('Vui lòng chọn Tỉnh/Thành phố.')
       return false
     }
-  }
+    if (!selectedDistrict.value) {
+      toast.error('Vui lòng chọn Quận/Huyện.')
+      return false
+    }
+    if (!selectedWard.value) {
+      toast.error('Vui lòng chọn Phường/Xã.')
+      return false
+    }
 
-  const nameRegex = /^[^\d]+$/
-  if (!nameRegex.test(emp.tenNhanVien.trim())) {
-    toast.error('Tên nhân viên không được chứa số.')
+    // Prepare data for backend validation
+    const validationData = {
+      tenNhanVien: emp.tenNhanVien,
+      ngaySinh: emp.ngaySinh,
+      gioiTinh: emp.gioiTinh,
+      cccd: emp.cccd,
+      diaChiCuThe: emp.diaChiSoNhaTenDuong,
+      thanhPho: selectedProvince.value?.name || emp.diaChiTinhThanh,
+      quan: selectedDistrict.value?.name || emp.diaChiQuanHuyen,
+      phuong: selectedWard.value?.name || emp.diaChiPhuongXa,
+      email: emp.email,
+      soDienThoai: emp.soDienThoai,
+      matKhau: '123456',
+      idQuyenHan: 2
+    }
+
+    // Call backend validation API
+    const { default: nhanVienValidationAPI } = await import('@/services/api/APINhanVien/NhanVienValidationAPI.js')
+    const validationResult = await nhanVienValidationAPI.validateCreateEmployee(validationData)
+    
+    if (validationResult.valid) {
+      return true
+    } else {
+      // Display first error from backend
+      if (validationResult.errors && validationResult.errors.length > 0) {
+        toast.error(validationResult.errors[0])
+      } else {
+        toast.error(validationResult.message || 'Dữ liệu không hợp lệ')
+      }
+      return false
+    }
+  } catch (error) {
+    console.error('Validation error:', error)
+    toast.error('Lỗi khi kiểm tra dữ liệu')
     return false
   }
-
-  const phoneRegex = /^\d{10}$/
-  if (!phoneRegex.test(emp.soDienThoai)) {
-    toast.error('Số điện thoại phải gồm đúng 10 chữ số.')
-    return false
-  }
-
-  const cccdRegex = /^\d{12}$/
-  if (!cccdRegex.test(emp.cccd)) {
-    toast.error('CCCD phải gồm đúng 12 chữ số.')
-    return false
-  }
-
-  return true
 }
 
 // Form submission
 const submitForm = async () => {
-  if (!validateEmployee(employee.value)) return
+  console.log('submitForm called!')
+  if (!(await validateEmployee(employee.value))) return
 
   loading.value = true
   try {
-    const now = new Date().toISOString()
-    const newEmployee = {
-      ...employee.value,
-      ngayTao: now,
-      ngayCapNhat: now
+    console.log('Frontend employee data:', employee.value)
+    console.log('Selected address:', {
+      province: selectedProvince.value,
+      district: selectedDistrict.value,
+      ward: selectedWard.value
+    })
+
+    // Map frontend data to backend format
+    const backendData = {
+      // NhanVien fields - let backend auto-generate ma from name and birthdate
+      ma: null,
+      tenNhanVien: employee.value.tenNhanVien,
+      ngaySinh: employee.value.ngaySinh,
+      gioiTinh: employee.value.gioiTinh,
+      cccd: employee.value.cccd,
+      diaChiCuThe: employee.value.diaChiSoNhaTenDuong,
+      thanhPho: selectedProvince.value?.name || employee.value.diaChiTinhThanh,
+      quan: selectedDistrict.value?.name || employee.value.diaChiQuanHuyen,
+      phuong: selectedWard.value?.name || employee.value.diaChiPhuongXa,
+      
+      // TaiKhoan fields - let backend auto-generate username
+      tenDangNhap: null,
+      email: employee.value.email,
+      soDienThoai: employee.value.soDienThoai,
+      matKhau: '123456', // Default password
+      idQuyenHan: 2 // Default role ID for employee
     }
 
-    // Here you would normally make an API call
-    // For now, we'll simulate success
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    console.log('Backend data to send:', backendData)
+
+    // Import and call API
+    const { default: nhanVienAPI } = await import('@/services/api/APINhanVien/NhanVienAPI.js')
+    const response = await nhanVienAPI.createNhanVien(backendData)
+    console.log('API Response:', response)
     
-    toast.success('Thêm nhân viên thành công!')
-    router.push('/nhan-vien')
+    if (response && response.data) {
+      toast.success(response.message || 'Thêm nhân viên thành công!')
+      router.push('/nhan-vien')
+    } else {
+      throw new Error('Không nhận được dữ liệu từ server')
+    }
   } catch (error) {
     console.error('Lỗi khi thêm nhân viên:', error)
-    toast.error('Lỗi khi thêm nhân viên.')
+    console.error('Error details:', error.response?.data)
+    const errorMessage = error.response?.data?.error || error.message || 'Lỗi khi thêm nhân viên'
+    toast.error(errorMessage)
   } finally {
     loading.value = false
   }
@@ -377,10 +520,14 @@ const resetForm = () => {
     gioiTinh: true,
     soDienThoai: '',
     cccd: '',
+    email: '',
     diaChiSoNhaTenDuong: '',
     diaChiPhuongXa: '',
     diaChiQuanHuyen: '',
     diaChiTinhThanh: '',
+    provinceCode: null,
+    districtCode: null,
+    wardCode: null,
     trangThai: true
   }
   toast.info('Đã làm mới form!')
@@ -410,6 +557,44 @@ const scanCCCD = () => {
     Object.assign(employee.value, mockCCCDData)
     toast.success('Quét CCCD thành công! Thông tin đã được điền tự động.')
   }, 2000)
+}
+
+// Address selection functions
+const selectProvince = (province) => {
+  selectedProvince.value = province
+  provinceSearch.value = province.name
+  showProvinceDropdown.value = false
+}
+
+const selectDistrict = (district) => {
+  selectedDistrict.value = district
+  districtSearch.value = district.name
+  showDistrictDropdown.value = false
+}
+
+const selectWard = (ward) => {
+  selectedWard.value = ward
+  wardSearch.value = ward.name
+  showWardDropdown.value = false
+}
+
+// Dropdown visibility functions
+const hideProvinceDropdown = () => {
+  setTimeout(() => {
+    showProvinceDropdown.value = false
+  }, 200)
+}
+
+const hideDistrictDropdown = () => {
+  setTimeout(() => {
+    showDistrictDropdown.value = false
+  }, 200)
+}
+
+const hideWardDropdown = () => {
+  setTimeout(() => {
+    showWardDropdown.value = false
+  }, 200)
 }
 
 // Go back
@@ -780,5 +965,65 @@ const goBack = () => {
     margin-top: 32px;
     padding-top: 24px;
   }
+}
+
+/* ===== ADDRESS DROPDOWN STYLES ===== */
+.address-select-wrapper {
+  position: relative;
+}
+
+.address-search {
+  width: 100%;
+}
+
+.address-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-top: none;
+  border-radius: 0 0 16px 16px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.dropdown-item {
+  padding: 12px 18px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.dropdown-item:hover {
+  background-color: #f8fafc;
+}
+
+.dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.dropdown-loading,
+.dropdown-empty {
+  padding: 12px 18px;
+  color: #6b7280;
+  font-style: italic;
+  text-align: center;
+}
+
+.dropdown-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.form-input:disabled {
+  background-color: #f9fafb;
+  color: #9ca3af;
+  cursor: not-allowed;
 }
 </style>

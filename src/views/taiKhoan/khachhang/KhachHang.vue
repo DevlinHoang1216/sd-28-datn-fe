@@ -1,472 +1,123 @@
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
-import { useToast } from 'vue-toastification'
-import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
-import * as XLSX from 'xlsx'
-import axios from 'axios'
+import { useRouter } from 'vue-router'
 import Breadcrumb from '@/components/Breadcrumb.vue'
 import DataTable from '@/components/DataTable.vue'
 
-// --- State Management ---
-const toast = useToast()
+// Import the main composable
+import { useKhachHangLogic } from '@/services/khachHangService/khachHangComposable.js'
+
+// Router for navigation
 const router = useRouter()
-const allCustomers = ref([])
-const currentPage = ref(0)
-const pageSize = ref(10)
-const showAddModal = ref(false)
-const showEditModal = ref(false)
-const showDetailModal = ref(false)
-const viewingCustomer = ref({})
-const editingCustomer = ref({})
-const isUpdating = ref(false)
-const isDeleting = ref(false)
-const errorMessage = ref('')
 
-const filters = ref({
-  search: '',
-  trangThai: '',
-  gioiTinh: '',
-  sortBy: ''
-})
+// Use the composable to get all the logic and state
+const {
+  // Data
+  allCustomers,
+  filteredCustomers,
+  paginatedCustomers,
+  currentPage,
+  pageSize,
+  totalPages,
+  activeTab,
+  newCustomer,
+  filters,
+  tempFilters,
+  tabs,
+  tableColumns,
+  pageStats,
+  breadcrumbItems,
+  breadcrumbActions,
+  apiResponse,
+  isLoadingData,
 
-const tempFilters = ref({
-  search: '',
-  trangThai: '',
-  gioiTinh: '',
-  sortBy: ''
-})
+  // UI state
+  showAddModal,
+  showEditModal,
+  showDetailModal,
+  isUpdating,
+  isDeleting,
+  viewingCustomer,
+  editingCustomer,
+  highlightedCustomer,
+  errorMessage,
 
-const activeTab = ref('all')
-const highlightedCustomer = ref(null)
+  // UI actions
+  openAddModal,
+  openEditModal,
+  openDetailModal,
+  closeAllModals,
 
-const newCustomer = ref({
-  tenKhachHang: '',
-  soDienThoai: '',
-  gioiTinh: true,
-  ngaySinh: '',
-  ngayTao: '',
-  ngayCapNhat: '',
-  taiKhoanID: null,
-  trangThai: true
-})
+  // Core functions
+  handleFetchAllCustomers,
+  handleCreateCustomer,
+  handleUpdateCustomer,
+  handleToggleCustomerStatus,
 
-// Tabs configuration
-const tabs = ref([
-  { id: 'all', label: 'Tất cả' },
-  { id: 'active', label: 'Hoạt động', status: true },
-  { id: 'inactive', label: 'Không hoạt động', status: false }
-])
+  // Navigation
+  handleNavigateToAddCustomer,
+  handleEditKhachHang,
 
-// Generate fake customer data
-const generateFakeCustomers = () => {
-  const firstNames = ['Nguyễn', 'Trần', 'Lê', 'Phạm', 'Hoàng', 'Vũ', 'Đặng', 'Bùi', 'Ngô', 'Lý']
-  const middleNames = ['Văn', 'Thị', 'Minh', 'Hoàng', 'Công', 'Thanh', 'Quốc', 'Hữu', 'Đức', 'Xuân']
-  const lastNames = ['An', 'Bình', 'Cường', 'Dung', 'Em', 'Phương', 'Quân', 'Hoa', 'Tùng', 'Mai', 'Linh', 'Nam', 'Hương', 'Tuấn', 'Lan']
-  
-  const fakeCustomers = []
-  
-  for (let i = 1; i <= 50; i++) {
-    const firstName = firstNames[Math.floor(Math.random() * firstNames.length)]
-    const middleName = middleNames[Math.floor(Math.random() * middleNames.length)]
-    const lastName = lastNames[Math.floor(Math.random() * lastNames.length)]
-    const fullName = `${firstName} ${middleName} ${lastName}`
-    
-    const isActive = Math.random() > 0.2 // 80% active
-    const gender = Math.random() > 0.5
-    
-    // Generate birth date (18-65 years old)
-    const birthYear = new Date().getFullYear() - Math.floor(Math.random() * 47) - 18
-    const birthMonth = Math.floor(Math.random() * 12) + 1
-    const birthDay = Math.floor(Math.random() * 28) + 1
-    const birthDate = new Date(birthYear, birthMonth - 1, birthDay)
-    
-    // Generate creation date (last 2 years)
-    const creationDate = new Date()
-    creationDate.setDate(creationDate.getDate() - Math.floor(Math.random() * 730))
-    
-    fakeCustomers.push({
-      id: i,
-      maKhachHang: `KH${String(i).padStart(6, '0')}`,
-      tenKhachHang: fullName,
-      soDienThoai: `09${Math.floor(Math.random() * 100000000).toString().padStart(8, '0')}`,
-      gioiTinh: gender,
-      ngaySinh: birthDate.toISOString().split('T')[0],
-      ngayTao: creationDate.toISOString(),
-      ngayCapNhat: creationDate.toISOString(),
-      trangThai: isActive,
-      taiKhoanID: null
-    })
-  }
-  
-  return fakeCustomers
-}
+  // Filters
+  handleSwitchTab,
+  handleApplyFilters,
+  handleResetFilters,
+  handleChangePage,
 
-// Computed Properties
-const filteredCustomers = computed(() => {
-  let result = allCustomers.value
+  // Export
+  handleExportToExcel,
+  handleExportCustomerDetail,
 
-  // Filter by active tab
-  const activeTabObj = tabs.value.find(tab => tab.id === activeTab.value)
-  if (activeTabObj?.status !== undefined) {
-    result = result.filter(customer => customer.trangThai === activeTabObj.status)
-  }
+  // Utilities
+  getTabCountForTab,
+  resetNewCustomerForm,
+  handleGetCustomerById,
+  formatDate,
+  formatDateTime,
+  formatGender,
+  formatStatus,
+  formatPhone,
+  formatAddress,
+  validateCustomer,
+  validateCustomerForm
+} = useKhachHangLogic()
 
-  // Apply other filters
-  if (filters.value.search) {
-    result = result.filter(customer =>
-      customer.tenKhachHang?.toLowerCase().includes(filters.value.search.toLowerCase()) ||
-      customer.maKhachHang?.toLowerCase().includes(filters.value.search.toLowerCase()) ||
-      customer.soDienThoai?.includes(filters.value.search)
-    )
-  }
+// Legacy functions for compatibility (if needed)
+const fetchAllCustomers = handleFetchAllCustomers
+const toggleCustomerStatus = handleToggleCustomerStatus
+const switchTab = handleSwitchTab
+const applyFilters = handleApplyFilters
+const resetFilters = handleResetFilters
+const changePage = handleChangePage
+const getTabCount = getTabCountForTab
+const exportToExcel = handleExportToExcel
 
-  if (filters.value.trangThai !== '') {
-    result = result.filter(customer => customer.trangThai === (filters.value.trangThai === 'true'))
-  }
+// Debounced search functionality
+let searchTimeout = null
 
-  if (filters.value.gioiTinh !== '') {
-    result = result.filter(customer => customer.gioiTinh === (filters.value.gioiTinh === 'true'))
-  }
-
-  // Apply sorting
-  if (filters.value.sortBy) {
-    result = [...result]
-    if (filters.value.sortBy === 'newest') {
-      result.sort((a, b) => new Date(b.ngayTao) - new Date(a.ngayTao))
-    } else if (filters.value.sortBy === 'oldest') {
-      result.sort((a, b) => new Date(a.ngayTao) - new Date(b.ngayTao))
-    } else if (filters.value.sortBy === 'name_asc') {
-      result.sort((a, b) => a.tenKhachHang.localeCompare(b.tenKhachHang))
-    } else if (filters.value.sortBy === 'name_desc') {
-      result.sort((a, b) => b.tenKhachHang.localeCompare(a.tenKhachHang))
-    }
-  }
-
-  return result
-})
-
-const totalPages = computed(() => Math.ceil(filteredCustomers.value.length / pageSize.value) || 1)
-
-const paginatedCustomers = computed(() => {
-  const start = currentPage.value * pageSize.value
-  const end = start + pageSize.value
-  return filteredCustomers.value.slice(start, end)
-})
-
-// DataTable columns configuration
-const tableColumns = ref([
-  { key: 'stt', label: 'STT', class: 'text-center' },
-  { key: 'maKhachHang', label: 'Mã KH', class: 'font-weight-bold' },
-  { key: 'tenKhachHang', label: 'Tên Khách Hàng' },
-  { key: 'soDienThoai', label: 'SĐT' },
-  { key: 'gioiTinh', label: 'Giới Tính', class: 'text-center' },
-  { key: 'ngaySinh', label: 'Ngày Sinh', class: 'text-center' },
-  { key: 'ngayTao', label: 'Ngày Tạo', class: 'text-center' },
-  { key: 'ngayCapNhat', label: 'Ngày Cập Nhật', class: 'text-center' },
-  { key: 'trangThai', label: 'Trạng Thái', class: 'text-center' },
-  { key: 'actions', label: 'Hành Động', class: 'text-center' }
-])
-
-// Breadcrumb configuration
-const breadcrumbItems = ref([
-  { label: 'Quản lý khách hàng', path: '/dashboard' },
-  { label: 'Khách hàng' }
-])
-
-const breadcrumbActions = ref([
-  {
-    label: 'Làm mới',
-    type: 'default',
-    handler: () => fetchAllCustomers()
-  },
-  {
-    label: 'Xuất Excel',
-    type: 'primary',
-    handler: () => exportToExcel()
-  },
-  {
-    label: 'Thêm khách hàng',
-    type: 'primary',
-    handler: () => router.push('/them-khach-hang')
-  }
-])
-
-const pageStats = computed(() => [
-  {
-    icon: 'solar:users-group-two-rounded-bold',
-    value: allCustomers.value.length,
-    label: 'Tổng khách hàng'
-  },
-  {
-    icon: 'solar:check-circle-bold',
-    value: allCustomers.value.filter(customer => customer.trangThai).length,
-    label: 'Đang hoạt động'
-  },
-  {
-    icon: 'solar:close-circle-bold',
-    value: allCustomers.value.filter(customer => !customer.trangThai).length,
-    label: 'Không hoạt động'
-  }
-])
-
-// Functions
-const fetchAllCustomers = async () => {
-  console.log('Bắt đầu tải khách hàng...')
-  errorMessage.value = ''
-  
-  try {
-    // Use fake data instead of API
-    const fakeData = generateFakeCustomers()
-    allCustomers.value = fakeData
-
-    if (allCustomers.value.length === 0) {
-      toast.info('Không có khách hàng nào trong hệ thống.', { timeout: 4000 })
-    } else {
-      toast.success('Dữ liệu khách hàng đã được tải thành công!', { timeout: 3000 })
-    }
-  } catch (error) {
-    console.error('Lỗi khi lấy dữ liệu khách hàng:', error)
-    errorMessage.value = `Lỗi khi tải dữ liệu khách hàng: ${error.message}`
-    toast.error(errorMessage.value, { timeout: 5000 })
-  } finally {
-    if (currentPage.value >= totalPages.value) {
-      currentPage.value = Math.max(0, totalPages.value - 1)
-    }
-    console.log('Kết thúc tải khách hàng:', allCustomers.value)
-  }
-}
-
-const openAddModal = () => {
-  resetNewCustomerForm()
-  showAddModal.value = true
-}
-
-const openEditModal = (customer) => {
-  editingCustomer.value = { ...customer }
-  showEditModal.value = true
-}
-
-const openDetailModal = (customer) => {
-  viewingCustomer.value = customer
-  showDetailModal.value = true
-}
-
-const handleAddCustomer = async () => {
-  if (!validateCustomer(newCustomer.value)) return
-  
-  isUpdating.value = true
-  try {
-    const now = new Date().toISOString()
-    const newCust = {
-      ...newCustomer.value,
-      id: allCustomers.value.length + 1,
-      maKhachHang: `KH${String(allCustomers.value.length + 1).padStart(6, '0')}`,
-      ngayTao: now,
-      ngayCapNhat: now
-    }
-    
-    allCustomers.value.unshift(newCust)
-    showAddModal.value = false
-    toast.success('Thêm khách hàng thành công!')
-    resetNewCustomerForm()
-  } catch (error) {
-    console.error('Lỗi khi thêm khách hàng:', error)
-    toast.error('Lỗi khi thêm khách hàng.')
-  } finally {
-    isUpdating.value = false
-  }
-}
-
-const handleUpdateCustomer = async () => {
-  if (!validateCustomer(editingCustomer.value)) return
-  
-  isUpdating.value = true
-  try {
-    const index = allCustomers.value.findIndex(customer => customer.id === editingCustomer.value.id)
-    if (index !== -1) {
-      allCustomers.value[index] = {
-        ...editingCustomer.value,
-        ngayCapNhat: new Date().toISOString()
-      }
-    }
-    
-    showEditModal.value = false
-    toast.success('Cập nhật khách hàng thành công!')
-  } catch (error) {
-    console.error('Lỗi khi cập nhật khách hàng:', error)
-    toast.error('Lỗi khi cập nhật khách hàng.')
-  } finally {
-    isUpdating.value = false
-  }
-}
-
-const toggleCustomerStatus = async (customer) => {
-  isUpdating.value = true
-  try {
-    const index = allCustomers.value.findIndex(cust => cust.id === customer.id)
-    if (index !== -1) {
-      allCustomers.value[index] = {
-        ...allCustomers.value[index],
-        trangThai: !allCustomers.value[index].trangThai,
-        ngayCapNhat: new Date().toISOString()
-      }
-    }
-    
-    const statusText = !customer.trangThai ? 'kích hoạt' : 'vô hiệu hóa'
-    toast.success(`Đã ${statusText} khách hàng ${customer.tenKhachHang}!`)
-  } catch (error) {
-    console.error('Lỗi khi cập nhật trạng thái khách hàng:', error)
-    toast.error('Lỗi khi cập nhật trạng thái khách hàng.')
-  } finally {
-    isUpdating.value = false
-  }
-}
-
-const validateCustomer = (customer) => {
-  const requiredFields = [
-    { field: customer.tenKhachHang, label: 'Tên khách hàng' },
-    { field: customer.soDienThoai, label: 'Số điện thoại' },
-    { field: customer.ngaySinh, label: 'Ngày sinh' }
-  ]
-
-  for (const item of requiredFields) {
-    if (!item.field || String(item.field).trim() === '') {
-      toast.error(`Vui lòng nhập ${item.label}.`)
-      return false
-    }
-  }
-
-  const nameRegex = /^[\p{L}\s]+$/u
-  if (!nameRegex.test(customer.tenKhachHang.trim())) {
-    toast.error('Tên khách hàng chỉ được chứa chữ cái và khoảng trắng.')
-    return false
-  }
-
-  const phoneRegex = /^0\d{9}$/
-  if (!phoneRegex.test(customer.soDienThoai)) {
-    toast.error('Số điện thoại phải bắt đầu bằng 0 và có đúng 10 chữ số.')
-    return false
-  }
-
-  return true
-}
-
-const resetNewCustomerForm = () => {
-  newCustomer.value = {
-    tenKhachHang: '',
-    soDienThoai: '',
-    gioiTinh: true,
-    ngaySinh: '',
-    ngayTao: '',
-    ngayCapNhat: '',
-    taiKhoanID: null,
-    trangThai: true
-  }
-}
-
-const exportToExcel = () => {
-  if (filteredCustomers.value.length === 0) {
-    toast.info('Không có dữ liệu để xuất.')
-    return
-  }
-
-  const dataToExport = filteredCustomers.value.map((customer, index) => ({
-    'STT': index + 1,
-    'Mã KH': customer.maKhachHang,
-    'Tên Khách Hàng': customer.tenKhachHang,
-    'Số Điện Thoại': customer.soDienThoai,
-    'Giới Tính': customer.gioiTinh ? 'Nam' : 'Nữ',
-    'Ngày Sinh': formatDate(customer.ngaySinh),
-    'Ngày Tạo': formatDate(customer.ngayTao),
-    'Ngày Cập Nhật': formatDate(customer.ngayCapNhat),
-    'Trạng Thái': customer.trangThai ? 'Hoạt động' : 'Không hoạt động'
-  }))
-
-  const worksheet = XLSX.utils.json_to_sheet(dataToExport)
-  const workbook = XLSX.utils.book_new()
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'DanhSachKhachHang')
-  XLSX.writeFile(workbook, `danh_sach_khach_hang_${new Date().toISOString().split('T')[0]}.xlsx`)
-  toast.success('Xuất file Excel thành công!')
-}
-
-const formatDate = (dateString) => {
-  if (!dateString) return 'N/A'
-  try {
-    const date = new Date(dateString)
-    if (isNaN(date.getTime())) return 'Invalid Date'
-    return date.toLocaleDateString('vi-VN')
-  } catch (e) {
-    return 'Invalid Date'
-  }
-}
-
-const formatDateTime = (dateString) => {
-  if (!dateString) return 'N/A'
-  try {
-    const date = new Date(dateString)
-    if (isNaN(date.getTime())) return 'Invalid Date'
-    return date.toLocaleString('vi-VN', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  } catch (e) {
-    return 'Invalid Date'
-  }
-}
-
-const getTabCount = (tabId) => {
-  if (!allCustomers.value.length) return 0
-  if (tabId === 'all') return allCustomers.value.length
-  const tab = tabs.value.find(t => t.id === tabId)
-  if (tab?.status === undefined) return 0
-  return allCustomers.value.filter(customer => customer.trangThai === tab.status).length
-}
-
-const switchTab = (tabId) => {
-  activeTab.value = tabId
-  const tab = tabs.value.find(t => t.id === tabId)
-  filters.value.trangThai = tab.status !== undefined ? String(tab.status) : ''
-  currentPage.value = 0
-  
-  if (tabId === 'all') {
-    toast.info('Đang hiển thị tất cả khách hàng.', { timeout: 2000 })
-  } else {
-    toast.info(`Đang hiển thị khách hàng trạng thái: ${tab.label}.`, { timeout: 2000 })
-  }
-}
-
+// Filter function with debounce for search
 const filterCustomers = () => {
-  filters.value.search = tempFilters.value.search
-  filters.value.trangThai = tempFilters.value.trangThai
-  filters.value.gioiTinh = tempFilters.value.gioiTinh
-  filters.value.sortBy = tempFilters.value.sortBy
-  currentPage.value = 0
-  
-  toast.success('Đã áp dụng bộ lọc!', { timeout: 2000 })
-}
-
-const resetFilters = () => {
-  filters.value = { search: '', trangThai: '', gioiTinh: '', sortBy: '' }
-  tempFilters.value = { search: '', trangThai: '', gioiTinh: '', sortBy: '' }
-  activeTab.value = 'all'
-  currentPage.value = 0
-  toast.info('Đã đặt lại tất cả bộ lọc!', { timeout: 2000 })
-}
-
-const changePage = (page) => {
-  if (page >= 0 && page < totalPages.value) {
-    currentPage.value = page
+  // Clear existing timeout
+  if (searchTimeout) {
+    clearTimeout(searchTimeout)
   }
+  
+  // Set new timeout for search (500ms delay)
+  searchTimeout = setTimeout(() => {
+    handleApplyFilters()
+  }, 500)
 }
 
-// Lifecycle Hook
-onMounted(() => {
-  fetchAllCustomers()
-})
+// Immediate filter for non-search fields (radio, select)
+const filterCustomersImmediate = () => {
+  handleApplyFilters()
+}
+
+// Add customer function for modal
+const handleAddCustomer = () => {
+  handleCreateCustomer()
+}
+
 </script>
 
 <template>
@@ -522,7 +173,7 @@ onMounted(() => {
                   type="radio"
                   v-model="tempFilters.trangThai"
                   value=""
-                  @change="filterCustomers"
+                  @change="filterCustomersImmediate"
                   class="radio-input"
                 />
                 <span class="radio-label">Tất cả</span>
@@ -532,7 +183,7 @@ onMounted(() => {
                   type="radio"
                   v-model="tempFilters.trangThai"
                   value="true"
-                  @change="filterCustomers"
+                  @change="filterCustomersImmediate"
                   class="radio-input"
                 />
                 <span class="radio-label">Hoạt động</span>
@@ -542,7 +193,7 @@ onMounted(() => {
                   type="radio"
                   v-model="tempFilters.trangThai"
                   value="false"
-                  @change="filterCustomers"
+                  @change="filterCustomersImmediate"
                   class="radio-input"
                 />
                 <span class="radio-label">Không hoạt động</span>
@@ -558,11 +209,11 @@ onMounted(() => {
             <select
               v-model="tempFilters.gioiTinh"
               class="filter-input"
-              @change="filterCustomers"
+              @change="filterCustomersImmediate"
             >
               <option value="">Tất cả giới tính</option>
-              <option value="true">Nam</option>
-              <option value="false">Nữ</option>
+              <option value="1">Nam</option>
+              <option value="0">Nữ</option>
             </select>
           </div>
           <div class="filter-group">
@@ -570,7 +221,7 @@ onMounted(() => {
             <select
               v-model="tempFilters.sortBy"
               class="filter-select"
-              @change="filterCustomers"
+              @change="filterCustomersImmediate"
             >
               <option value="">Sắp xếp mặc định</option>
               <option value="newest">Mới nhất</option>
@@ -598,7 +249,7 @@ onMounted(() => {
 
           <!-- DataTable Component -->
           <DataTable
-            :data="filteredCustomers"
+            :data="paginatedCustomers"
             :columns="tableColumns"
             item-label="khách hàng"
             empty-message="Không có dữ liệu khách hàng nào được tìm thấy."
