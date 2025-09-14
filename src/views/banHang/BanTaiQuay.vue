@@ -199,7 +199,7 @@
               />
             </div>
 
-            <button class="customer-select-btn" @click="showModal = true">
+            <button class="customer-select-btn" @click="openCustomerModal">
               Chọn Khách Hàng
             </button>
 
@@ -425,9 +425,51 @@
               <button class="search-btn primary" @click="timKhachHangTheoMa">
                 Tìm
               </button>
+              <button class="search-btn primary" @click="showQuickCreateForm = true">
+                Thêm nhanh
+              </button>
               <button class="search-btn secondary" @click="tuKhoaMaKH = ''; fetchTatCaKhachHang()">
                 Làm mới
               </button>
+            </div>
+          </div>
+
+          <!-- Quick Create Customer Form -->
+          <div v-if="showQuickCreateForm" class="quick-create-form">
+            <div class="form-header">
+              <h4>Thêm khách hàng nhanh</h4>
+              <button class="close-form-btn" @click="cancelQuickCreate">
+                <iconify-icon icon="solar:close-circle-bold"></iconify-icon>
+              </button>
+            </div>
+            <div class="form-content">
+              <div class="form-group">
+                <label>Tên khách hàng *</label>
+                <input 
+                  type="text" 
+                  v-model="quickCreateForm.ten" 
+                  class="form-input"
+                  placeholder="Nhập tên khách hàng"
+                  @keyup.enter="submitQuickCreate"
+                />
+              </div>
+              <div class="form-group">
+                <label>Số điện thoại *</label>
+                <input 
+                  type="tel" 
+                  v-model="quickCreateForm.soDienThoai" 
+                  class="form-input"
+                  placeholder="Nhập số điện thoại"
+                  @keyup.enter="submitQuickCreate"
+                />
+              </div>
+              <div class="form-actions">
+                <button class="btn-cancel" @click="cancelQuickCreate">Hủy</button>
+                <button class="btn-submit" @click="submitQuickCreate" :disabled="isCreatingCustomer">
+                  <iconify-icon v-if="isCreatingCustomer" icon="solar:loading-bold" class="loading-icon"></iconify-icon>
+                  {{ isCreatingCustomer ? 'Đang thêm...' : 'Thêm khách hàng' }}
+                </button>
+              </div>
             </div>
           </div>
           <div class="table-container">
@@ -438,25 +480,29 @@
                   <th>Mã KH</th>
                   <th>Tên KH</th>
                   <th>SĐT</th>
-                  <th>Ngày Tạo</th>
                   <th>Chọn</th>
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="(kh, index) in danhSachKhachHang" :key="kh.id">
+                <tr v-if="isLoadingKhachHang">
+                  <td colspan="5" class="loading-message">
+                    <iconify-icon icon="solar:loading-bold" class="loading-icon"></iconify-icon>
+                    Đang tải danh sách khách hàng...
+                  </td>
+                </tr>
+                <tr v-else-if="danhSachKhachHang.length === 0">
+                  <td colspan="5" class="empty-message">Không tìm thấy khách hàng nào.</td>
+                </tr>
+                <tr v-else v-for="(kh, index) in danhSachKhachHang" :key="kh.id">
                   <td>{{ index + 1 }}</td>
                   <td>{{ kh.maKH }}</td>
                   <td>{{ kh.tenKH }}</td>
                   <td>{{ kh.soDT }}</td>
-                  <td>{{ formatDate(kh.ngayT) }}</td>
                   <td>
                     <button @click="chonKhachHang(kh)" class="select-btn">
                       <iconify-icon icon="solar:check-circle-bold"></iconify-icon>
                     </button>
                   </td>
-                </tr>
-                <tr v-if="danhSachKhachHang.length === 0">
-                  <td colspan="6" class="empty-message">Không tìm thấy khách hàng nào.</td>
                 </tr>
               </tbody>
             </table>
@@ -700,6 +746,14 @@ export default {
     const showModal = ref(false);
     const showThemSanPhamModal = ref(false);
     const showThanhToanModal = ref(false);
+    
+    // Quick create customer
+    const showQuickCreateForm = ref(false);
+    const isCreatingCustomer = ref(false);
+    const quickCreateForm = ref({
+      ten: '',
+      soDienThoai: ''
+    });
 
     // Search
     const tuKhoaMaKH = ref('');
@@ -744,44 +798,15 @@ export default {
       }
     ]);
 
-    // Fake data
-    const danhSachKhachHang = ref([
-      {
-        id: 1,
-        maKH: 'KH001',
-        tenKH: 'Nguyễn Văn An',
-        soDT: '0912345678',
-        ngayT: '2024-01-15T10:30:00'
-      },
-      {
-        id: 2,
-        maKH: 'KH002',
-        tenKH: 'Trần Thị Bình',
-        soDT: '0987654321',
-        ngayT: '2024-01-14T11:15:00'
-      },
-      {
-        id: 3,
-        maKH: 'KH003',
-        tenKH: 'Lê Hoài Nam',
-        soDT: '0934567890',
-        ngayT: '2024-01-13T09:20:00'
-      },
-      {
-        id: 4,
-        maKH: 'KH004',
-        tenKH: 'Phạm Thu Hương',
-        soDT: '0976543210',
-        ngayT: '2024-01-12T14:45:00'
-      },
-      {
-        id: 5,
-        maKH: 'KH005',
-        tenKH: 'Võ Minh Tuấn',
-        soDT: '0965432109',
-        ngayT: '2024-01-11T16:30:00'
-      }
-    ]);
+    // Customer data - loaded from API
+    const danhSachKhachHang = ref([]);
+    const isLoadingKhachHang = ref(false);
+    const khachHangPagination = ref({
+      currentPage: 0,
+      totalPages: 0,
+      totalElements: 0,
+      size: 10
+    });
 
     // Product data - loaded from API
     const danhSachSanPham = ref([]);
@@ -947,6 +972,11 @@ export default {
     };
 
     // Customer management
+    const openCustomerModal = async () => {
+      showModal.value = true;
+      await fetchTatCaKhachHang();
+    };
+
     const chonKhachHang = (khach) => {
       if (currentHoaDon.value) {
         khachHangHienTai.value = {
@@ -958,27 +988,125 @@ export default {
       showModal.value = false;
     };
 
-    const fetchTatCaKhachHang = () => {
-      // In real app, this would be an API call
-      // For now, we just use the fake data
+    const fetchTatCaKhachHang = async () => {
+      try {
+        isLoadingKhachHang.value = true;
+        const response = await productService.getActiveCustomersForSales({
+          page: khachHangPagination.value.currentPage,
+          size: khachHangPagination.value.size,
+          sortBy: 'id',
+          sortDir: 'desc'
+        });
+
+        // Transform the API response to match the expected format
+        danhSachKhachHang.value = response.data.content.map(item => ({
+          id: item.id,
+          maKH: item.ma,
+          tenKH: item.ten,
+          soDT: item.soDienThoai,
+          ngayT: item.createdAt
+        }));
+
+        // Update pagination info
+        khachHangPagination.value = {
+          currentPage: response.data.number,
+          totalPages: response.data.totalPages,
+          totalElements: response.data.totalElements,
+          size: response.data.size
+        };
+
+      } catch (error) {
+        console.error('Error loading customers:', error);
+        toast.error('Không thể tải danh sách khách hàng');
+        danhSachKhachHang.value = [];
+      } finally {
+        isLoadingKhachHang.value = false;
+      }
     };
 
-    const timKhachHangTheoMa = () => {
+    const timKhachHangTheoMa = async () => {
       if (!tuKhoaMaKH.value.trim()) {
+        await fetchTatCaKhachHang();
         return;
       }
-      // In real app, this would be an API call
-      const keyword = tuKhoaMaKH.value.toLowerCase();
-      const filtered = danhSachKhachHang.value.filter(kh =>
-        kh.maKH.toLowerCase().includes(keyword) ||
-        kh.tenKH.toLowerCase().includes(keyword) ||
-        kh.soDT.includes(keyword)
-      );
       
-      if (filtered.length === 0) {
-        toast.info('Không tìm thấy khách hàng nào phù hợp');
-      } else {
-        toast.success(`Tìm thấy ${filtered.length} khách hàng`);
+      try {
+        isLoadingKhachHang.value = true;
+        const response = await productService.getActiveCustomersForSales({
+          page: 0,
+          size: 50,
+          sortBy: 'id',
+          sortDir: 'desc',
+          keyword: tuKhoaMaKH.value.trim()
+        });
+
+        // Transform the API response to match the expected format
+        danhSachKhachHang.value = response.data.content.map(item => ({
+          id: item.id,
+          maKH: item.ma,
+          tenKH: item.ten,
+          soDT: item.soDienThoai,
+          ngayT: item.createdAt
+        }));
+        
+        if (danhSachKhachHang.value.length === 0) {
+          toast.info('Không tìm thấy khách hàng nào phù hợp');
+        } else {
+          toast.success(`Tìm thấy ${danhSachKhachHang.value.length} khách hàng`);
+        }
+      } catch (error) {
+        console.error('Error searching customers:', error);
+        toast.error('Không thể tìm kiếm khách hàng');
+        danhSachKhachHang.value = [];
+      } finally {
+        isLoadingKhachHang.value = false;
+      }
+    };
+
+    // Quick create customer methods
+    const cancelQuickCreate = () => {
+      showQuickCreateForm.value = false;
+      quickCreateForm.value = {
+        ten: '',
+        soDienThoai: ''
+      };
+    };
+
+    const submitQuickCreate = async () => {
+      if (!quickCreateForm.value.ten.trim() || !quickCreateForm.value.soDienThoai.trim()) {
+        toast.warning('Vui lòng nhập đầy đủ tên và số điện thoại');
+        return;
+      }
+
+      try {
+        isCreatingCustomer.value = true;
+        const response = await productService.quickCreateCustomer({
+          ten: quickCreateForm.value.ten.trim(),
+          soDienThoai: quickCreateForm.value.soDienThoai.trim()
+        });
+
+        toast.success('Tạo khách hàng thành công!');
+        
+        // Add the new customer to the list and select it
+        const newCustomer = {
+          id: response.data.id,
+          maKH: response.data.ma,
+          tenKH: response.data.ten,
+          soDT: response.data.taiKhoan?.soDienThoai || quickCreateForm.value.soDienThoai,
+          ngayT: response.data.createdAt
+        };
+        
+        danhSachKhachHang.value.unshift(newCustomer);
+        chonKhachHang(newCustomer);
+        
+        // Reset form and close
+        cancelQuickCreate();
+        
+      } catch (error) {
+        console.error('Error creating customer:', error);
+        toast.error('Không thể tạo khách hàng. Vui lòng thử lại.');
+      } finally {
+        isCreatingCustomer.value = false;
       }
     };
 
@@ -1179,6 +1307,8 @@ export default {
       danhSachSanPham,
       sanPhamLoc,
       isLoadingSanPham,
+      isLoadingKhachHang,
+      khachHangPagination,
       
       // Payment
       phuongThucThanhToan,
@@ -1214,7 +1344,15 @@ export default {
       xoaSanPham,
       tangSoLuong,
       giamSoLuong,
+      openCustomerModal,
       chonKhachHang,
+      
+      // Quick create customer
+      showQuickCreateForm,
+      isCreatingCustomer,
+      quickCreateForm,
+      cancelQuickCreate,
+      submitQuickCreate,
       fetchTatCaKhachHang,
       timKhachHangTheoMa,
       fetchSanPham,
@@ -2508,6 +2646,137 @@ export default {
   align-items: center;
   padding: 6px 0;
   font-size: 0.95rem;
+}
+
+/* Quick Create Customer Form Styles */
+.quick-create-form {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: #007bff;
+  color: white;
+}
+
+.form-header h4 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.close-form-btn {
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.close-form-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.close-form-btn iconify-icon {
+  font-size: 1.2rem;
+}
+
+.form-content {
+  padding: 20px;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+  color: #374151;
+  font-size: 0.9rem;
+}
+
+.form-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.btn-cancel {
+  padding: 10px 20px;
+  border: 1px solid #d1d5db;
+  background: white;
+  color: #6b7280;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.btn-cancel:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.btn-submit {
+  padding: 10px 20px;
+  border: none;
+  background: #007bff;
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-submit:hover:not(:disabled) {
+  background: #0056b3;
+}
+
+.btn-submit:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.search-btn.success {
+  background: #28a745;
+  color: white;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.search-btn.success:hover {
+  background: #218838;
 }
 
 .calc-line:not(:last-child) {

@@ -329,32 +329,45 @@ export const productService = {
   updateChiTietSanPham: (id, data) => productAPI.put(`/chi-tiet-san-pham/${id}`, data),
 
   // Sales Counter (Ban Hang) APIs - Only active products with stock
-  getSalesProducts: (params = {}) => {
-    const {
-      page = 0,
-      size = 10,
-      keyword = ''
-    } = params
-    
-    return productAPI.get('/ban-hang/san-pham', {
-      params: { page, size, keyword }
-    })
-  },
-
-  getSalesProductDetails: (productId) => {
-    return productAPI.get(`/ban-hang/chi-tiet-san-pham/${productId}`)
+  getActiveProductDetailsForSales: (productId) => {
+    return productAPI.get(`/chi-tiet-san-pham/sales/product/${productId}`)
   },
 
   getAllSalesProductDetails: (params = {}) => {
     const {
       page = 0,
       size = 10,
+      sortBy = 'id',
+      sortDir = 'asc',
       keyword = ''
     } = params
     
-    return productAPI.get('/ban-hang/chi-tiet-san-pham', {
-      params: { page, size, keyword }
+    return productAPI.get('/chi-tiet-san-pham/sales', {
+      params: { 
+        page, 
+        size, 
+        sortBy, 
+        sortDir,
+        ...(keyword && { keyword })
+      }
     })
+  },
+
+  // Customer APIs for sales counter
+  getActiveCustomersForSales(params = {}) {
+    return productAPI.get('/ban-hang/khach-hang', {
+      params: {
+        page: params.page || 0,
+        size: params.size || 10,
+        sortBy: params.sortBy || 'id',
+        sortDir: params.sortDir || 'asc',
+        keyword: params.keyword || ''
+      }
+    })
+  },
+
+  quickCreateCustomer(customerData) {
+    return productAPI.post('/ban-hang/khach-hang/quick-create', customerData)
   }
 }
 
