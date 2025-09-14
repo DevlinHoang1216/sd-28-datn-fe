@@ -814,21 +814,25 @@ export default {
             ? availableVariants.value
             : selectedProductDetails.value;
 
-        const payload = {
-          id: campaign.value.id,
-          ma: campaign.value.ma,
-          tenDotGiamGia: campaign.value.tenDotGiamGia,
-          loaiGiamGiaApDung:
-            discountConfig.value.type === 'percentage' ? 'PHAN_TRAM' : 'TIEN',
-          giaTriGiamGia: discountConfig.value.value,
-          soTienGiamToiDa: discountConfig.value.soTienGiamToiDa || null,
-          ngayBatDau: campaign.value.thoiGianBatDau,
-          ngayKetThuc: campaign.value.thoiGianKetThuc,
-          // trangThai: campaign.value.trangThai, // XÓA DÒNG NÀY
-          listSanPhamId: targetVariants.map((variant) => variant.id),
+        // Chuyển datetime-local về yyyy-MM-dd (LocalDate)
+        const toLocalDate = (dateStr) => {
+          if (!dateStr) return null;
+          // dateStr dạng yyyy-MM-ddTHH:mm, chỉ lấy phần yyyy-MM-dd
+          return dateStr.split('T')[0];
         };
 
-        const response = await axios.put(`${API_CAMPAIGN_URL}/update`, payload);
+        const payload = {
+          ma: campaign.value.ma,
+          tenDotGiamGia: campaign.value.tenDotGiamGia,
+          loaiGiamGiaApDung: discountConfig.value.type === 'percentage' ? 'PHAN_TRAM' : 'TIEN_MAT',
+          giaTriGiamGia: discountConfig.value.value,
+          soTienGiamToiDa: discountConfig.value.soTienGiamToiDa || null,
+          ngayBatDau: toLocalDate(campaign.value.thoiGianBatDau),
+          ngayKetThuc: toLocalDate(campaign.value.thoiGianKetThuc),
+          listSanPhamId: targetVariants.map(variant => variant.id),
+        };
+
+        await axios.put(`/api/dot-giam-gia/update/${campaign.value.id}`, payload);
 
         toast.success(
           `Đã cập nhật đợt giảm giá thành công! Áp dụng cho ${targetVariants.length} biến thể.`
