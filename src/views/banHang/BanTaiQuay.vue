@@ -31,12 +31,12 @@
           @click="chonTab(tab.id)"
         >
           <div class="tab-info">
-            <span class="tab-id">{{ tab.id }}</span>
+            <span class="tab-id">{{ tab.ma }}</span>
             <span class="tab-items-count">{{ tab.items.length }} SP</span>
           </div>
           <div class="tab-total">{{ formatCurrency(calculateTabTotal(tab)) }}</div>
           <button 
-            v-if="hoaDonTabs.length > 1 && tabActive === tab.id"
+            v-if="tabActive === tab.id"
             class="tab-close-btn"
             @click.stop="showXacNhanXoaModal = true"
           >
@@ -55,7 +55,7 @@
           <div class="card-header">
             <h3 class="card-title">
               <iconify-icon icon="solar:cart-large-2-bold-duotone"></iconify-icon>
-              Giỏ Hàng {{ tabActive }}
+              Giỏ Hàng {{ currentHoaDon?.ma || tabActive }}
             </h3>
             <div class="card-actions">
               <button class="action-btn primary" @click="showThemSanPhamModal = true">
@@ -389,7 +389,7 @@
           </button>
         </div>
         <div class="modal-content">
-          <p>Bạn có chắc chắn muốn xóa hóa đơn <strong>{{ tabActive }}</strong> này không?</p>
+          <p>Bạn có chắc chắn muốn xóa hóa đơn <strong>{{ currentHoaDon?.ma || tabActive }}</strong> này không?</p>
         </div>
         <div class="modal-footer">
           <button class="btn secondary" @click="showXacNhanXoaModal = false">Hủy bỏ</button>
@@ -603,7 +603,7 @@
         <div class="modal-header">
           <h3 class="modal-title">
             <iconify-icon icon="solar:wallet-bold-duotone"></iconify-icon>
-            Thanh Toán Hóa Đơn {{ tabActive }}
+            Thanh Toán Hóa Đơn {{ currentHoaDon?.ma || tabActive }}
           </h3>
           <button class="modal-close" @click="showThanhToanModal = false">
             <iconify-icon icon="solar:close-circle-bold"></iconify-icon>
@@ -686,6 +686,7 @@ import { useToast } from 'vue-toastification';
 import { useRouter } from 'vue-router';
 import Breadcrumb from '@/components/Breadcrumb.vue';
 import { productService } from '@/services/api/productAPI.js';
+import invoiceAPI from '@/services/api/invoiceAPI.js';
 
 export default {
   name: 'BanTaiQuayModern',
@@ -734,12 +735,9 @@ export default {
     ]);
 
     // State management
-    const hoaDonTabs = ref([{ 
-      id: 'HD000001', 
-      items: [], 
-      khachHang: { ten: 'Khách lẻ', soDienThoai: '' } 
-    }]);
-    const tabActive = ref('HD000001');
+    const hoaDonTabs = ref([]);
+    const tabActive = ref(null);
+    const isLoadingInvoices = ref(false);
     
     // Modals
     const showXacNhanXoaModal = ref(false);
@@ -878,48 +876,97 @@ export default {
       return tab.items.reduce((sum, item) => sum + item.soLuong * item.giaBan, 0);
     };
 
+    // Load customer information for selected invoice
+    const loadCustomerForInvoice = async (invoiceId) => {
+      try {
+        // Get invoice details to load customer info
+        const response = await invoiceAPI.getInvoiceById(invoiceId);
+        const invoice = response.data;
+        
+        if (invoice && invoice.khachHang) {
+          // Update customer info in current tab
+          const currentTab = hoaDonTabs.value.find(tab => tab.id === invoiceId);
+          if (currentTab) {
+            currentTab.khachHang = {
+              id: invoice.khachHang.id,
+              ten: invoice.tenKhachHang || invoice.khachHang.tenKH || 'Khách lẻ',
+              soDienThoai: invoice.soDienThoaiKhachHang || invoice.khachHang.soDT || ''
+            };
+          }
+        }
+      } catch (error) {
+        console.error('Error loading customer for invoice:', error);
+        // Don't show error toast as this is background loading
+      }
+    };
+
     // Tab management
-    const chonTab = (id) => {
+    const chonTab = async (id) => {
       tabActive.value = id;
       // Reset payment info when switching tabs
       giamGia.value = 0;
       khachThanhToan.value = 0;
       maGiamGia.value = '';
       thongBaoGiamGia.value = '';
+      
+      // Load customer information for the selected invoice
+      await loadCustomerForInvoice(id);
     };
 
-    const themHoaDonMoi = () => {
+    const themHoaDonMoi = async () => {
       // Kiểm tra giới hạn tối đa 5 hóa đơn chờ
       if (hoaDonTabs.value.length >= 5) {
         toast.error('Đã đạt giới hạn tối đa 5 hóa đơn chờ! Vui lòng hoàn thành hoặc xóa hóa đơn cũ trước khi tạo mới.');
         return;
       }
 
-      const newIdNum = hoaDonTabs.value.length + 1;
-      const newId = `HD${String(newIdNum).padStart(6, '0')}`;
-      hoaDonTabs.value.push({ 
-        id: newId, 
-        items: [], 
-        khachHang: { ten: 'Khách lẻ', soDienThoai: '' } 
-      });
-      tabActive.value = newId;
-      toast.info(`Đã tạo hóa đơn mới: ${newId} (${hoaDonTabs.value.length}/5)`);
+      try {
+        // Create new pending invoice via API
+        const response = await invoiceAPI.createInvoice();
+        const newInvoice = response.data;
+
+        // Add to local state
+        hoaDonTabs.value.push({
+          id: newInvoice.id,
+          ma: newInvoice.ma,
+          items: [],
+          khachHang: { ten: 'Khách lẻ', soDienThoai: '' },
+          trangThai: newInvoice.trangThai
+        });
+        
+        tabActive.value = newInvoice.id;
+        toast.info(`Đã tạo hóa đơn mới: ${newInvoice.ma} (${hoaDonTabs.value.length}/5)`);
+      } catch (error) {
+        console.error('Error creating invoice:', error);
+        toast.error('Có lỗi xảy ra khi tạo hóa đơn mới');
+      }
     };
 
-    const xoaHoaDon = () => {
-      hoaDonTabs.value = hoaDonTabs.value.filter(tab => tab.id !== tabActive.value);
-      toast.success(`Đã xóa hóa đơn ${tabActive.value}`);
+    const xoaHoaDon = async () => {
+      try {
+        const currentInvoice = hoaDonTabs.value.find(tab => tab.id === tabActive.value);
+        if (!currentInvoice) return;
 
-      if (hoaDonTabs.value.length === 0) {
-        themHoaDonMoi();
-      } else {
-        tabActive.value = hoaDonTabs.value[0].id;
+        // Delete pending invoice from backend
+        await invoiceAPI.deleteInvoice(tabActive.value);
+        
+        // Remove from local state
+        hoaDonTabs.value = hoaDonTabs.value.filter(tab => tab.id !== tabActive.value);
+        toast.success(`Đã xóa hóa đơn ${currentInvoice.ma}`);
+
+        if (hoaDonTabs.value.length > 0) {
+          tabActive.value = hoaDonTabs.value[0].id;
+        }
+        // Do not auto-create new invoice - let user create manually
+        showXacNhanXoaModal.value = false;
+      } catch (error) {
+        console.error('Error deleting invoice:', error);
+        toast.error('Có lỗi xảy ra khi xóa hóa đơn');
       }
-      showXacNhanXoaModal.value = false;
     };
 
     // Product management
-    const themVaoGioHang = (sp) => {
+    const themVaoGioHang = async (sp) => {
       if (sp.soLuongTonKho === 0) {
         toast.error(`Sản phẩm "${sp.tenSanPham}" đã hết hàng!`);
         return;
@@ -927,47 +974,105 @@ export default {
 
       if (!currentHoaDon.value) return;
 
-      const sanPhamTonTai = currentHoaDon.value.items.find(item => item.id === sp.id);
-      if (sanPhamTonTai) {
-        if (sanPhamTonTai.soLuong < sp.soLuongTonKho) {
-          sanPhamTonTai.soLuong += 1;
-          toast.info(`Tăng số lượng sản phẩm "${sp.tenSanPham}" lên ${sanPhamTonTai.soLuong}`);
+      try {
+        const sanPhamTonTai = currentHoaDon.value.items.find(item => item.id === sp.id);
+        
+        if (sanPhamTonTai) {
+          if (sanPhamTonTai.soLuong < sp.soLuongTonKho) {
+            // Update existing item in invoice
+            const updateData = {
+              soLuong: sanPhamTonTai.soLuong + 1,
+              donGia: sp.giaBan
+            };
+            
+            await invoiceAPI.updateInvoiceDetail(currentHoaDon.value.id, sanPhamTonTai.detailId, updateData);
+            sanPhamTonTai.soLuong += 1;
+            toast.info(`Tăng số lượng sản phẩm "${sp.tenSanPham}" lên ${sanPhamTonTai.soLuong}`);
+          } else {
+            toast.warning(`Sản phẩm "${sp.tenSanPham}" chỉ còn ${sp.soLuongTonKho} trong kho.`);
+          }
         } else {
-          toast.warning(`Sản phẩm "${sp.tenSanPham}" chỉ còn ${sp.soLuongTonKho} trong kho.`);
+          // Add new item to invoice
+          const newItemData = {
+            idChiTietSanPham: sp.id,
+            soLuong: 1,
+            donGia: sp.giaBan
+          };
+          
+          const response = await invoiceAPI.addProductToInvoice(currentHoaDon.value.id, newItemData);
+          const newDetail = response.data;
+          
+          currentHoaDon.value.items.push({
+            id: sp.id,
+            detailId: newDetail.id,
+            maSanPham: sp.maSanPham,
+            tenSanPham: sp.tenSanPham,
+            giaBan: sp.giaBan,
+            soLuong: 1,
+            soLuongTonKho: sp.soLuongTonKho,
+            image: sp.image
+          });
+          toast.success(`Đã thêm "${sp.tenSanPham}" vào giỏ hàng`);
         }
-      } else {
-        currentHoaDon.value.items.push({
-          id: sp.id,
-          maSanPham: sp.maSanPham,
-          tenSanPham: sp.tenSanPham,
-          giaBan: sp.giaBan,
-          soLuong: 1,
-          soLuongTonKho: sp.soLuongTonKho,
-          image: sp.image
-        });
-        toast.success(`Đã thêm "${sp.tenSanPham}" vào giỏ hàng`);
+        showThemSanPhamModal.value = false;
+      } catch (error) {
+        console.error('Error adding product to invoice:', error);
+        toast.error('Có lỗi xảy ra khi thêm sản phẩm vào hóa đơn');
       }
-      showThemSanPhamModal.value = false;
     };
 
-    const xoaSanPham = (id) => {
+    const xoaSanPham = async (id) => {
       if (!currentHoaDon.value) return;
-      const tenSP = currentHoaDon.value.items.find(item => item.id === id)?.tenSanPham;
-      currentHoaDon.value.items = currentHoaDon.value.items.filter(item => item.id !== id);
-      toast.success(`Đã xóa "${tenSP}" khỏi giỏ hàng`);
+      
+      try {
+        const item = currentHoaDon.value.items.find(item => item.id === id);
+        if (!item) return;
+        
+        // Remove from backend
+        await invoiceAPI.removeProductFromInvoice(currentHoaDon.value.id, item.detailId);
+        
+        // Remove from local state
+        currentHoaDon.value.items = currentHoaDon.value.items.filter(item => item.id !== id);
+        toast.success(`Đã xóa "${item.tenSanPham}" khỏi giỏ hàng`);
+      } catch (error) {
+        console.error('Error removing product from invoice:', error);
+        toast.error('Có lỗi xảy ra khi xóa sản phẩm khỏi hóa đơn');
+      }
     };
 
-    const tangSoLuong = (item) => {
+    const tangSoLuong = async (item) => {
       if (item.soLuong < item.soLuongTonKho) {
-        item.soLuong += 1;
+        try {
+          const updateData = {
+            soLuong: item.soLuong + 1,
+            donGia: item.giaBan
+          };
+          
+          await invoiceAPI.updateInvoiceDetail(currentHoaDon.value.id, item.detailId, updateData);
+          item.soLuong += 1;
+        } catch (error) {
+          console.error('Error updating product quantity:', error);
+          toast.error('Có lỗi xảy ra khi cập nhật số lượng sản phẩm');
+        }
       } else {
         toast.warning(`Sản phẩm "${item.tenSanPham}" chỉ còn ${item.soLuongTonKho} trong kho`);
       }
     };
 
-    const giamSoLuong = (item) => {
+    const giamSoLuong = async (item) => {
       if (item.soLuong > 1) {
-        item.soLuong -= 1;
+        try {
+          const updateData = {
+            soLuong: item.soLuong - 1,
+            donGia: item.giaBan
+          };
+          
+          await invoiceAPI.updateInvoiceDetail(currentHoaDon.value.id, item.detailId, updateData);
+          item.soLuong -= 1;
+        } catch (error) {
+          console.error('Error updating product quantity:', error);
+          toast.error('Có lỗi xảy ra khi cập nhật số lượng sản phẩm');
+        }
       }
     };
 
@@ -977,13 +1082,34 @@ export default {
       await fetchTatCaKhachHang();
     };
 
-    const chonKhachHang = (khach) => {
+    const chonKhachHang = async (khach) => {
       if (currentHoaDon.value) {
-        khachHangHienTai.value = {
-          ten: khach.tenKH,
-          soDienThoai: khach.soDT
-        };
-        toast.success(`Đã chọn khách hàng: ${khach.tenKH}`);
+        try {
+          // Update invoice with customer info
+          const updateData = {
+            khachHangId: khach.id,
+            tenKhachHang: khach.tenKH,
+            soDienThoaiKhachHang: khach.soDT,
+            diaChiKhachHang: khach.diaChi || '',
+            email: khach.email || ''
+          };
+          
+          await invoiceAPI.updatePendingInvoiceCustomer(currentHoaDon.value.id, updateData);
+          
+          khachHangHienTai.value = {
+            id: khach.id,
+            ten: khach.tenKH,
+            soDienThoai: khach.soDT
+          };
+          
+          // Update local state
+          currentHoaDon.value.khachHang = khachHangHienTai.value;
+          
+          toast.success(`Đã chọn khách hàng: ${khach.tenKH}`);
+        } catch (error) {
+          console.error('Error updating customer:', error);
+          toast.error('Có lỗi xảy ra khi cập nhật thông tin khách hàng');
+        }
       }
       showModal.value = false;
     };
@@ -1195,7 +1321,7 @@ export default {
       toast.info(`Đã chọn phương thức thanh toán: ${phuongThuc.replace('_', ' ').toLowerCase()}`);
     };
 
-    const xacNhanThanhToan = () => {
+    const xacNhanThanhToan = async () => {
       if (!currentHoaDon.value || currentHoaDon.value.items.length === 0) {
         toast.warning('Giỏ hàng trống! Không thể thanh toán.');
         return;
@@ -1243,19 +1369,71 @@ export default {
       
       toast.success(`Thanh toán hóa đơn ${tabActive.value} thành công!`);
       
-      // Remove current tab and create new one if needed
+      // Remove current tab
       hoaDonTabs.value = hoaDonTabs.value.filter(tab => tab.id !== tabActive.value);
-      if (hoaDonTabs.value.length === 0) {
-        themHoaDonMoi();
-      } else {
+      if (hoaDonTabs.value.length > 0) {
         tabActive.value = hoaDonTabs.value[0].id;
       }
+      // Do not auto-create new invoice - let user create manually
+      
       showThanhToanModal.value = false;
+      resetPaymentForm();
+    };
+
+    // Load pending invoices (status = 0)
+    const loadPendingInvoices = async () => {
+      try {
+        isLoadingInvoices.value = true;
+        
+        // Load pending invoices from API
+        const response = await invoiceAPI.getPendingInvoices();
+        const pendingInvoices = response.data;
+        
+        if (pendingInvoices && pendingInvoices.length > 0) {
+          // Add pending invoices to tabs with customer information
+          for (const invoice of pendingInvoices) {
+            const customerInfo = {
+              ten: 'Khách lẻ',
+              soDienThoai: ''
+            };
+            
+            // Load customer info if available
+            if (invoice.idKhachHang) {
+              customerInfo.id = invoice.idKhachHang.id;
+              customerInfo.ten = invoice.tenKhachHang || invoice.idKhachHang.tenKH || 'Khách lẻ';
+              customerInfo.soDienThoai = invoice.soDienThoaiKhachHang || invoice.idKhachHang.soDT || '';
+            }
+            
+            hoaDonTabs.value.push({
+              id: invoice.id,
+              ma: invoice.ma,
+              items: [], // Empty items array for pending invoices
+              khachHang: customerInfo,
+              trangThai: invoice.trangThai
+            });
+          }
+          
+          // Set first invoice as active and load its customer info
+          if (hoaDonTabs.value.length > 0) {
+            tabActive.value = hoaDonTabs.value[0].id;
+            await loadCustomerForInvoice(hoaDonTabs.value[0].id);
+          }
+        }
+        // Do not auto-create invoice - let user create manually
+      } catch (error) {
+        console.error('Error loading pending invoices:', error);
+        toast.error('Không thể tải danh sách hóa đơn chờ');
+      } finally {
+        isLoadingInvoices.value = false;
+      }
     };
 
     // Initialize data on component mount
-    onMounted(() => {
-      fetchSanPham(); // Load initial product data
+    onMounted(async () => {
+      await Promise.all([
+        loadPendingInvoices(),
+        fetchSanPham()
+      ]);
     });
 
     // Watchers
