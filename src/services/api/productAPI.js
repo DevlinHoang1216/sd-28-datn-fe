@@ -327,6 +327,35 @@ export const productService = {
   },
   getChiTietSanPhamById: (id) => productAPI.get(`/chi-tiet-san-pham/${id}`),
   updateChiTietSanPham: (id, data) => productAPI.put(`/chi-tiet-san-pham/${id}`, data),
+
+  // Sales Counter (Ban Hang) APIs - Only active products with stock
+  getSalesProducts: (params = {}) => {
+    const {
+      page = 0,
+      size = 10,
+      keyword = ''
+    } = params
+    
+    return productAPI.get('/ban-hang/san-pham', {
+      params: { page, size, keyword }
+    })
+  },
+
+  getSalesProductDetails: (productId) => {
+    return productAPI.get(`/ban-hang/chi-tiet-san-pham/${productId}`)
+  },
+
+  getAllSalesProductDetails: (params = {}) => {
+    const {
+      page = 0,
+      size = 10,
+      keyword = ''
+    } = params
+    
+    return productAPI.get('/ban-hang/chi-tiet-san-pham', {
+      params: { page, size, keyword }
+    })
+  }
 }
 
 export default productService
