@@ -368,6 +368,19 @@ export const productService = {
 
   quickCreateCustomer(customerData) {
     return productAPI.post('/ban-hang/khach-hang/quick-create', customerData)
+  },
+
+  // Invoice management for sales counter
+  getPendingInvoices() {
+    return productAPI.get('/ban-hang/hoa-don-cho')
+  },
+
+  createPendingInvoice() {
+    return productAPI.post('/ban-hang/hoa-don-cho')
+  },
+
+  deletePendingInvoice(invoiceId) {
+    return productAPI.delete(`/ban-hang/hoa-don-cho/${invoiceId}`)
   }
 }
 
