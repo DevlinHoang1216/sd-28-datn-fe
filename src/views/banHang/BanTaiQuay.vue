@@ -510,7 +510,16 @@
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="(sp, index) in sanPhamLoc" :key="sp.id">
+                <tr v-if="isLoadingSanPham">
+                  <td colspan="6" class="loading-message">
+                    <iconify-icon icon="solar:loading-bold" class="loading-icon"></iconify-icon>
+                    Đang tải sản phẩm...
+                  </td>
+                </tr>
+                <tr v-else-if="sanPhamLoc.length === 0">
+                  <td colspan="6" class="empty-message">Không tìm thấy sản phẩm nào.</td>
+                </tr>
+                <tr v-else v-for="(sp, index) in sanPhamLoc" :key="sp.id">
                   <td>{{ index + 1 }}</td>
                   <td>{{ sp.maSanPham }}</td>
                   <td>
@@ -533,9 +542,6 @@
                       <iconify-icon icon="solar:add-circle-bold"></iconify-icon>
                     </button>
                   </td>
-                </tr>
-                <tr v-if="sanPhamLoc.length === 0">
-                  <td colspan="6" class="empty-message">Không tìm thấy sản phẩm nào.</td>
                 </tr>
               </tbody>
             </table>
@@ -633,6 +639,7 @@ import { ref, computed, watch, onMounted } from 'vue';
 import { useToast } from 'vue-toastification';
 import { useRouter } from 'vue-router';
 import Breadcrumb from '@/components/Breadcrumb.vue';
+import { productService } from '@/services/api/productAPI.js';
 
 export default {
   name: 'BanTaiQuayModern',
@@ -776,56 +783,9 @@ export default {
       }
     ]);
 
-    const danhSachSanPham = ref([
-      {
-        id: 1,
-        maSanPham: 'SP001',
-        tenSanPham: 'Nike Air Max 270',
-        giaBan: 2890000,
-        soLuongTonKho: 15,
-        image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=100&h=100&fit=crop&crop=center'
-      },
-      {
-        id: 2,
-        maSanPham: 'SP002',
-        tenSanPham: 'Adidas Ultraboost 22',
-        giaBan: 3200000,
-        soLuongTonKho: 8,
-        image: 'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=100&h=100&fit=crop&crop=center'
-      },
-      {
-        id: 3,
-        maSanPham: 'SP003',
-        tenSanPham: 'Converse Chuck Taylor',
-        giaBan: 1590000,
-        soLuongTonKho: 22,
-        image: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=100&h=100&fit=crop&crop=center'
-      },
-      {
-        id: 4,
-        maSanPham: 'SP004',
-        tenSanPham: 'Vans Old Skool',
-        giaBan: 1890000,
-        soLuongTonKho: 0,
-        image: 'https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?w=100&h=100&fit=crop&crop=center'
-      },
-      {
-        id: 5,
-        maSanPham: 'SP005',
-        tenSanPham: 'New Balance 990v5',
-        giaBan: 4200000,
-        soLuongTonKho: 5,
-        image: 'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=100&h=100&fit=crop&crop=center'
-      },
-      {
-        id: 6,
-        maSanPham: 'SP006',
-        tenSanPham: 'Puma RS-X3',
-        giaBan: 2650000,
-        soLuongTonKho: 12,
-        image: 'https://images.unsplash.com/photo-1551107696-a4b0c5a0d9a2?w=100&h=100&fit=crop&crop=center'
-      }
-    ]);
+    // Product data - loaded from API
+    const danhSachSanPham = ref([]);
+    const isLoadingSanPham = ref(false);
 
     // Computed properties
     const currentHoaDon = computed(() => {
@@ -842,12 +802,8 @@ export default {
     });
 
     const sanPhamLoc = computed(() => {
-      if (!tuKhoaSanPham.value.trim()) return danhSachSanPham.value;
-      const keyword = tuKhoaSanPham.value.toLowerCase();
-      return danhSachSanPham.value.filter(sp =>
-        sp.tenSanPham?.toLowerCase().includes(keyword) ||
-        sp.maSanPham?.toLowerCase().includes(keyword)
-      );
+      // Since we're now filtering on the server side, just return the data
+      return danhSachSanPham.value;
     });
 
     const tongTien = computed(() => {
@@ -1026,9 +982,35 @@ export default {
       }
     };
 
-    const fetchSanPham = () => {
-      // In real app, this would be an API call
-      // For now, we just use the fake data
+    const fetchSanPham = async () => {
+      try {
+        isLoadingSanPham.value = true;
+        const response = await productService.getAllSalesProductDetails({
+          page: 0,
+          size: 100, // Load more products for sales
+          keyword: tuKhoaSanPham.value.trim()
+        });
+
+        // Transform the API response to match the expected format
+        danhSachSanPham.value = response.data.content.map(item => ({
+          id: item.id,
+          maSanPham: item.ma,
+          tenSanPham: item.idSanPham?.tenSanPham || 'N/A',
+          giaBan: item.giaBan,
+          soLuongTonKho: item.soLuongTonKho,
+          image: item.idAnhSanPham?.urlAnh || item.idSanPham?.idAnhSanPham?.urlAnh || '/public/sneakers/sneakers-1-alt1.jpg'
+        }));
+
+        if (tuKhoaSanPham.value.trim()) {
+          toast.success(`Tìm thấy ${danhSachSanPham.value.length} sản phẩm`);
+        }
+      } catch (error) {
+        console.error('Error loading products:', error);
+        toast.error('Không thể tải danh sách sản phẩm');
+        danhSachSanPham.value = [];
+      } finally {
+        isLoadingSanPham.value = false;
+      }
     };
 
     // Discount management
@@ -1143,6 +1125,11 @@ export default {
       showThanhToanModal.value = false;
     };
 
+    // Initialize data on component mount
+    onMounted(() => {
+      fetchSanPham(); // Load initial product data
+    });
+
     // Watchers
     watch(showModal, (newVal) => {
       if (newVal) {
@@ -1191,6 +1178,7 @@ export default {
       danhSachKhachHang,
       danhSachSanPham,
       sanPhamLoc,
+      isLoadingSanPham,
       
       // Payment
       phuongThucThanhToan,
@@ -2636,6 +2624,24 @@ export default {
     text-align: center;
     gap: 8px;
   }
+}
+
+/* Loading animation */
+.loading-message {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+}
+
+.loading-icon {
+  animation: spin 1s linear infinite;
+  margin-right: 8px;
+  font-size: 18px;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 </style>
