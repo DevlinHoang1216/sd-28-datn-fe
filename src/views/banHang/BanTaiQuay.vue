@@ -353,7 +353,6 @@
                 </button>
               </div>
               <button v-else class="select-voucher-btn" @click="showVoucherModal = true">
-                <iconify-icon icon="solar:ticket-bold-duotone"></iconify-icon>
                 Chọn phiếu giảm giá
               </button>
               <div v-if="thongBaoGiamGia" class="discount-message" :class="thongBaoGiamGia.includes('thành công') ? 'success' : 'error'">
@@ -691,85 +690,168 @@
     </Teleport>
 
     <!-- Payment Modal -->
-    <div v-if="showThanhToanModal" class="modal-overlay" @click="showThanhToanModal = false">
-      <div class="modal-container medium" @click.stop>
-        <div class="modal-header">
-          <h3 class="modal-title">
-            <iconify-icon icon="solar:wallet-bold-duotone"></iconify-icon>
-            Thanh Toán Hóa Đơn {{ currentHoaDon?.ma || tabActive }}
-          </h3>
-          <button class="modal-close" @click="showThanhToanModal = false">
-            <iconify-icon icon="solar:close-circle-bold"></iconify-icon>
-          </button>
-        </div>
-        <div class="modal-content">
-          <div class="payment-info">
-            <div class="payment-total">
-              <span class="label">Tổng tiền khách cần trả:</span>
-              <span class="amount">{{ formatCurrency(khachCanTra) }}</span>
+    <Teleport to="body">
+      <div v-if="showThanhToanModal" class="modal-overlay" @click="showThanhToanModal = false">
+        <div class="modal-container" @click.stop>
+          <div class="modal-header">
+            <h3 class="modal-title">Thanh Toán</h3>
+            <button class="modal-close" @click="showThanhToanModal = false">×</button>
+          </div>
+          
+          <div class="modal-content">
+            <!-- Tổng tiền -->
+            <div class="payment-total-card">
+              <div class="total-icon">
+                <iconify-icon icon="solar:wallet-money-bold-duotone"></iconify-icon>
+              </div>
+              <div class="total-info">
+                <span class="total-label">Tổng cần thanh toán</span>
+                <div class="total-amount">{{ formatCurrency(khachCanTra) }}</div>
+              </div>
             </div>
 
-            <div class="form-group">
-              <label class="form-label">Số tiền khách đưa:</label>
-              <input 
-                type="number" 
-                v-model="khachThanhToan" 
-                class="form-input"
-                placeholder="Nhập số tiền khách thanh toán"
-              />
-            </div>
-
-            <div class="payment-methods">
-              <label class="form-label">Phương thức thanh toán:</label>
-              <div class="method-buttons">
-                <button 
-                  class="method-btn"
+            <!-- Phương thức thanh toán -->
+            <div class="payment-methods-section">
+              <h4 class="section-title">
+                <iconify-icon icon="solar:card-bold-duotone"></iconify-icon>
+                Chọn phương thức thanh toán
+              </h4>
+              <div class="payment-methods-grid">
+                <div 
+                  class="payment-method-card"
                   :class="{ active: phuongThucThanhToan === 'TIEN_MAT' }"
                   @click="chonPhuongThuc('TIEN_MAT')"
                 >
-                  <iconify-icon icon="solar:wallet-money-bold-duotone"></iconify-icon>
-                  Tiền mặt
-                </button>
-                <button 
-                  class="method-btn"
-                  :class="{ active: phuongThucThanhToan === 'CHUYEN_KHOAN' }"
-                  @click="chonPhuongThuc('CHUYEN_KHOAN')"
-                >
-                  <iconify-icon icon="solar:card-transfer-bold-duotone"></iconify-icon>
-                  Chuyển khoản
-                </button>
-                <button 
-                  class="method-btn"
+                  <div class="method-icon">
+                    <iconify-icon icon="solar:wallet-money-bold-duotone"></iconify-icon>
+                  </div>
+                  <div class="method-info">
+                    <h5>Tiền mặt</h5>
+                    <p>Thanh toán trực tiếp</p>
+                  </div>
+                  <div class="method-check">
+                    <iconify-icon icon="solar:check-circle-bold" v-if="phuongThucThanhToan === 'TIEN_MAT'"></iconify-icon>
+                  </div>
+                </div>
+                
+                <div 
+                  class="payment-method-card"
                   :class="{ active: phuongThucThanhToan === 'VNPAY' }"
                   @click="chonPhuongThuc('VNPAY')"
                 >
-                  <iconify-icon icon="solar:smartphone-2-bold-duotone"></iconify-icon>
-                  VNPay
-                </button>
+                  <div class="method-icon vnpay">
+                    <img src="/src/assets/images/Icon-VNPAY-QR.webp" alt="VNPay" class="vnpay-logo" />
+                  </div>
+                  <div class="method-info">
+                    <h5>VNPay</h5>
+                    <p>Thanh toán online</p>
+                  </div>
+                  <div class="method-check">
+                    <iconify-icon icon="solar:check-circle-bold" v-if="phuongThucThanhToan === 'VNPAY'"></iconify-icon>
+                  </div>
+                </div>
+                
+                <div 
+                  class="payment-method-card"
+                  :class="{ active: phuongThucThanhToan === 'KET_HOP' }"
+                  @click="chonPhuongThuc('KET_HOP')"
+                >
+                  <div class="method-icon combined">
+                    <iconify-icon icon="solar:card-transfer-bold-duotone"></iconify-icon>
+                  </div>
+                  <div class="method-info">
+                    <h5>Kết hợp</h5>
+                    <p>Tiền mặt + VNPay</p>
+                  </div>
+                  <div class="method-check">
+                    <iconify-icon icon="solar:check-circle-bold" v-if="phuongThucThanhToan === 'KET_HOP'"></iconify-icon>
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div class="payment-calculation">
-              <div class="calc-line">
-                <span>Khách đã thanh toán:</span>
-                <span class="paid">{{ formatCurrency(khachThanhToan) }}</span>
+            <!-- Input tiền mặt -->
+            <div v-if="phuongThucThanhToan === 'TIEN_MAT'" class="payment-input-section">
+              <div class="input-card">
+                <div class="input-header">
+
+                  <span>Tiền khách đưa</span>
+                </div>
+                <input 
+                  type="text" 
+                  v-model="khachThanhToanFormatted" 
+                  class="payment-input"
+                  placeholder="Nhập số tiền khách đưa"
+                  @input="updateKhachThanhToan"
+                  @blur="formatKhachThanhToanInput"
+                />
+                <div v-if="tienThua > 0" class="change-display">
+                  <div class="change-icon">
+                    <iconify-icon icon="solar:arrow-left-up-bold-duotone"></iconify-icon>
+                  </div>
+                  <div class="change-info">
+                    <span class="change-label">Tiền thừa trả khách</span>
+                    <div class="change-amount">{{ formatCurrency(tienThua) }}</div>
+                  </div>
+                </div>
               </div>
-              <div class="calc-line">
-                <span>Tiền thừa trả khách:</span>
-                <span class="change">{{ formatCurrency(tienThua) }}</span>
+            </div>
+
+            <!-- Input kết hợp -->
+            <div v-if="phuongThucThanhToan === 'KET_HOP'" class="combined-payment-section">
+              <div class="combined-inputs">
+                <div class="input-card">
+                  <div class="input-header">
+                    <iconify-icon icon="solar:wallet-money-bold-duotone"></iconify-icon>
+                    <span>Tiền mặt</span>
+                  </div>
+                  <input 
+                    type="text" 
+                    v-model="tienMatFormatted" 
+                    class="payment-input"
+                    placeholder="Nhập số tiền mặt"
+                    @input="updateTienMat"
+                    @blur="formatTienMatInput"
+                  />
+                </div>
+                
+                <div class="plus-divider">
+                  <iconify-icon icon="solar:add-circle-bold-duotone"></iconify-icon>
+                </div>
+                
+                <div class="input-card">
+                  <div class="input-header">
+                    <iconify-icon icon="solar:smartphone-2-bold-duotone"></iconify-icon>
+                    <span>VNPay</span>
+                  </div>
+                  <input 
+                    type="text" 
+                    :value="formatCurrency(tienVNPay)" 
+                    class="payment-input readonly"
+                    placeholder="Tự động tính"
+                    readonly
+                  />
+                </div>
+              </div>
+              
+              <div class="total-summary">
+                <div class="summary-row">
+                  <span>Tổng thanh toán:</span>
+                  <strong>{{ formatCurrency((tienMat || 0) + (tienVNPay || 0)) }}</strong>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn secondary" @click="showThanhToanModal = false">Hủy</button>
-          <button class="btn primary" @click="xacNhanThanhToan">
-            <iconify-icon icon="solar:check-circle-bold"></iconify-icon>
-            Xác Nhận Thanh Toán
-          </button>
+          
+          <div class="modal-footer">
+            <button class="btn secondary" @click="showThanhToanModal = false">Hủy</button>
+            <button class="btn primary" @click="xacNhanThanhToan" :disabled="!isPaymentValid">
+              Xác Nhận
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>
 
@@ -853,6 +935,12 @@ export default {
     const thongBaoGiamGia = ref('');
     const giamGia = ref(0);
     const khachThanhToan = ref(0);
+    const tienMat = ref(0);
+    const tienVNPay = ref(0);
+    
+    // Formatted currency inputs
+    const khachThanhToanFormatted = ref('');
+    const tienMatFormatted = ref('');
     
     // Voucher management
     const showVoucherModal = ref(false);
@@ -943,6 +1031,21 @@ export default {
 
     const sanPhamKhacNhau = computed(() => {
       return currentHoaDon.value?.items.length || 0;
+    });
+
+    const isPaymentValid = computed(() => {
+      if (!currentHoaDon.value || currentHoaDon.value.items.length === 0) return false;
+      
+      if (phuongThucThanhToan.value === 'TIEN_MAT') {
+        return khachThanhToan.value >= khachCanTra.value;
+      }
+      
+      if (phuongThucThanhToan.value === 'KET_HOP') {
+        const totalPaid = (parseFloat(tienMat.value) || 0) + (parseFloat(tienVNPay.value) || 0);
+        return totalPaid >= khachCanTra.value && tienMat.value > 0 && tienVNPay.value > 0;
+      }
+      
+      return true; // For VNPAY, validation happens on backend
     });
 
     // Available discount codes
@@ -1601,7 +1704,70 @@ export default {
     // Payment management
     const chonPhuongThuc = (phuongThuc) => {
       phuongThucThanhToan.value = phuongThuc;
+      // Reset payment amounts when switching methods
+      if (phuongThuc === 'KET_HOP') {
+        tienMat.value = 0;
+        tienVNPay.value = khachCanTra.value;
+      } else {
+        tienMat.value = 0;
+        tienVNPay.value = 0;
+        khachThanhToan.value = phuongThuc === 'TIEN_MAT' ? khachCanTra.value : 0;
+      }
       toast.info(`Đã chọn phương thức thanh toán: ${phuongThuc.replace('_', ' ').toLowerCase()}`);
+    };
+
+    const updateVNPayAmount = () => {
+      const cashAmount = parseFloat(tienMat.value) || 0;
+      const remaining = khachCanTra.value - cashAmount;
+      tienVNPay.value = remaining > 0 ? remaining : 0;
+    };
+
+    // Currency formatting methods
+    const formatVNDInput = (value) => {
+      if (!value) return '';
+      // Remove all non-digit characters
+      const numericValue = value.toString().replace(/\D/g, '');
+      if (!numericValue) return '';
+      
+      // Format with thousands separators
+      return new Intl.NumberFormat('vi-VN').format(parseInt(numericValue));
+    };
+
+    const parseVNDInput = (formattedValue) => {
+      if (!formattedValue) return 0;
+      // Remove all non-digit characters and convert to number
+      const numericValue = formattedValue.toString().replace(/\D/g, '');
+      return parseInt(numericValue) || 0;
+    };
+
+    const updateKhachThanhToan = (event) => {
+      const inputValue = event.target.value;
+      const numericValue = parseVNDInput(inputValue);
+      khachThanhToan.value = numericValue;
+      
+      // Update formatted display while typing (without full formatting to avoid cursor jump)
+      khachThanhToanFormatted.value = inputValue;
+    };
+
+    const formatKhachThanhToanInput = () => {
+      khachThanhToanFormatted.value = formatVNDInput(khachThanhToan.value);
+    };
+
+    const updateTienMat = (event) => {
+      const inputValue = event.target.value;
+      const numericValue = parseVNDInput(inputValue);
+      tienMat.value = numericValue;
+      
+      // Update VNPay amount automatically
+      const remaining = khachCanTra.value - numericValue;
+      tienVNPay.value = remaining > 0 ? remaining : 0;
+      
+      // Update formatted display while typing
+      tienMatFormatted.value = inputValue;
+    };
+
+    const formatTienMatInput = () => {
+      tienMatFormatted.value = formatVNDInput(tienMat.value);
     };
 
     const xacNhanThanhToan = async () => {
@@ -1818,9 +1984,12 @@ export default {
       thongBaoGiamGia,
       giamGia,
       khachThanhToan,
+      tienMat,
+      tienVNPay,
       tongTien,
       khachCanTra,
       tienThua,
+      isPaymentValid,
       
       // Delivery
       isDelivery,
@@ -1873,7 +2042,16 @@ export default {
       fetchSanPham,
       apDungMaGiamGia,
       chonPhuongThuc,
-      xacNhanThanhToan
+      updateVNPayAmount,
+      xacNhanThanhToan,
+      
+      // Currency formatting
+      khachThanhToanFormatted,
+      tienMatFormatted,
+      updateKhachThanhToan,
+      formatKhachThanhToanInput,
+      updateTienMat,
+      formatTienMatInput
     };
   }
 }
@@ -2150,6 +2328,32 @@ export default {
   overflow-x: auto;
   border-radius: 12px;
   border: 1px solid #e2e8f0;
+}
+
+/* Modal table containers with scrolling */
+.modal-container .table-container {
+  max-height: 400px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+.modal-container .table-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.modal-container .table-container::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.modal-container .table-container::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.modal-container .table-container::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 .cart-table {
@@ -2530,7 +2734,7 @@ export default {
 }
 
 .total-amount {
-  color: #007bff !important;
+  color: #ffffff !important;
   font-size: 1.25rem;
 }
 
@@ -3113,7 +3317,7 @@ export default {
 .select-voucher-btn {
   width: 100%;
   padding: 12px 20px;
-  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  background: #007bff;
   color: white;
   border: none;
   border-radius: 12px;
@@ -3189,14 +3393,35 @@ export default {
 
 /* Voucher Modal */
 .voucher-modal {
-  max-width: 800px;
+  max-width: 900px;
+  width: 90vw;
   max-height: 80vh;
 }
 
 .voucher-modal .modal-content {
-  max-height: 60vh;
+  max-height: 70vh;
   overflow-y: auto;
   padding: 0;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f5f9;
+}
+
+.voucher-modal .modal-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.voucher-modal .modal-content::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.voucher-modal .modal-content::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.voucher-modal .modal-content::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 .vouchers-list {
@@ -3703,4 +3928,635 @@ export default {
   to { transform: rotate(360deg); }
 }
 
+/* ===== PAYMENT MODAL STYLES ===== */
+.payment-summary-card {
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 24px;
+  border: 1px solid #e2e8f0;
+}
+
+.summary-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  color: #1a202c;
+}
+
+.summary-header h4 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.summary-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.summary-row.total {
+  border-top: 2px solid #007bff;
+  padding-top: 12px;
+  margin-top: 8px;
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.summary-row .label {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.summary-row .value {
+  font-weight: 600;
+  color: #1a202c;
+}
+
+.summary-row .value.discount {
+  color: #059669;
+}
+
+.payment-methods-section {
+  margin-bottom: 24px;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1a202c;
+}
+
+.payment-methods-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.payment-method-card {
+  background: white;
+  border: 2px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  position: relative;
+}
+
+.payment-method-card:hover {
+  border-color: #007bff;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 123, 255, 0.15);
+}
+
+.payment-method-card.active {
+  border-color: #007bff;
+  background: linear-gradient(135deg, #e6f3ff 0%, #cce7ff 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 123, 255, 0.25);
+}
+
+.method-icon {
+  width: 48px;
+  height: 48px;
+  background: #f8fafc;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  color: #007bff;
+  flex-shrink: 0;
+}
+
+.payment-method-card.active .method-icon {
+  background: #007bff;
+  color: white;
+}
+
+.method-info {
+  flex: 1;
+}
+
+.method-info h5 {
+  margin: 0 0 4px 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1a202c;
+}
+
+.method-info p {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #64748b;
+}
+
+.method-check {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: #007bff;
+}
+
+.payment-input-section {
+  margin-bottom: 24px;
+}
+
+.payment-input-group {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid #e2e8f0;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group:last-child {
+  margin-bottom: 0;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #374151;
+  font-size: 0.95rem;
+}
+
+.form-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.form-input.large {
+  padding: 16px 20px;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.payment-table {
+  margin-top: 0;
+}
+
+.payment-table .amount {
+  text-align: right;
+  font-weight: 600;
+}
+
+.payment-table .amount.discount {
+  color: #059669;
+}
+
+.payment-table .amount.paid {
+  color: #007bff;
+}
+
+.payment-table .amount.change {
+  color: #dc2626;
+}
+
+.payment-table .total-row {
+  background: #f8fafc;
+  border-top: 2px solid #007bff;
+}
+
+.payment-table .total-row td {
+  padding: 16px 12px;
+  font-size: 1.1rem;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.btn:disabled:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Responsive Design for Payment Modal */
+@media (max-width: 768px) {
+  .payment-methods-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .payment-method-card {
+    padding: 16px;
+  }
+  
+  .method-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+  }
+  
+  .modal-container.large {
+    max-width: 95vw;
+    margin: 10px;
+  }
+  
+  .modal-content {
+    padding: 16px 20px;
+  }
+  
+  .modal-header,
+  .modal-footer {
+    padding: 16px 20px;
+  }
+}
+
+/* ===== PAYMENT MODAL STYLES ===== */
+.payment-total-card {
+  background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  color: white;
+  box-shadow: 0 8px 32px rgba(59, 130, 246, 0.3);
+}
+
+.total-icon {
+  width: 56px;
+  height: 56px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  backdrop-filter: blur(10px);
+}
+
+.total-info {
+  flex: 1;
+}
+
+.total-label {
+  display: block;
+  font-size: 14px;
+  opacity: 0.9;
+  margin-bottom: 4px;
+}
+
+.total-amount {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.payment-methods-section {
+  margin-bottom: 24px;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 16px;
+}
+
+.section-title iconify-icon {
+  font-size: 20px;
+  color: #3b82f6;
+}
+
+.payment-methods-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.payment-method-card {
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.payment-method-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(29, 78, 216, 0.05) 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.payment-method-card:hover {
+  border-color: #3b82f6;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.15);
+}
+
+.payment-method-card:hover::before {
+  opacity: 1;
+}
+
+.payment-method-card.active {
+  border-color: #3b82f6;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(29, 78, 216, 0.05) 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.2);
+}
+
+.method-icon {
+  width: 40px;
+  height: 40px;
+  background: #f3f4f6;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: #6b7280;
+  margin-bottom: 12px;
+  transition: all 0.3s ease;
+}
+
+.payment-method-card.active .method-icon {
+  background: #3b82f6;
+  color: white;
+}
+
+.method-icon.vnpay {
+  background: white;
+  border: 2px solid #e5e7eb;
+  color: white;
+}
+
+.method-icon.combined {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+}
+
+.vnpay-logo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.method-info h5 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 4px 0;
+}
+
+.method-info p {
+  font-size: 12px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.method-check {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 20px;
+  color: #10b981;
+}
+
+.payment-input-section {
+  margin-bottom: 24px;
+}
+
+.input-card {
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  transition: all 0.3s ease;
+}
+
+.input-card:focus-within {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.input-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.input-header iconify-icon {
+  font-size: 18px;
+  color: #3b82f6;
+}
+
+.payment-input {
+  width: 100%;
+  border: none;
+  outline: none;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+  background: transparent;
+  padding: 8px 0;
+}
+
+.payment-input::placeholder {
+  color: #9ca3af;
+  font-weight: 400;
+}
+
+.payment-input.readonly {
+  color: #6b7280;
+  background: #f9fafb;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.change-display {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 16px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border-radius: 12px;
+  color: white;
+}
+
+.change-icon {
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+
+.change-info {
+  flex: 1;
+}
+
+.change-label {
+  display: block;
+  font-size: 14px;
+  opacity: 0.9;
+  margin-bottom: 4px;
+}
+
+.change-amount {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.combined-payment-section {
+  margin-bottom: 24px;
+}
+
+.combined-inputs {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.combined-inputs .input-card {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.plus-divider {
+  width: 40px;
+  height: 40px;
+  background: #f3f4f6;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: #6b7280;
+  flex-shrink: 0;
+}
+
+.total-summary {
+  background: #f8fafc;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: between;
+  align-items: center;
+  font-size: 16px;
+}
+
+.summary-row span {
+  color: #64748b;
+}
+
+.summary-row strong {
+  color: #1e293b;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+/* Modal animations */
+.modal-overlay {
+  animation: fadeIn 0.3s ease;
+}
+
+.modal-container {
+  animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .payment-methods-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  
+  .combined-inputs {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .plus-divider {
+    transform: rotate(90deg);
+  }
+  
+  .total-amount {
+    font-size: 24px;
+  }
+  
+  .payment-total-card {
+    padding: 20px;
+  }
+}
 </style>
