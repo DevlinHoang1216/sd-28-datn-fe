@@ -1,49 +1,72 @@
+import axios from 'axios';
+
 // Authentication Service
 class AuthService {
   constructor() {
     this.user = JSON.parse(localStorage.getItem('user_info') || 'null');
     this.isLoggedIn = localStorage.getItem('is_logged_in') === 'true';
+    this.baseURL = 'http://localhost:8080/api/auth';
   }
 
   async login(credentials) {
-    // Simple credential validation without backend API
-    const validCredentials = [
-      { username: 'admin', password: 'admin123', name: 'Administrator', role: 'admin' },
-      { username: 'nhanvien', password: '123456', name: 'Nhân viên', role: 'employee' },
-      { username: 'manager', password: 'manager123', name: 'Quản lý', role: 'manager' }
-    ];
+    try {
+      const response = await axios.post(`${this.baseURL}/login`, {
+        tenDangNhap: credentials.username,
+        matKhau: credentials.password,
+        rememberMe: credentials.rememberMe
+      });
 
-    // Find matching credentials
-    const user = validCredentials.find(
-      cred => cred.username === credentials.username && cred.password === credentials.password
-    );
+      if (response.data.success) {
+        // Map backend response to frontend format
+        const userInfo = {
+          id: response.data.id,
+          ma: response.data.ma,
+          username: response.data.tenDangNhap,
+          email: response.data.email,
+          soDienThoai: response.data.soDienThoai,
+          tenQuyen: response.data.tenQuyen,
+          capQuyenHan: response.data.capQuyenHan,
+          loginTime: new Date().toISOString()
+        };
 
-    if (!user) {
-      throw new Error('Tên đăng nhập hoặc mật khẩu không chính xác');
+        // Store user info and login status
+        localStorage.setItem('user_info', JSON.stringify(userInfo));
+        localStorage.setItem('is_logged_in', 'true');
+        
+        if (credentials.rememberMe) {
+          localStorage.setItem('remember_me', 'true');
+        }
+
+        this.user = userInfo;
+        this.isLoggedIn = true;
+
+        return { user: userInfo };
+      } else {
+        throw new Error(response.data.message || 'Đăng nhập thất bại');
+      }
+    } catch (error) {
+      if (error.response && error.response.data && error.response.data.message) {
+        throw new Error(error.response.data.message);
+      } else {
+        throw new Error('Lỗi kết nối đến server');
+      }
     }
-
-    // Store user info and login status
-    const userInfo = {
-      username: user.username,
-      name: user.name,
-      role: user.role,
-      loginTime: new Date().toISOString()
-    };
-
-    localStorage.setItem('user_info', JSON.stringify(userInfo));
-    localStorage.setItem('is_logged_in', 'true');
-    
-    if (credentials.rememberMe) {
-      localStorage.setItem('remember_me', 'true');
-    }
-
-    this.user = userInfo;
-    this.isLoggedIn = true;
-
-    return { user: userInfo };
   }
 
   async logout() {
+    try {
+      // Call backend logout API with user ID if available
+      const userId = this.user?.id;
+      if (userId) {
+        await axios.post(`${this.baseURL}/logout?userId=${userId}`);
+      } else {
+        await axios.post(`${this.baseURL}/logout`);
+      }
+    } catch (error) {
+      console.error('Logout API error:', error);
+      // Continue with local logout even if API fails
+    }
+
     // Clear local storage
     localStorage.removeItem('user_info');
     localStorage.removeItem('is_logged_in');

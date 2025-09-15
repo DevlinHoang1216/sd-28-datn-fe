@@ -90,8 +90,8 @@
               <div class="status-indicator"></div>
             </div>
             <div class="user-info">
-              <div class="user-name">{{ currentUser?.name || 'Admin User' }}</div>
-              <div class="user-role">{{ getUserRoleText(currentUser?.role) }}</div>
+              <div class="user-name">{{ currentUser?.username || 'Người dùng' }}</div>
+              <div class="user-role">{{ getUserRoleText(currentUser?.tenQuyen) }}</div>
             </div>
             <div class="user-actions">
               <button class="action-btn" title="Cài đặt">
@@ -180,17 +180,26 @@ export default {
       this.$emit('show-logout-modal');
     },
 
-    getUserRoleText(role) {
+    getUserRoleText(tenQuyen) {
+      // Nếu không có thông tin quyền, trả về mặc định
+      if (!tenQuyen) return 'Nhân viên';
+      
+      // Map các mã quyền từ database sang tên hiển thị
       const roleMap = {
-        'admin': 'Quản trị viên',
-        'manager': 'Quản lý',
-        'employee': 'Nhân viên'
+        'ADMIN': 'Quản trị viên',
+        'MANAGER': 'Quản lý', 
+        'EMPLOYEE': 'Nhân viên',
+        'NHANVIEN': 'Nhân viên',
+        'QUANLY': 'Quản lý',
+        'QUANTRI': 'Quản trị viên'
       };
-      return roleMap[role] || 'Quản trị viên';
+      
+      return roleMap[tenQuyen.toUpperCase()] || tenQuyen;
     },
 
     loadCurrentUser() {
       this.currentUser = authService.getUser();
+      console.log('Current user loaded:', this.currentUser); // Debug log
     }
   },
   watch: {
@@ -209,6 +218,17 @@ export default {
       },
       immediate: true, // Chạy ngay khi component được tạo
     },
+  },
+  created() {
+    // Load user info khi component được tạo
+    this.loadCurrentUser();
+    
+    // Listen for storage changes (when user logs in/out in another tab)
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'user_info' || e.key === 'is_logged_in') {
+        this.loadCurrentUser();
+      }
+    });
   },
   mounted() {
     // Load thông tin user khi component được mount

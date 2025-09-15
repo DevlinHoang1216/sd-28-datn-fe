@@ -436,21 +436,25 @@
                       <!-- Image -->
                       <td class="image-cell">
                         <div class="table-image-container">
-                          <div class="current-table-image" v-if="variant.imageUrl">
-                            <img :src="variant.imageUrl" alt="Variant image" class="table-image-preview" />
+                          <div class="current-table-image" v-if="getColorImageUrl(variant.colorId)">
+                            <img :src="getColorImageUrl(variant.colorId)" alt="Variant image" class="table-image-preview" />
                           </div>
-                          <div class="table-upload-area" v-else>
+                          <div class="table-upload-area" v-else-if="isFirstVariantOfColor(variant.colorId, index)">
                             <input 
                               type="file" 
-                              :ref="`variantImageInput${index}`"
-                              @change="(event) => handleVariantImageUpload(event, index)"
+                              :ref="`colorImageInput${variant.colorId}`"
+                              @change="(event) => handleColorImageUpload(event, variant.colorId)"
                               accept="image/*"
                               class="file-input"
-                              :id="`table-variant-image-upload-${index}`"
+                              :id="`table-color-image-upload-${variant.colorId}`"
                             />
-                            <label :for="`table-variant-image-upload-${index}`" class="table-upload-label">
+                            <label :for="`table-color-image-upload-${variant.colorId}`" class="table-upload-label">
                               <iconify-icon icon="solar:camera-add-bold"></iconify-icon>
                             </label>
+                          </div>
+                          <div class="color-image-shared" v-else>
+                            <iconify-icon icon="solar:gallery-bold" class="shared-icon"></iconify-icon>
+                            <span class="shared-text">Ảnh chung</span>
                           </div>
                         </div>
                       </td>
@@ -505,10 +509,10 @@
                       <td class="actions-cell">
                         <div class="action-buttons">
                           <button 
-                            @click="removeVariantImage(index)" 
+                            @click="removeColorImage(variant.colorId)" 
                             class="action-btn image-btn"
-                            v-if="variant.imageUrl"
-                            title="Xóa ảnh"
+                            v-if="getColorImageUrl(variant.colorId) && isFirstVariantOfColor(variant.colorId, index)"
+                            title="Xóa ảnh màu"
                           >
                             <iconify-icon icon="solar:gallery-remove-bold"></iconify-icon>
                           </button>
@@ -788,7 +792,7 @@
         </div>
         <div class="modal-footer">
           <button @click="closeQuickAddModal" class="btn secondary" :disabled="quickAddLoading">Hủy</button>
-          <button type="submit" class="btn primary" :disabled="quickAddLoading">
+          <button @click="saveQuickAddAttribute" class="btn primary" :disabled="quickAddLoading">
             <span v-if="quickAddLoading" class="loading-spinner"></span>
             {{ quickAddLoading ? 'Đang lưu...' : 'Lưu' }}
           </button>
@@ -1386,13 +1390,15 @@ export default {
           if (existingVariant) {
             variants.push(existingVariant);
           } else {
+            // Use existing color image if available
+            const colorImageUrl = colorImages.value[color.id] || '';
             variants.push({
               colorId: color.id,
               colorName: color.name,
               colorHex: color.hex,
               sizeId: size.id,
               sizeName: size.name,
-              imageUrl: '',
+              imageUrl: colorImageUrl,
               importPrice: 0,
               salePrice: 0,
               quantity: 0
@@ -1537,22 +1543,68 @@ export default {
       productForm.value.imageUrl = '';
     };
 
-    const handleVariantImageUpload = async (event, variantIndex) => {
+    // Color image storage
+    const colorImages = ref({});
+
+    // Get image URL for a specific color
+    const getColorImageUrl = (colorId) => {
+      return colorImages.value[colorId] || '';
+    };
+
+    // Check if this is the first variant of a color (for image upload display)
+    const isFirstVariantOfColor = (colorId, currentIndex) => {
+      const firstIndex = productVariants.value.findIndex(v => v.colorId === colorId);
+      return firstIndex === currentIndex;
+    };
+
+    // Handle color image upload (applies to all variants of same color)
+    const handleColorImageUpload = async (event, colorId) => {
       const file = event.target.files[0];
       if (!file) return;
 
       try {
         const imageUrl = await productService.uploadImage(file);
-        productVariants.value[variantIndex].imageUrl = imageUrl;
-        toast.success('Tải ảnh biến thể thành công!');
+        colorImages.value[colorId] = imageUrl;
+        
+        // Update all variants of this color with the new image
+        productVariants.value.forEach(variant => {
+          if (variant.colorId === colorId) {
+            variant.imageUrl = imageUrl;
+          }
+        });
+        
+        const colorName = selectedColors.value.find(c => c.id === colorId)?.name || 'màu này';
+        toast.success(`Đã cập nhật ảnh cho tất cả biến thể màu ${colorName}!`);
       } catch (error) {
         toast.error('Lỗi khi tải ảnh lên');
-        console.error('Error uploading variant image:', error);
+        console.error('Error uploading color image:', error);
       }
     };
 
+    // Remove image for all variants of a color
+    const removeColorImage = (colorId) => {
+      colorImages.value[colorId] = '';
+      
+      // Remove image from all variants of this color
+      productVariants.value.forEach(variant => {
+        if (variant.colorId === colorId) {
+          variant.imageUrl = '';
+        }
+      });
+      
+      const colorName = selectedColors.value.find(c => c.id === colorId)?.name || 'màu này';
+      toast.success(`Đã xóa ảnh cho tất cả biến thể màu ${colorName}`);
+    };
+
+    // Legacy function for backward compatibility
+    const handleVariantImageUpload = async (event, variantIndex) => {
+      const variant = productVariants.value[variantIndex];
+      await handleColorImageUpload(event, variant.colorId);
+    };
+
     const removeVariantImage = (variantIndex) => {
-      productVariants.value[variantIndex].imageUrl = '';
+      const variant = productVariants.value[variantIndex];
+      removeColorImage(variant.colorId);
     };
 
     // Bulk operations computed
@@ -1916,6 +1968,11 @@ export default {
       removeMainImage,
       handleVariantImageUpload,
       removeVariantImage,
+      colorImages,
+      getColorImageUrl,
+      isFirstVariantOfColor,
+      handleColorImageUpload,
+      removeColorImage,
       
       // Bulk operations methods
       toggleSelectAll,
@@ -3789,5 +3846,32 @@ export default {
   border-color: #007bff;
   background: white;
   box-shadow: 0 0 0 4px rgba(0, 123, 255, 0.1);
+}
+
+/* Color image shared styles */
+.color-image-shared {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  background: #f3f4f6;
+  border: 1px dashed #d1d5db;
+  border-radius: 6px;
+  color: #6b7280;
+  font-size: 11px;
+  text-align: center;
+  min-height: 60px;
+}
+
+.color-image-shared .shared-icon {
+  font-size: 20px;
+  margin-bottom: 4px;
+  opacity: 0.7;
+}
+
+.color-image-shared .shared-text {
+  font-weight: 500;
+  line-height: 1.2;
 }
 </style>
