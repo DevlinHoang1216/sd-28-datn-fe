@@ -18,21 +18,17 @@
         <div class="card shadow-sm">
           <div class="loading-spinner" v-if="loading"></div>
           <div class="card-content" :class="{ 'loading-overlay': loading }">
-            <!-- Coupon Code -->
+            <!-- Coupon Code (Read-only) -->
             <div class="form-group">
               <label class="form-label">Mã phiếu giảm giá</label>
-              <div class="input-group">
-                <input
-                  v-model="coupon.maPhieuGiamGia"
-                  type="text"
-                  class="form-input"
-                  placeholder="Nhập mã phiếu giảm giá"
-                />
-                <button class="action-btn secondary" @click="generateCode">
-                  <iconify-icon icon="solar:refresh-bold-duotone"></iconify-icon>
-                  Tự sinh
-                </button>
-              </div>
+              <input
+                v-model="coupon.maPhieuGiamGia"
+                type="text"
+                class="form-input"
+                placeholder="Mã được tự động tạo"
+                readonly
+                disabled
+              />
             </div>
 
             <!-- Coupon Name -->
@@ -71,8 +67,8 @@
               />
             </div>
 
-            <!-- Maximum Discount (for Percentage) -->
-            <div class="form-group" v-if="coupon.loaiGiamGia === 'PHAN_TRAM'">
+            <!-- Maximum Discount (for both Percentage and Fixed Amount) -->
+            <div class="form-group" v-if="coupon.loaiGiamGia === 'PHAN_TRAM' || coupon.loaiGiamGia === 'SO_TIEN_CO_DINH'">
               <label class="form-label">Số tiền giảm tối đa</label>
               <input
                 v-model.number="coupon.soTienGiamToiDa"
@@ -98,7 +94,7 @@
               <label class="form-label">Ngày bắt đầu</label>
               <input
                 v-model="coupon.ngayBatDau"
-                type="datetime-local"
+                type="date"
                 class="form-input"
               />
             </div>
@@ -108,7 +104,7 @@
               <label class="form-label">Ngày kết thúc</label>
               <input
                 v-model="coupon.ngayKetThuc"
-                type="datetime-local"
+                type="date"
                 class="form-input"
               />
             </div>
@@ -251,18 +247,7 @@ export default {
       },
     ]);
 
-    const pageStats = ref([
-      {
-        value: '0',
-        label: 'Phiếu đang hoạt động',
-        icon: 'solar:ticket-bold-duotone',
-      },
-      {
-        value: '0',
-        label: 'Lượt sử dụng hôm nay',
-        icon: 'solar:cart-check-bold-duotone',
-      },
-    ]);
+    const pageStats = ref([]);
 
     return { toast, router, route, breadcrumbItems, breadcrumbActions, pageStats };
   },
@@ -340,8 +325,8 @@ export default {
           giaTriGiam: data.phanTramGiamGia || data.soTienGiamGia,
           hoaDonToiThieu: data.hoaDonToiThieu,
           soTienGiamToiDa: data.soTienGiamToiDa,
-          ngayBatDau: this.formatDateTimeForInput(data.ngayBatDau),
-          ngayKetThuc: this.formatDateTimeForInput(data.ngayKetThuc),
+          ngayBatDau: this.formatDateForInput(data.ngayBatDau),
+          ngayKetThuc: this.formatDateForInput(data.ngayKetThuc),
           loaiGiamGia: data.loaiPhieuGiamGia === 'PHANTRAM' ? 'PHAN_TRAM' : data.loaiPhieuGiamGia || 'SO_TIEN_CO_DINH',
           isPrivate: data.riengTu || false,
         };
@@ -362,22 +347,15 @@ export default {
       console.log('All Customers:', this.customers);
     },
 
-    formatDateTimeForInput(dateTime) {
+    formatDateForInput(dateTime) {
       if (!dateTime) return '';
       const date = new Date(dateTime);
-      return date.toISOString().slice(0, 16);
-    },
-
-    generateCode() {
-      this.coupon.maPhieuGiamGia =
-        'PGG-' + Math.random().toString(36).substring(2, 8).toUpperCase();
-      this.toast.info('Đã tạo mã phiếu giảm giá mới!');
+      return date.toISOString().slice(0, 10);
     },
 
     handleLoaiGiamGiaChange() {
-      if (this.coupon.loaiGiamGia === 'SO_TIEN_CO_DINH') {
-        this.coupon.soTienGiamToiDa = null;
-      }
+      // Keep soTienGiamToiDa field for both types now
+      // No need to reset it when switching types
     },
 
     handlePrivateCouponChange() {
@@ -422,10 +400,6 @@ export default {
     },
 
     validateForm() {
-      if (!this.coupon.maPhieuGiamGia.trim()) {
-        this.toast.error('Mã phiếu giảm giá không được để trống!');
-        return false;
-      }
       if (!this.coupon.tenPhieuGiamGia.trim()) {
         this.toast.error('Tên phiếu giảm giá không được để trống!');
         return false;
@@ -447,6 +421,10 @@ export default {
       if (this.coupon.loaiGiamGia === 'SO_TIEN_CO_DINH') {
         if (!this.coupon.giaTriGiam || this.coupon.giaTriGiam <= 0) {
           this.toast.error('Giá trị giảm (VND) phải lớn hơn 0!');
+          return false;
+        }
+        if (!this.coupon.soTienGiamToiDa || this.coupon.soTienGiamToiDa <= 0) {
+          this.toast.error('Số tiền giảm tối đa phải lớn hơn 0!');
           return false;
         }
       }
@@ -474,18 +452,16 @@ export default {
 
       this.loading = true;
       try {
-        const formatDateTime = (dt) => (dt ? dt + ':00Z' : null);
         const isPhanTram = this.coupon.loaiGiamGia === 'PHAN_TRAM';
         const dataToSend = {
-          ma: this.coupon.maPhieuGiamGia,
           tenPhieuGiamGia: this.coupon.tenPhieuGiamGia,
           loaiPhieuGiamGia: isPhanTram ? 'PHAN_TRAM' : 'SO_TIEN_CO_DINH',
           phanTramGiamGia: isPhanTram ? this.coupon.giaTriGiam : null,
-          soTienGiamToiDa: isPhanTram ? this.coupon.soTienGiamToiDa : null,
+          soTienGiamToiDa: this.coupon.soTienGiamToiDa,
           hoaDonToiThieu: this.coupon.hoaDonToiThieu,
           soLuongDung: this.coupon.soLuongDung || null,
-          ngayBatDau: formatDateTime(this.coupon.ngayBatDau),
-          ngayKetThuc: formatDateTime(this.coupon.ngayKetThuc),
+          ngayBatDau: this.coupon.ngayBatDau,
+          ngayKetThuc: this.coupon.ngayKetThuc,
           riengTu: this.coupon.isPrivate,
           moTa: this.coupon.moTa || "",
           khachHangIds: this.selectedCustomers,
@@ -506,7 +482,9 @@ export default {
           errorMessage = err.response.data.message;
         }
         this.toast.error(errorMessage);
-        console.error('Lỗi cập nhật phiếu:', err.response || err);
+        console.error('Lỗi cập nhật phiếu:', err);
+        console.error('Chi tiết lỗi:', err.response?.data);
+        console.error('Dữ liệu gửi đi:', dataToSend);
       } finally {
         this.loading = false;
       }
@@ -522,8 +500,6 @@ export default {
 <style scoped>
 /* ===== GENERAL STYLES ===== */
 .coupon-edit-container {
-  padding: 24px;
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   min-height: 100vh;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }

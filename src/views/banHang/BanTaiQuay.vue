@@ -100,17 +100,17 @@
                       </td>
                       <td class="item-price">{{ formatCurrency(item.giaBan) }}</td>
                       <td class="item-quantity">
-                        <div class="quantity-controls">
+                        <div class="quantity-controls" :class="{ 'has-inline-modal': showInlineQuantityModal && selectedInlineItem?.id === item.id }">
                           <button @click="giamSoLuong(item)" class="qty-btn minus">
                             <iconify-icon icon="solar:minus-circle-bold"></iconify-icon>
                           </button>
-                          <input 
-                            type="number" 
-                            v-model.number="item.soLuong" 
-                            min="1" 
-                            :max="item.soLuongTonKho"
-                            class="qty-input"
-                          />
+                          <div 
+                            class="qty-display"
+                            @click="openInlineQuantityModal(item, $event)"
+                            title="Click để nhập số lượng tùy chỉnh"
+                          >
+                            {{ item.soLuong }}
+                          </div>
                           <button @click="tangSoLuong(item)" class="qty-btn plus">
                             <iconify-icon icon="solar:add-circle-bold"></iconify-icon>
                           </button>
@@ -642,6 +642,8 @@
                   <th>STT</th>
                   <th>Mã SP</th>
                   <th>Tên SP</th>
+                  <th>Kích Cỡ</th>
+                  <th>Màu Sắc</th>
                   <th>Giá Bán</th>
                   <th>Tồn Kho</th>
                   <th>Thêm</th>
@@ -649,13 +651,13 @@
               </thead>
               <tbody>
                 <tr v-if="isLoadingSanPham">
-                  <td colspan="6" class="loading-message">
+                  <td colspan="8" class="loading-message">
                     <iconify-icon icon="solar:loading-bold" class="loading-icon"></iconify-icon>
                     Đang tải sản phẩm...
                   </td>
                 </tr>
                 <tr v-else-if="sanPhamLoc.length === 0">
-                  <td colspan="6" class="empty-message">Không tìm thấy sản phẩm nào.</td>
+                  <td colspan="8" class="empty-message">Không tìm thấy sản phẩm nào.</td>
                 </tr>
                 <tr v-else v-for="(sp, index) in sanPhamLoc" :key="sp.id">
                   <td>{{ index + 1 }}</td>
@@ -668,7 +670,32 @@
                       <span class="product-name">{{ sp.tenSanPham }}</span>
                     </div>
                   </td>
-                  <td class="price">{{ formatCurrency(sp.giaBan) }}</td>
+                  <td class="size">
+                    <span class="size-badge">{{ sp.idKichCo?.tenKichCo || 'N/A' }}</span>
+                  </td>
+                  <td class="color">
+                    <div class="color-info">
+                      <div 
+                        class="color-swatch" 
+                        :style="{ backgroundColor: sp.idMauSac?.hex || '#ccc' }"
+                        :title="sp.idMauSac?.tenMauSac || 'N/A'"
+                      ></div>
+                      <span class="color-name">{{ sp.idMauSac?.tenMauSac || 'N/A' }}</span>
+                    </div>
+                  </td>
+                  <td class="price">
+                    <div v-if="sp.giaGiamGia" class="price-container">
+                      <div class="discount-info">
+                        <span class="discounted-price">{{ formatCurrency(sp.giaGiamGia) }}</span>
+                        <span class="original-price">{{ formatCurrency(sp.giaBan) }}</span>
+                        <div v-if="sp.tenDotGiamGia" class="campaign-name">
+                          <iconify-icon icon="solar:tag-bold-duotone"></iconify-icon>
+                          {{ sp.tenDotGiamGia }}
+                        </div>
+                      </div>
+                    </div>
+                    <span v-else class="regular-price">{{ formatCurrency(sp.giaBan) }}</span>
+                  </td>
                   <td class="stock" :class="{ 'out-of-stock': sp.soLuongTonKho === 0 }">{{ sp.soLuongTonKho }}</td>
                   <td>
                     <button 
@@ -852,11 +879,112 @@
         </div>
       </div>
     </Teleport>
+
+    <!-- Quantity Modal -->
+    <Teleport to="body">
+      <div v-if="showQuantityModal" class="modal-overlay" @click="showQuantityModal = false">
+        <div class="modal-container small" @click.stop>
+          <div class="modal-header">
+            <h3 class="modal-title">Nhập Số Lượng</h3>
+            <button class="modal-close" @click="showQuantityModal = false">×</button>
+          </div>
+          
+          <div class="modal-content">
+            <div class="quantity-modal-content">
+              <div class="product-info-modal">
+                <div class="product-image-small">
+                  <img :src="selectedQuantityItem?.image" :alt="selectedQuantityItem?.tenSanPham" />
+                </div>
+                <div class="product-details-modal">
+                  <h4>{{ selectedQuantityItem?.tenSanPham }}</h4>
+                  <p>{{ selectedQuantityItem?.maSanPham }}</p>
+                  <p class="stock-info">Có thể đặt tối đa: <strong>{{ selectedQuantityItem ? selectedQuantityItem.soLuongTonKho + selectedQuantityItem.soLuong : 0 }}</strong> sản phẩm</p>
+                </div>
+              </div>
+              
+              <div class="quantity-input-section">
+                <label class="input-label">Số lượng mong muốn</label>
+                <div class="quantity-input-group">
+                  <button 
+                    @click="decreaseModalQuantity" 
+                    class="qty-modal-btn minus"
+                    :disabled="modalQuantity <= 1"
+                  >
+                    <iconify-icon icon="solar:minus-circle-bold"></iconify-icon>
+                  </button>
+                  <input 
+                    type="number" 
+                    v-model.number="modalQuantity" 
+                    class="qty-modal-input"
+                    min="1" 
+                    :max="selectedQuantityItem ? selectedQuantityItem.soLuongTonKho + selectedQuantityItem.soLuong : 0"
+                    @input="validateModalQuantity"
+                  />
+                  <button 
+                    @click="increaseModalQuantity" 
+                    class="qty-modal-btn plus"
+                    :disabled="modalQuantity >= (selectedQuantityItem ? selectedQuantityItem.soLuongTonKho + selectedQuantityItem.soLuong : 0)"
+                  >
+                    <iconify-icon icon="solar:add-circle-bold"></iconify-icon>
+                  </button>
+                </div>
+                <div class="quantity-range-info">
+                  <span>Từ 1 đến {{ selectedQuantityItem ? selectedQuantityItem.soLuongTonKho + selectedQuantityItem.soLuong : 0 }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="modal-footer">
+            <button class="btn secondary" @click="showQuantityModal = false">Hủy</button>
+            <button class="btn primary" @click="confirmQuantityChange">Xác nhận</button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Inline Quantity Modal -->
+    <Teleport to="body">
+      <div v-if="showInlineQuantityModal" class="inline-modal-overlay" @click="closeInlineQuantityModal">
+        <div 
+          class="inline-quantity-modal-teleport"
+          :style="{ top: modalPosition.top + 'px', left: modalPosition.left + 'px' }"
+          @click.stop
+        >
+          <div class="inline-modal-content">
+            <div class="inline-modal-header">
+              <span>Nhập số lượng</span>
+              <button @click="closeInlineQuantityModal" class="inline-close-btn">×</button>
+            </div>
+            <div class="inline-input-group">
+              <input 
+                ref="inlineQuantityInput"
+                type="number" 
+                v-model.number="inlineQuantity" 
+                class="inline-qty-input"
+                min="1" 
+                :max="selectedInlineItem ? selectedInlineItem.soLuongTonKho + selectedInlineItem.soLuong : 0"
+                @keydown.enter="confirmInlineQuantity"
+                @keydown.escape="closeInlineQuantityModal"
+                @input="validateInlineQuantity(selectedInlineItem)"
+              />
+              <div class="inline-actions">
+                <button @click="confirmInlineQuantity" class="inline-btn confirm">✓</button>
+                <button @click="closeInlineQuantityModal" class="inline-btn cancel">✕</button>
+              </div>
+            </div>
+            <div class="inline-range-info">
+              Max: {{ selectedInlineItem ? selectedInlineItem.soLuongTonKho + selectedInlineItem.soLuong : 0 }}
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import Breadcrumb from '@/components/Breadcrumb.vue';
@@ -916,6 +1044,17 @@ export default {
     const showModal = ref(false);
     const showThemSanPhamModal = ref(false);
     const showThanhToanModal = ref(false);
+    const showQuantityModal = ref(false);
+    
+    // Quantity modal state
+    const selectedQuantityItem = ref(null);
+    const modalQuantity = ref(1);
+    
+    // Inline quantity modal state
+    const showInlineQuantityModal = ref(false);
+    const selectedInlineItem = ref(null);
+    const inlineQuantity = ref(1);
+    const modalPosition = ref({ top: 0, left: 0 });
     
     // Quick create customer
     const showQuickCreateForm = ref(false);
@@ -1183,11 +1322,11 @@ export default {
       if (!currentHoaDon.value) return;
 
       try {
-        // Add product to cart using cart API
+        // Add product to cart using cart API - use discounted price if available
         const cartItemData = {
           idChiTietSanPham: sp.id,
           soLuong: 1,
-          gia: sp.giaBan
+          gia: sp.giaGiamGia || sp.giaBan
         };
         
         await cartAPI.addProductToCart(currentHoaDon.value.id, cartItemData);
@@ -1224,7 +1363,9 @@ export default {
     };
 
     const tangSoLuong = async (item) => {
-      if (item.soLuong < item.soLuongTonKho) {
+      // Calculate max available: current stock + current cart quantity
+      const maxAvailable = item.soLuongTonKho + item.soLuong;
+      if (item.soLuong < maxAvailable) {
         try {
           // Update cart item quantity using cart API
           await cartAPI.updateCartItem(currentHoaDon.value.id, item.cartItemId, item.soLuong + 1);
@@ -1236,7 +1377,7 @@ export default {
           toast.error('Có lỗi xảy ra khi cập nhật số lượng sản phẩm');
         }
       } else {
-        toast.warning(`Sản phẩm "${item.tenSanPham}" chỉ còn ${item.soLuongTonKho} trong kho`);
+        toast.warning(`Sản phẩm "${item.tenSanPham}" chỉ có thể đặt tối đa ${maxAvailable} sản phẩm`);
       }
     };
 
@@ -1252,6 +1393,175 @@ export default {
           console.error('Error updating product quantity:', error);
           toast.error('Có lỗi xảy ra khi cập nhật số lượng sản phẩm');
         }
+      }
+    };
+
+    // Prevent invalid input during typing
+    const preventInvalidInput = (event, item) => {
+      const key = event.key;
+      const currentValue = event.target.value;
+      const newValue = currentValue + key;
+      
+      // Allow navigation keys, backspace, delete, etc.
+      if (['Backspace', 'Delete', 'Tab', 'Escape', 'Enter', 'Home', 'End', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(key)) {
+        return;
+      }
+      
+      // Allow Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+      if (event.ctrlKey && ['a', 'c', 'v', 'x'].includes(key.toLowerCase())) {
+        return;
+      }
+      
+      // Only allow numeric input
+      if (!/^\d$/.test(key)) {
+        event.preventDefault();
+        return;
+      }
+      
+      // Check if the new value would exceed stock limit
+      const futureValue = parseInt(newValue);
+      if (!isNaN(futureValue) && futureValue > item.soLuongTonKho) {
+        event.preventDefault();
+        toast.warning(`Chỉ còn ${item.soLuongTonKho} sản phẩm trong kho`);
+        return;
+      }
+      
+      // Prevent leading zeros (except for single 0)
+      if (currentValue === '0' && key !== '0') {
+        event.target.value = '';
+      }
+    };
+
+    // Open quantity modal
+    const openQuantityModal = (item) => {
+      selectedQuantityItem.value = item;
+      modalQuantity.value = item.soLuong;
+      showQuantityModal.value = true;
+    };
+
+    // Inline quantity modal methods
+    const openInlineQuantityModal = (item, event) => {
+      // Close any existing inline modal first
+      closeInlineQuantityModal();
+      
+      // Calculate position based on clicked element
+      const rect = event.target.getBoundingClientRect();
+      modalPosition.value = {
+        top: rect.top - 120, // Position above the clicked element
+        left: rect.left + (rect.width / 2) // Center horizontally with transform: translateX(-50%)
+      };
+      
+      selectedInlineItem.value = item;
+      inlineQuantity.value = item.soLuong;
+      
+      // Set position first, then show modal to prevent jumping
+      nextTick(() => {
+        showInlineQuantityModal.value = true;
+        
+        // Focus input after modal appears
+        nextTick(() => {
+          const input = document.querySelector('.inline-qty-input');
+          if (input) {
+            input.focus();
+            input.select();
+          }
+        });
+      });
+    };
+
+    const closeInlineQuantityModal = () => {
+      showInlineQuantityModal.value = false;
+      selectedInlineItem.value = null;
+      inlineQuantity.value = 1;
+    };
+
+    const validateInlineQuantity = (item) => {
+      const maxAvailable = item.soLuongTonKho + item.soLuong;
+      if (isNaN(inlineQuantity.value) || inlineQuantity.value < 1) {
+        inlineQuantity.value = 1;
+      } else if (inlineQuantity.value > maxAvailable) {
+        inlineQuantity.value = maxAvailable;
+      }
+    };
+
+    const confirmInlineQuantity = async () => {
+      if (selectedInlineItem.value && inlineQuantity.value !== selectedInlineItem.value.soLuong) {
+        try {
+          await cartAPI.updateCartItem(currentHoaDon.value.id, selectedInlineItem.value.cartItemId, inlineQuantity.value);
+          await loadCartItems(currentHoaDon.value.id);
+          toast.success(`Đã cập nhật số lượng thành ${inlineQuantity.value}`);
+        } catch (error) {
+          console.error('Error updating product quantity:', error);
+          toast.error('Có lỗi xảy ra khi cập nhật số lượng sản phẩm');
+        }
+      }
+      closeInlineQuantityModal();
+    };
+
+    // Quantity modal methods
+    const decreaseModalQuantity = () => {
+      if (modalQuantity.value > 1) {
+        modalQuantity.value--;
+      }
+    };
+
+    const increaseModalQuantity = () => {
+      // Calculate max available: current stock + current cart quantity
+      const maxAvailable = selectedQuantityItem.value.soLuongTonKho + selectedQuantityItem.value.soLuong;
+      if (modalQuantity.value < maxAvailable) {
+        modalQuantity.value++;
+      }
+    };
+
+    const validateModalQuantity = () => {
+      if (isNaN(modalQuantity.value) || modalQuantity.value < 1) {
+        modalQuantity.value = 1;
+      } else {
+        // Calculate max available: current stock + current cart quantity
+        const maxAvailable = selectedQuantityItem.value.soLuongTonKho + selectedQuantityItem.value.soLuong;
+        if (modalQuantity.value > maxAvailable) {
+          modalQuantity.value = maxAvailable;
+        }
+      }
+    };
+
+    const confirmQuantityChange = async () => {
+      if (selectedQuantityItem.value && modalQuantity.value !== selectedQuantityItem.value.soLuong) {
+        try {
+          await cartAPI.updateCartItem(currentHoaDon.value.id, selectedQuantityItem.value.cartItemId, modalQuantity.value);
+          await loadCartItems(currentHoaDon.value.id);
+          toast.success(`Đã cập nhật số lượng thành ${modalQuantity.value}`);
+        } catch (error) {
+          console.error('Error updating product quantity:', error);
+          toast.error('Có lỗi xảy ra khi cập nhật số lượng sản phẩm');
+        }
+      }
+      showQuantityModal.value = false;
+    };
+
+    // Validate quantity input to prevent entering more than available stock
+    const validateQuantityInput = async (item) => {
+      // Ensure quantity is a valid number
+      if (isNaN(item.soLuong) || item.soLuong < 1) {
+        item.soLuong = 1;
+        toast.warning('Số lượng phải lớn hơn 0');
+        return;
+      }
+
+      // Check if quantity exceeds original stock (soLuongTonKho is the original database stock)
+      if (item.soLuong > item.soLuongTonKho) {
+        item.soLuong = item.soLuongTonKho;
+        toast.warning(`Sản phẩm "${item.tenSanPham}" chỉ có ${item.soLuongTonKho} trong kho`);
+      }
+
+      // Update cart with validated quantity
+      try {
+        await cartAPI.updateCartItem(currentHoaDon.value.id, item.cartItemId, item.soLuong);
+        // Reload cart to update UI
+        await loadCartItems(currentHoaDon.value.id);
+      } catch (error) {
+        console.error('Error updating product quantity:', error);
+        toast.error('Có lỗi xảy ra khi cập nhật số lượng sản phẩm');
       }
     };
 
@@ -1463,27 +1773,38 @@ export default {
     const fetchSanPham = async () => {
       try {
         isLoadingSanPham.value = true;
-        const response = await productAPI.getAllSalesProductDetails({
-          page: 0,
-          size: 100, // Load more products for sales
-          keyword: tuKhoaSanPham.value.trim()
-        });
+        
+        // Use discount campaign prices API for sales counter
+        const response = await productAPI.getActiveProductDetailsWithDiscountPrices();
 
         // Transform the API response to match the expected format
-        danhSachSanPham.value = response.data.content.map(item => ({
+        danhSachSanPham.value = response.data.map(item => ({
           id: item.id,
           maSanPham: item.ma,
           tenSanPham: item.idSanPham?.tenSanPham || 'N/A',
-          giaBan: item.giaBan,
+          giaBan: item.giaBan, // Original price
+          giaGiamGia: item.giaGiamGia, // Discounted price if available
+          tenDotGiamGia: item.tenDotGiamGia, // Discount campaign name
           soLuongTonKho: item.soLuongTonKho,
+          idKichCo: item.idKichCo, // Size information
+          idMauSac: item.idMauSac, // Color information
           image: item.idAnhSanPham?.urlAnh || item.idSanPham?.idAnhSanPham?.urlAnh || '/public/sneakers/sneakers-1-alt1.jpg'
         }));
+
+        // Filter by search keyword if provided
+        if (tuKhoaSanPham.value.trim()) {
+          const keyword = tuKhoaSanPham.value.trim().toLowerCase();
+          danhSachSanPham.value = danhSachSanPham.value.filter(item => 
+            item.tenSanPham.toLowerCase().includes(keyword) ||
+            item.maSanPham.toLowerCase().includes(keyword)
+          );
+        }
 
         // Update product details count in page stats
         pageStats.value[1].value = danhSachSanPham.value.length.toString();
 
         if (tuKhoaSanPham.value.trim()) {
-          toast.success(`Tìm thấy ${danhSachSanPham.value.length} sản phẩm`);
+          toast.success(`Tìm thấy ${danhSachSanPham.value.length} sản phẩm với giá đã áp dụng khuyến mãi`);
         }
       } catch (error) {
         console.error('Error loading products:', error);
@@ -2051,7 +2372,27 @@ export default {
       updateKhachThanhToan,
       formatKhachThanhToanInput,
       updateTienMat,
-      formatTienMatInput
+      formatTienMatInput,
+      
+      // Quantity modal methods
+      showQuantityModal,
+      selectedQuantityItem,
+      modalQuantity,
+      openQuantityModal,
+      decreaseModalQuantity,
+      increaseModalQuantity,
+      validateModalQuantity,
+      confirmQuantityChange,
+      
+      // Inline quantity modal methods
+      showInlineQuantityModal,
+      selectedInlineItem,
+      inlineQuantity,
+      modalPosition,
+      openInlineQuantityModal,
+      closeInlineQuantityModal,
+      validateInlineQuantity,
+      confirmInlineQuantity
     };
   }
 }
@@ -3299,9 +3640,89 @@ export default {
   font-size: 0.9rem;
 }
 
+.price-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .price {
   font-weight: 600;
   color: #059669;
+}
+
+.discounted-price {
+  font-weight: 700;
+  color: #dc2626;
+  font-size: 1rem;
+}
+
+.original-price {
+  font-size: 0.8rem;
+  color: #6b7280;
+  text-decoration: line-through;
+  margin-left: 8px;
+}
+
+.discount-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.campaign-name {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: #059669;
+  font-weight: 500;
+  background: #ecfdf5;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid #a7f3d0;
+}
+
+.campaign-name iconify-icon {
+  font-size: 0.875rem;
+}
+
+.regular-price {
+  font-weight: 600;
+  color: #1a202c;
+  font-size: 1rem;
+}
+
+/* Size and Color Styling */
+.size-badge {
+  display: inline-block;
+  background: #f3f4f6;
+  color: #374151;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: 1px solid #d1d5db;
+}
+
+.color-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.color-swatch {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+.color-name {
+  font-size: 0.875rem;
+  color: #374151;
+  font-weight: 500;
 }
 
 .stock {
@@ -4455,6 +4876,314 @@ export default {
 .change-amount {
   font-size: 20px;
   font-weight: 700;
+}
+
+/* Quantity Display Styles */
+.qty-display {
+  min-width: 50px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8fafc;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.qty-display:hover {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+}
+
+.qty-display:active {
+  transform: translateY(0);
+}
+
+/* Quantity Modal Styles */
+.quantity-modal-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.product-info-modal {
+  display: flex;
+  gap: 16px;
+  padding: 20px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.product-image-small {
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.product-image-small img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.product-details-modal {
+  flex: 1;
+}
+
+.product-details-modal h4 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+  margin: 0 0 4px 0;
+}
+
+.product-details-modal p {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 0 0 4px 0;
+}
+
+.stock-info {
+  color: #059669 !important;
+  font-weight: 500 !important;
+}
+
+.quantity-input-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.input-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.quantity-input-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: center;
+}
+
+.qty-modal-btn {
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.qty-modal-btn.minus {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+}
+
+.qty-modal-btn.plus {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+}
+
+.qty-modal-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.qty-modal-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.qty-modal-input {
+  width: 80px;
+  height: 44px;
+  text-align: center;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #374151;
+  background: white;
+  transition: border-color 0.2s ease;
+}
+
+.qty-modal-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.quantity-range-info {
+  text-align: center;
+  font-size: 12px;
+  color: #6b7280;
+  font-style: italic;
+}
+
+/* Inline Quantity Modal Styles */
+.inline-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.1);
+  z-index: 9999;
+}
+
+.inline-quantity-modal-teleport {
+  position: fixed;
+  background: white;
+  border: 2px solid #3b82f6;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  z-index: 10000;
+  min-width: 200px;
+  transform: translateX(-50%);
+  opacity: 0;
+  animation: fadeInScale 0.15s ease forwards;
+}
+
+@keyframes fadeInScale {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+}
+
+.inline-modal-content {
+  padding: 16px;
+}
+
+.inline-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.inline-close-btn {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.inline-close-btn:hover {
+  color: #ef4444;
+}
+
+.inline-input-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.inline-qty-input {
+  flex: 1;
+  height: 36px;
+  text-align: center;
+  border: 2px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #374151;
+  background: white;
+  transition: border-color 0.2s ease;
+}
+
+.inline-qty-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.inline-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.inline-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.inline-btn.confirm {
+  background: #10b981;
+  color: white;
+}
+
+.inline-btn.confirm:hover {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+.inline-btn.cancel {
+  background: #ef4444;
+  color: white;
+}
+
+.inline-btn.cancel:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+}
+
+.inline-range-info {
+  font-size: 11px;
+  color: #6b7280;
+  text-align: center;
+  font-style: italic;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
 
 .combined-payment-section {

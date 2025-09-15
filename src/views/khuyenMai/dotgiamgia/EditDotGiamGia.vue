@@ -1,6 +1,6 @@
 ```vue
 <template>
-  <div class="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900 p-4 md:p-6 font-roboto transition-colors duration-300">
+  <div class="min-h-screen flex flex-col font-roboto transition-colors duration-300">
     <!-- Breadcrumb -->
     <Breadcrumb 
       :items="breadcrumbItems"
@@ -19,18 +19,8 @@
           Thông Tin Đợt Giảm Giá
         </h2>
         
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Mã Đợt Giảm Giá
-            </label>
-            <input
-              v-model="campaign.ma"
-              type="text"
-              disabled
-              class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed transition-colors"
-            />
-          </div>
+        <div class="grid grid-cols-1 gap-6">
+          <input v-model="campaign.ma" type="hidden" />
           
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -45,30 +35,30 @@
             />
           </div>
 
-          <!-- ĐÃ XÓA MÔ TẢ -->
-          
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Thời Gian Bắt Đầu *
-            </label>
-            <input
-              v-model="campaign.thoiGianBatDau"
-              type="datetime-local"
-              required
-              class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors"
-            />
-          </div>
-          
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Thời Gian Kết Thúc *
-            </label>
-            <input
-              v-model="campaign.thoiGianKetThuc"
-              type="datetime-local"
-              required
-              class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors"
-            />
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Ngày Bắt Đầu *
+              </label>
+              <input
+                v-model="campaign.thoiGianBatDau"
+                type="date"
+                required
+                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors"
+              />
+            </div>
+            
+            <div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Ngày Kết Thúc *
+              </label>
+              <input
+                v-model="campaign.thoiGianKetThuc"
+                type="date"
+                required
+                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors"
+              />
+            </div>
           </div>
         </div>
 
@@ -453,7 +443,6 @@ export default {
       tenDotGiamGia: '',
       thoiGianBatDau: '',
       thoiGianKetThuc: '',
-      // trangThai: 'DANG_DIEN_RA', // XÓA DÒNG NÀY
     });
 
     const loadingProducts = ref(false);
@@ -484,28 +473,6 @@ export default {
 
     const allProducts = ref([]);
 
-    const productTableColumns = ref([
-      { key: 'selection', label: '', class: 'text-center', width: '50px' },
-      { key: 'anhSanPham', label: 'Ảnh', class: 'text-center', width: '80px' },
-      { key: 'maSanPham', label: 'Mã SP', class: 'font-weight-bold' },
-      { key: 'tenSanPham', label: 'Tên Sản Phẩm' },
-      { key: 'soLuongBienThe', label: 'Biến Thể', class: 'text-center' },
-      { key: 'giaThapNhat', label: 'Giá Từ', class: 'text-right' },
-      // { key: 'trangThai', label: 'Trạng Thái', class: 'text-center' }, // XÓA DÒNG NÀY
-    ]);
-
-    const variantTableColumns = ref([
-      { key: 'selection', label: '', class: 'text-center', width: '50px' },
-      { key: 'anhSanPham', label: 'Ảnh', class: 'text-center', width: '80px' },
-      { key: 'tenSanPham', label: 'Sản Phẩm' },
-      { key: 'mauSac', label: 'Màu Sắc' },
-      { key: 'kichThuoc', label: 'Size' },
-      { key: 'giaBan', label: 'Giá Bán', class: 'text-right' },
-      { key: 'giaSauKhiGiam', label: 'Giá Sau Giảm', class: 'text-right' },
-      { key: 'soLuong', label: 'SL', class: 'text-center' },
-      // { key: 'trangThai', label: 'Trạng Thái', class: 'text-center' }, // XÓA DÒNG NÀY
-    ]);
-
     const formatDateForInput = (dateTimeString) => {
       if (!dateTimeString) return '';
       const date = new Date(dateTimeString);
@@ -513,9 +480,7 @@ export default {
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
-      const hours = String(date.getHours()).padStart(2, '0');
-      const minutes = String(date.getMinutes()).padStart(2, '0');
-      return `${year}-${month}-${day}T${hours}:${minutes}`;
+      return `${year}-${month}-${day}`;
     };
 
     const mapProductData = (apiProduct) => {
@@ -560,6 +525,26 @@ export default {
       kichThuoc: 'N/A',
       soLuong: 0, // API doesn't provide quantity, set as 0
     });
+
+    const productTableColumns = ref([
+      { key: 'selection', label: '', class: 'text-center', width: '50px' },
+      { key: 'anhSanPham', label: 'Ảnh', class: 'text-center', width: '80px' },
+      { key: 'maSanPham', label: 'Mã SP', class: 'font-weight-bold' },
+      { key: 'tenSanPham', label: 'Tên Sản Phẩm' },
+      { key: 'soLuongBienThe', label: 'Biến Thể', class: 'text-center' },
+      { key: 'giaThapNhat', label: 'Giá Từ', class: 'text-right' },
+    ]);
+
+    const variantTableColumns = ref([
+      { key: 'selection', label: '', class: 'text-center', width: '50px' },
+      { key: 'anhSanPham', label: 'Ảnh', class: 'text-center', width: '80px' },
+      { key: 'tenSanPham', label: 'Sản Phẩm' },
+      { key: 'mauSac', label: 'Màu Sắc' },
+      { key: 'kichThuoc', label: 'Size' },
+      { key: 'giaBan', label: 'Giá Bán', class: 'text-right' },
+      { key: 'giaSauKhiGiam', label: 'Giá Sau Giảm', class: 'text-right' },
+      { key: 'soLuong', label: 'SL', class: 'text-center' },
+    ]);
 
     const filteredProducts = computed(() => {
       return allProducts.value.filter((product) => {
@@ -645,7 +630,9 @@ export default {
           },
         });
 
-        allProducts.value = response.data.content.map(mapProductData);
+        allProducts.value = response.data.content
+          .filter(product => !product.deleted)
+          .map(mapProductData);
         pagination.value.totalElements = response.data.totalElements || 0;
         pagination.value.totalPages = response.data.totalPages || 0;
 
@@ -674,7 +661,6 @@ export default {
           tenDotGiamGia: data.tenDotGiamGia,
           thoiGianBatDau: formatDateForInput(data.ngayBatDau),
           thoiGianKetThuc: formatDateForInput(data.ngayKetThuc),
-          // trangThai: data.trangThai, // XÓA DÒNG NÀY
         };
 
         discountConfig.value = {
@@ -814,11 +800,10 @@ export default {
             ? availableVariants.value
             : selectedProductDetails.value;
 
-        // Chuyển datetime-local về yyyy-MM-dd (LocalDate)
+        // Date input already in yyyy-MM-dd format
         const toLocalDate = (dateStr) => {
           if (!dateStr) return null;
-          // dateStr dạng yyyy-MM-ddTHH:mm, chỉ lấy phần yyyy-MM-dd
-          return dateStr.split('T')[0];
+          return dateStr; // Already in yyyy-MM-dd format
         };
 
         const payload = {
