@@ -49,7 +49,7 @@ export function useSuaNhanVienService() {
     provinceCode: null,
     districtCode: null,
     wardCode: null,
-    trangThai: true
+    // trangThai: true
   })
 
   // Breadcrumb configuration

@@ -36,7 +36,7 @@ export const nhanVienConfig = {
     diaChiTinhThanh: '',
     ngayTao: '',
     ngayCapNhat: '',
-    trangThai: true
+    trangThai: false  
   },
 
   // Default filters

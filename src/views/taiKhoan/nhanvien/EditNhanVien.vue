@@ -86,7 +86,7 @@
 
                   <div class="form-grid contact-info">
                     <!-- Số điện thoại -->
-                    <div class="form-group col-span-2">
+                    <div class="form-group">
                       <label class="form-label">
                         <Icon icon="solar:phone-calling-bold-duotone" class="label-icon" />
                         Số điện thoại <span class="required">*</span>
@@ -101,7 +101,7 @@
                     </div>
 
                     <!-- Email -->
-                    <div class="form-group col-span-2">
+                    <div class="form-group">
                       <label class="form-label">
                         <Icon icon="solar:letter-bold-duotone" class="label-icon" />
                         Email <span class="required">*</span>
@@ -116,7 +116,7 @@
                     </div>
 
                     <!-- CCCD -->
-                    <div class="form-group col-span-2">
+                    <div class="form-group col-span-full">
                       <label class="form-label">
                         <Icon icon="solar:card-bold-duotone" class="label-icon" />
                         CCCD <span class="required">*</span>
@@ -130,17 +130,6 @@
                       />
                     </div>
 
-                    <!-- Trạng thái -->
-                    <div class="form-group col-span-2">
-                      <label class="form-label">
-                        <Icon icon="solar:shield-check-bold-duotone" class="label-icon" />
-                        Trạng thái
-                      </label>
-                      <select v-model="employee.trangThai" class="form-input">
-                        <option :value="true">Hoạt động</option>
-                        <option :value="false">Không hoạt động</option>
-                      </select>
-                    </div>
                   </div>
                 </div>
 
@@ -825,7 +814,7 @@ onMounted(() => {
 }
 
 .contact-info {
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: 1fr 1fr;
 }
 
 .address-grid {

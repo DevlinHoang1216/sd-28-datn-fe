@@ -126,8 +126,8 @@ export const updateEmployee = async (employeeId, employeeData, toast) => {
       
       // TaiKhoan fields
       email: employeeData.email,
-      soDienThoai: employeeData.soDienThoai,
-      deleted: employeeData.trangThai // Map frontend status to backend deleted field
+      soDienThoai: employeeData.soDienThoai
+      // Do not send deleted field during regular updates
     }
     
     const response = await nhanVienAPI.updateNhanVien(employeeId, backendData)

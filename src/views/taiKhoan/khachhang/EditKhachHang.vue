@@ -71,9 +71,9 @@
                   <div class="section-header">
                     <h3 class="section-title">
                       <Icon icon="solar:phone-bold-duotone" class="section-icon" />
-                      Thông tin liên hệ & Trạng thái
+                      Thông tin liên hệ
                     </h3>
-                    <p class="section-description">Thông tin liên lạc và trạng thái hoạt động của khách hàng</p>
+                    <p class="section-description">Thông tin liên lạc của khách hàng</p>
                   </div>
 
                   <div class="form-grid contact-info">
@@ -94,18 +94,6 @@
                         Email
                       </label>
                       <input v-model="customer.email" type="email" class="form-input" placeholder="example@email.com" />
-                    </div>
-
-                    <!-- Trạng thái -->
-                    <div class="form-group">
-                      <label class="form-label">
-                        <Icon icon="solar:shield-check-bold-duotone" class="label-icon" />
-                        Trạng thái
-                      </label>
-                      <select v-model="customer.trangThai" class="form-input">
-                        <option :value="true">Hoạt động</option>
-                        <option :value="false">Không hoạt động</option>
-                      </select>
                     </div>
                   </div>
                 </div>
@@ -238,7 +226,7 @@ import { useToast } from 'vue-toastification'
 import { useRouter, useRoute } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import Breadcrumb from '@/components/Breadcrumb.vue'
-import khachHangService from '@/services/khachHangService'
+import khachHangService from '@/services/khachHangService/khachHangService.js'
 import { useKhachHangAddressSelection } from '@/services/khachHangService/addressService.js'
 
 // Composables
@@ -598,7 +586,7 @@ onMounted(() => {
 }
 
 .contact-info {
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1fr;
 }
 
 .address-grid {
