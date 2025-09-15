@@ -18,22 +18,6 @@
         <div class="card shadow-sm">
           <div class="loading-spinner" v-if="loading"></div>
           <div class="card-content" :class="{ 'loading-overlay': loading }">
-            <!-- Coupon Code -->
-            <div class="form-group">
-              <label class="form-label">Mã phiếu giảm giá</label>
-              <div class="input-group">
-                <input
-                  v-model="coupon.ma"
-                  type="text"
-                  class="form-input"
-                  placeholder="Nhập mã phiếu giảm giá"
-                />
-                <button class="action-btn secondary" @click="generateCode">
-                  <iconify-icon icon="solar:refresh-bold-duotone"></iconify-icon>
-                  Tự sinh
-                </button>
-              </div>
-            </div>
 
             <!-- Coupon Name -->
             <div class="form-group">
@@ -71,8 +55,8 @@
               />
             </div>
 
-            <!-- Maximum Discount (for Percentage) -->
-            <div class="form-group" v-if="coupon.loaiPhieuGiamGia === 'PHAN_TRAM'">
+            <!-- Maximum Discount (for both Percentage and Fixed Amount) -->
+            <div class="form-group" v-if="coupon.loaiPhieuGiamGia === 'PHAN_TRAM' || coupon.loaiPhieuGiamGia === 'SO_TIEN_CO_DINH'">
               <label class="form-label">Số tiền giảm tối đa</label>
               <input
                 v-model.number="coupon.soTienGiamToiDa"
@@ -109,7 +93,7 @@
               <label class="form-label">Ngày bắt đầu</label>
               <input
                 v-model="coupon.ngayBatDau"
-                type="datetime-local"
+                type="date"
                 class="form-input"
               />
             </div>
@@ -119,7 +103,7 @@
               <label class="form-label">Ngày kết thúc</label>
               <input
                 v-model="coupon.ngayKetThuc"
-                type="datetime-local"
+                type="date"
                 class="form-input"
               />
             </div>
@@ -277,25 +261,13 @@ export default {
       },
     ]);
 
-    const pageStats = ref([
-      {
-        value: '0',
-        label: 'Phiếu đang hoạt động',
-        icon: 'solar:ticket-bold-duotone',
-      },
-      {
-        value: '0',
-        label: 'Lượt sử dụng hôm nay',
-        icon: 'solar:cart-check-bold-duotone',
-      },
-    ]);
+    const pageStats = ref([]);
 
     return { toast, router, breadcrumbItems, breadcrumbActions, pageStats };
   },
   data() {
     return {
       coupon: {
-        ma: '',
         tenPhieuGiamGia: '',
         loaiPhieuGiamGia: '',
         phanTramGiamGia: null,
@@ -364,15 +336,10 @@ export default {
     this.fetchCustomers();
   },
   methods: {
-    generateCode() {
-      this.coupon.ma = 'PGG-' + Math.random().toString(36).substring(2, 8).toUpperCase();
-      this.toast.info('Đã tạo mã phiếu giảm giá mới!');
-    },
 
     handleLoaiGiamGiaChange() {
-      if (this.coupon.loaiPhieuGiamGia === 'SO_TIEN_CO_DINH') {
-        this.coupon.soTienGiamToiDa = null;
-      }
+      // Keep soTienGiamToiDa field for both types now
+      // No need to reset it when switching types
     },
 
     handlePrivateCouponChange() {
@@ -396,10 +363,6 @@ export default {
     },
 
     validateForm() {
-      if (!this.coupon.ma.trim()) {
-        this.toast.error('Mã phiếu giảm giá không được để trống!');
-        return false;
-      }
       if (!this.coupon.tenPhieuGiamGia.trim()) {
         this.toast.error('Tên phiếu giảm giá không được để trống!');
         return false;
@@ -421,6 +384,10 @@ export default {
       if (this.coupon.loaiPhieuGiamGia === 'SO_TIEN_CO_DINH') {
         if (!this.coupon.phanTramGiamGia || this.coupon.phanTramGiamGia <= 0) {
           this.toast.error('Giá trị giảm (VND) phải lớn hơn 0!');
+          return false;
+        }
+        if (!this.coupon.soTienGiamToiDa || this.coupon.soTienGiamToiDa <= 0) {
+          this.toast.error('Số tiền giảm tối đa phải lớn hơn 0!');
           return false;
         }
       }
@@ -452,21 +419,15 @@ export default {
 
   this.loading = true;
   try {
-    const formatDateTime = (dt) => {
-      if (!dt) return null;
-      if (dt.endsWith('Z') || dt.match(/[+-]\d{2}:\d{2}$/)) return dt;
-      return dt + ':00Z';
-    };
     const dataToSend = {
-      ma: this.coupon.ma,
       tenPhieuGiamGia: this.coupon.tenPhieuGiamGia,
       loaiPhieuGiamGia: this.coupon.loaiPhieuGiamGia,
       phanTramGiamGia: this.coupon.phanTramGiamGia,
-      soTienGiamToiDa: this.coupon.loaiPhieuGiamGia === 'PHAN_TRAM' ? this.coupon.soTienGiamToiDa : null,
+      soTienGiamToiDa: this.coupon.soTienGiamToiDa,
       hoaDonToiThieu: this.coupon.hoaDonToiThieu,
       soLuongDung: this.coupon.soLuongDung,
-      ngayBatDau: formatDateTime(this.coupon.ngayBatDau),
-      ngayKetThuc: formatDateTime(this.coupon.ngayKetThuc),
+      ngayBatDau: this.coupon.ngayBatDau,
+      ngayKetThuc: this.coupon.ngayKetThuc,
       riengTu: this.coupon.riengTu,
       moTa: this.coupon.moTa,
       khachHangIds: this.coupon.riengTu ? this.selectedCustomers : [],
@@ -499,9 +460,22 @@ export default {
     }
   } catch (err) {
     console.error('Lỗi khi thêm phiếu:', err.response || err); // Gỡ lỗi
+    console.error('Chi tiết lỗi:', {
+      status: err.response?.status,
+      statusText: err.response?.statusText,
+      data: err.response?.data,
+      headers: err.response?.headers
+    });
+    
     let errorMessage = 'Đã xảy ra lỗi khi thêm phiếu giảm giá.';
-    if (err.response?.data?.message) {
-      errorMessage = err.response.data.message;
+    if (err.response?.data) {
+      if (typeof err.response.data === 'string') {
+        errorMessage = err.response.data;
+      } else if (err.response.data.message) {
+        errorMessage = err.response.data.message;
+      } else {
+        errorMessage = `Lỗi ${err.response.status}: ${JSON.stringify(err.response.data)}`;
+      }
     }
     this.toast.error(errorMessage, {
       timeout: 5000,
@@ -518,8 +492,6 @@ export default {
 <style scoped>
 /* ===== GENERAL STYLES ===== */
 .coupon-add-container {
-  padding: 24px;
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   min-height: 100vh;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }

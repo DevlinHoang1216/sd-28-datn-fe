@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900 p-4 md:p-6 font-roboto transition-colors duration-300">
+  <div class="min-h-screen flex flex-col font-roboto transition-colors duration-300">
     <!-- Breadcrumb -->
     <Breadcrumb 
       :items="breadcrumbItems"
@@ -19,18 +19,7 @@
         </h2>
         
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Mã Đợt Giảm Giá *
-            </label>
-            <input
-              v-model="newCampaign.ma"
-              type="text"
-              required
-              class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors"
-              placeholder="Nhập mã đợt giảm giá (e.g., DOT2025-XX)"
-            />
-          </div>
+          <!-- Mã tự động tạo, không hiển thị -->
           
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -59,11 +48,11 @@
           
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Thời Gian Bắt Đầu *
+              Ngày Bắt Đầu *
             </label>
             <input
               v-model="newCampaign.thoiGianBatDau"
-              type="datetime-local"
+              type="date"
               required
               class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors"
             />
@@ -71,11 +60,11 @@
           
           <div>
             <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              Thời Gian Kết Thúc *
+              Ngày Kết Thúc *
             </label>
             <input
               v-model="newCampaign.thoiGianKetThuc"
-              type="datetime-local"
+              type="date"
               required
               class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors"
             />
@@ -466,7 +455,6 @@ export default {
     ]);
 
     const newCampaign = ref({
-      ma: '',
       tenDotGiamGia: '',
       moTa: '',
       thoiGianBatDau: '',
@@ -635,7 +623,9 @@ export default {
           },
         });
 
-        allProducts.value = response.data.content.map(mapProductData);
+        allProducts.value = response.data.content
+          .filter(product => !product.deleted)
+          .map(mapProductData);
         pagination.value.totalElements = response.data.totalElements || 0;
         pagination.value.totalPages = response.data.totalPages || 0;
 
@@ -750,14 +740,12 @@ export default {
           return;
         }
 
-        // Tạo mã tự động nếu không nhập
-        if (!newCampaign.value.ma) {
-          newCampaign.value.ma = `DOT${new Date().getFullYear()}-${Math.floor(
-            Math.random() * 100
-          )
-            .toString()
-            .padStart(2, '0')}`;
-        }
+        // Tạo mã tự động
+        newCampaign.value.ma = `DOT${new Date().getFullYear()}-${Math.floor(
+          Math.random() * 100
+        )
+          .toString()
+          .padStart(2, '0')}`;
 
         const targetVariants =
           discountConfig.value.applyTo === 'all'
@@ -842,7 +830,6 @@ export default {
       changeSort,
       isFormValid: computed(() => {
         return (
-          newCampaign.value.ma &&
           newCampaign.value.tenDotGiamGia &&
           newCampaign.value.thoiGianBatDau &&
           newCampaign.value.thoiGianKetThuc &&

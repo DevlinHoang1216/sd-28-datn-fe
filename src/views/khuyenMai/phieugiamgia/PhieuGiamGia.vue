@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900 p-4 md:p-6 font-roboto transition-colors duration-300">
+  <div class="min-h-screen flex flex-col font-roboto transition-colors duration-300">
     <!-- Breadcrumb -->
     <Breadcrumb 
       :items="breadcrumbItems"
@@ -114,7 +114,7 @@
             <label class="filter-label">Ngày bắt đầu</label>
             <input
               v-model="tempFilters.startDate"
-              type="datetime-local"
+              type="date"
               class="filter-input"
               @change="filterCoupons"
             />
@@ -123,7 +123,7 @@
             <label class="filter-label">Ngày kết thúc</label>
             <input
               v-model="tempFilters.endDate"
-              type="datetime-local"
+              type="date"
               class="filter-input"
               @change="filterCoupons"
             />
@@ -660,12 +660,10 @@ export default {
       try {
         const date = new Date(dateString);
         if (isNaN(date.getTime())) return 'Invalid Date';
-        return date.toLocaleString('vi-VN', {
+        return date.toLocaleDateString('vi-VN', {
           day: '2-digit',
           month: '2-digit',
           year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
         });
       } catch (e) {
         return 'Invalid Date';

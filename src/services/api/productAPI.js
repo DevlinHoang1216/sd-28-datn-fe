@@ -353,6 +353,15 @@ export const productService = {
     })
   },
 
+  // Sales Counter APIs with discount campaign prices applied
+  getActiveProductDetailsWithDiscountPrices: () => {
+    return productAPI.get('/chi-tiet-san-pham/sales/with-discounts')
+  },
+
+  getActiveProductDetailsForSalesWithDiscounts: (productId) => {
+    return productAPI.get(`/chi-tiet-san-pham/sales/with-discounts/product/${productId}`)
+  },
+
   // Customer APIs for sales counter
   getActiveCustomersForSales(params = {}) {
     return productAPI.get('/ban-hang/khach-hang', {

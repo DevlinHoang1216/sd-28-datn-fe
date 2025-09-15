@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900 p-4 md:p-6 font-roboto transition-colors duration-300">
+  <div class="min-h-screen flex flex-col font-roboto transition-colors duration-300">
     <!-- Breadcrumb -->
     <Breadcrumb 
       :items="breadcrumbItems"
@@ -145,7 +145,7 @@
             </template>
             
             <template #giaTri="{ item }">
-              <span class="font-semibold text-right">{{ item.giaTri }}%</span>
+              <span class="font-semibold text-right">{{ item.giaTri }}</span>
             </template>
             
             <template #thoiGianBatDau="{ item }">
@@ -387,12 +387,10 @@ export default {
       try {
         const date = new Date(dateString);
         if (isNaN(date.getTime())) return 'Invalid Date';
-        return date.toLocaleString('vi-VN', {
+        return date.toLocaleDateString('vi-VN', {
           day: '2-digit',
           month: '2-digit',
           year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
         });
       } catch (e) {
         return 'Invalid Date';
