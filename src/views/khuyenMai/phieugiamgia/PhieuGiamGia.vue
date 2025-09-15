@@ -253,6 +253,7 @@ import { useToast } from "vue-toastification";
 import axios from 'axios';
 import Breadcrumb from '@/components/Breadcrumb.vue';
 import DataTable from '@/components/DataTable.vue';
+import khachHangAPI from '@/services/api/APIKhachHang/KhachHangAPI.js';
 
 export default {
   name: 'PhieuGiamGia',
@@ -519,15 +520,15 @@ export default {
 
     async loadAllCustomers() {
       try {
-        const response = await axios.get('http://localhost:8080/api/khach-hang');
-        this.allCustomers = response.data;
+        const response = await khachHangAPI.getAllActiveKhachHang();
+        this.allCustomers = response;
       } catch (error) {
         console.error('Lỗi khi tải danh sách khách hàng:', error);
         this.toast.error('Không thể tải danh sách khách hàng');
       }
     },
 
-    filterCoupons() {
+    applyFilters() {
       this.filters.search = this.tempFilters.search;
       this.filters.couponType = this.tempFilters.couponType;
       this.filters.discountType = this.tempFilters.discountType;
