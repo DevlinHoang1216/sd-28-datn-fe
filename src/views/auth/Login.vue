@@ -176,8 +176,17 @@ export default {
       try {
         await authService.login(this.loginForm);
         
-        // Get redirect path from query params or default to dashboard
-        const redirectPath = this.$route.query.redirect || '/thong-ke';
+        // Determine redirect path based on user role
+        let redirectPath = this.$route.query.redirect;
+        
+        if (!redirectPath) {
+          // Default redirect based on user role
+          if (authService.isAdmin()) {
+            redirectPath = '/thong-ke'; // Admin goes to dashboard
+          } else {
+            redirectPath = '/ban-tai-quay'; // Employee goes to sales counter
+          }
+        }
         
         // Success - redirect to intended page
         this.$router.push(redirectPath);
@@ -215,7 +224,12 @@ export default {
   mounted() {
     // Check if user is already logged in
     if (authService.isAuthenticated()) {
-      this.$router.push('/thong-ke');
+      // Redirect based on user role
+      if (authService.isAdmin()) {
+        this.$router.push('/thong-ke');
+      } else {
+        this.$router.push('/ban-tai-quay');
+      }
     }
   }
 }

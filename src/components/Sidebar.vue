@@ -19,7 +19,7 @@
           </div>
 
           <nav class="nav-menu">
-            <div v-for="item in menuItems" :key="item.path || item.label" class="menu-item-container">
+            <div v-for="item in filteredMenuItems" :key="item.path || item.label" class="menu-item-container">
               <router-link
                 v-if="!item.children"
                 :to="item.path"
@@ -59,7 +59,7 @@
                 <div class="submenu-container" :class="{ 'submenu-expanded': item.expanded }">
                   <div class="submenu-content">
                     <router-link
-                      v-for="subItem in item.children"
+                      v-for="subItem in getFilteredChildren(item.children)"
                       :key="subItem.path"
                       :to="subItem.path"
                       class="submenu-item"
@@ -127,36 +127,67 @@ export default {
     return {
       currentUser: null,
       menuItems: [
-        { path: '/thong-ke', label: 'Thống kê', icon: 'solar:home-smile-outline' },
-        { path: '/ban-tai-quay', label: 'Bán Tại Quầy', icon: 'solar:shop-outline' },
-        { path: '/hoa-don', label: 'Quản Lý Hóa Đơn', icon: 'solar:document-outline' },
+        { path: '/thong-ke', label: 'Thống kê', icon: 'solar:home-smile-outline', adminOnly: true },
+        { path: '/ban-tai-quay', label: 'Bán Tại Quầy', icon: 'solar:shop-outline', permission: 'ban-tai-quay' },
+        { path: '/hoa-don', label: 'Quản Lý Hóa Đơn', icon: 'solar:document-outline', permission: 'hoa-don' },
         {
           path: '/san-pham',
           label: 'Quản Lý Sản Phẩm',
           icon: 'solar:box-minimalistic-outline',
+          adminOnly: true
         },
-        // Thêm mục 'Thuộc tính' với các mục con và icon cho từng mục con
+        // Admin-only attribute management
         {
           label: 'Quản Lý Thuộc Tính',
-          icon: 'solar:tag-outline', // Icon cho mục thuộc tính chính
-          expanded: true, // Đặt thành true để mở rộng mặc định
+          icon: 'solar:tag-outline',
+          expanded: true,
+          adminOnly: true,
           children: [
-            { path: '/thuoc-tinh/thuong-hieu', label: 'Thương Hiệu', icon: 'mdi:factory' }, // Đã thay đổi icon cho Thương Hiệu
-            { path: '/thuoc-tinh/mau-sac', label: 'Màu Sắc', icon: 'solar:palette-outline' },
-            { path: '/thuoc-tinh/kich-co', label: 'Kích Cỡ', icon: 'solar:ruler-outline' },
-            { path: '/thuoc-tinh/chat-lieu', label: 'Chất Liệu', icon: 'mdi:tshirt-crew-outline' }, // Đã thay đổi icon cho Chất liệu
-            { path: '/thuoc-tinh/danh-muc', label: 'Danh Mục', icon: 'solar:folder-outline' },
-            { path: '/thuoc-tinh/de-giay', label: 'Đế Giày', icon: 'solar:layers-bold-duotone' },
+            { path: '/thuoc-tinh/thuong-hieu', label: 'Thương Hiệu', icon: 'mdi:factory', adminOnly: true },
+            { path: '/thuoc-tinh/mau-sac', label: 'Màu Sắc', icon: 'solar:palette-outline', adminOnly: true },
+            { path: '/thuoc-tinh/kich-co', label: 'Kích Cỡ', icon: 'solar:ruler-outline', adminOnly: true },
+            { path: '/thuoc-tinh/chat-lieu', label: 'Chất Liệu', icon: 'mdi:tshirt-crew-outline', adminOnly: true },
+            { path: '/thuoc-tinh/danh-muc', label: 'Danh Mục', icon: 'solar:folder-outline', adminOnly: true },
+            { path: '/thuoc-tinh/de-giay', label: 'Đế Giày', icon: 'solar:layers-bold-duotone', adminOnly: true },
           ],
         },
-        { path: '/phieu-giam-gia', label: 'Quản Lý Phiếu Giảm Giá', icon: 'solar:tag-horizontal-outline' },
-        { path: '/dot-giam-gia', label: 'Quản Lý Đợt Giảm Giá', icon: 'solar:sale-outline' },
-        { path: '/nhan-vien', label: 'Quản Lý Nhân Viên', icon: 'solar:users-group-rounded-outline' },
-        { path: '/khach-hang', label: 'Quản Lý Khách Hàng', icon: 'solar:user-outline' },
+        { path: '/phieu-giam-gia', label: 'Quản Lý Phiếu Giảm Giá', icon: 'solar:tag-horizontal-outline', permission: 'phieu-giam-gia' },
+        { path: '/dot-giam-gia', label: 'Quản Lý Đợt Giảm Giá', icon: 'solar:sale-outline', adminOnly: true },
+        { path: '/nhan-vien', label: 'Quản Lý Nhân Viên', icon: 'solar:users-group-rounded-outline', adminOnly: true },
+        { path: '/khach-hang', label: 'Quản Lý Khách Hàng', icon: 'solar:user-outline', permission: 'khach-hang' },
       ],
     };
   },
+  computed: {
+    filteredMenuItems() {
+      return this.menuItems.filter(item => this.hasAccessToMenuItem(item));
+    }
+  },
   methods: {
+    hasAccessToMenuItem(item) {
+      // Admin has access to everything
+      if (authService.isAdmin()) {
+        return true;
+      }
+      
+      // Check if item is admin-only
+      if (item.adminOnly) {
+        return false;
+      }
+      
+      // Check if item requires specific permission
+      if (item.permission) {
+        return authService.hasPermission(item.permission);
+      }
+      
+      // If no restrictions, allow access
+      return true;
+    },
+
+    getFilteredChildren(children) {
+      if (!children) return [];
+      return children.filter(child => this.hasAccessToMenuItem(child));
+    },
     isActive(item) {
       // Kiểm tra nếu route hiện tại khớp với path của item hoặc bất kỳ path con nào
       return (

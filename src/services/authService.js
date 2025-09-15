@@ -89,6 +89,43 @@ class AuthService {
     return this.user?.role === role;
   }
 
+  // Check if user is admin (capQuyenHan = 1)
+  isAdmin() {
+    return this.user?.capQuyenHan === 1;
+  }
+
+  // Check if user is employee (capQuyenHan = 2)
+  isEmployee() {
+    return this.user?.capQuyenHan === 2;
+  }
+
+  // Check if user has access to specific feature
+  hasPermission(permission) {
+    if (this.isAdmin()) {
+      return true; // Admin has full access
+    }
+    
+    if (this.isEmployee()) {
+      // Define employee permissions
+      const employeePermissions = [
+        'ban-tai-quay', // Sales counter
+        'hoa-don', // Invoices
+        'khach-hang', // Customers
+        'phieu-giam-gia' // Vouchers
+      ];
+      return employeePermissions.includes(permission);
+    }
+    
+    return false;
+  }
+
+  // Get user role name
+  getUserRole() {
+    if (this.isAdmin()) return 'Admin';
+    if (this.isEmployee()) return 'Nhân viên';
+    return 'Unknown';
+  }
+
   // Simple session check - no token expiration needed
   isSessionValid() {
     return this.isAuthenticated();
@@ -106,5 +143,9 @@ export const {
   isAuthenticated,
   getUser,
   hasRole,
+  isAdmin,
+  isEmployee,
+  hasPermission,
+  getUserRole,
   isSessionValid
 } = authService;
