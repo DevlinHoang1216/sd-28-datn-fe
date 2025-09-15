@@ -3,6 +3,19 @@ import axios from 'axios'
 const API_BASE_URL = 'http://localhost:8080/api/khach-hang'
 
 const khachHangAPI = {
+  // Get all active customers without pagination (for dropdowns)
+  getAllActiveKhachHang: async () => {
+    try {
+      console.log('Fetching all active customers')
+      const response = await axios.get(`${API_BASE_URL}`)
+      console.log('Active customers response:', response.data)
+      return response.data
+    } catch (error) {
+      console.error('Error fetching active customers:', error)
+      throw error
+    }
+  },
+
   // Get all customers with pagination and filtering
   getAllKhachHang: async (params = {}) => {
     try {

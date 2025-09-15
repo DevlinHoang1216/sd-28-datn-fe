@@ -199,9 +199,19 @@
               />
             </div>
 
-            <button class="customer-select-btn" @click="openCustomerModal">
-              Chọn Khách Hàng
-            </button>
+            <div class="customer-actions">
+              <button class="customer-select-btn" @click="openCustomerModal">
+                Chọn Khách Hàng
+              </button>
+              <button 
+                v-if="khachHangHienTai.id && khachHangHienTai.id !== 1" 
+                class="customer-remove-btn" 
+                @click="xoaKhachHang"
+                title="Xóa khách hàng (chuyển về khách lẻ)"
+              >
+                Xóa
+              </button>
+            </div>
 
             <!-- Delivery Information (shown when delivery is enabled) -->
             <div v-if="isDelivery" class="delivery-info-section">
@@ -327,18 +337,25 @@
           <div class="card-content">
             <!-- Discount Code -->
             <div class="discount-section">
-              <label class="form-label">Mã Giảm Giá</label>
-              <div class="discount-input-group">
-                <input 
-                  type="text" 
-                  v-model="maGiamGia" 
-                  class="form-input"
-                  placeholder="Nhập mã giảm giá"
-                />
-                <button class="discount-btn" @click="apDungMaGiamGia">
-                  Áp Dụng
+              <label class="form-label">Phiếu Giảm Giá</label>
+              <div class="selected-voucher" v-if="selectedVoucher">
+                <div class="voucher-info">
+                  <span class="voucher-code">{{ selectedVoucher.ma }}</span>
+                  <span class="voucher-name">{{ selectedVoucher.tenPhieuGiamGia }}</span>
+                  <span class="voucher-discount">
+                    {{ selectedVoucher.loaiPhieuGiamGia === 'PHAN_TRAM' 
+                      ? `Giảm ${selectedVoucher.phanTramGiamGia}%` 
+                      : `Giảm ${formatCurrency(selectedVoucher.soTienGiamToiDa)}` }}
+                  </span>
+                </div>
+                <button class="remove-voucher-btn" @click="removeVoucher">
+                  <iconify-icon icon="solar:close-circle-bold"></iconify-icon>
                 </button>
               </div>
+              <button v-else class="select-voucher-btn" @click="showVoucherModal = true">
+                <iconify-icon icon="solar:ticket-bold-duotone"></iconify-icon>
+                Chọn phiếu giảm giá
+              </button>
               <div v-if="thongBaoGiamGia" class="discount-message" :class="thongBaoGiamGia.includes('thành công') ? 'success' : 'error'">
                 {{ thongBaoGiamGia }}
               </div>
@@ -376,6 +393,82 @@
         </div>
       </div>
     </div>
+
+    <!-- Voucher Selection Modal -->
+    <Teleport to="body">
+      <div v-if="showVoucherModal" class="modal-overlay" @click="showVoucherModal = false">
+        <div class="modal-container voucher-modal" @click.stop>
+          <div class="modal-header">
+            <h3 class="modal-title">
+              <iconify-icon icon="solar:ticket-bold-duotone"></iconify-icon>
+              Chọn Phiếu Giảm Giá
+            </h3>
+            <button class="modal-close" @click="showVoucherModal = false">
+              <iconify-icon icon="solar:close-circle-bold"></iconify-icon>
+            </button>
+          </div>
+          <div class="modal-content">
+            <div v-if="isLoadingVouchers" class="loading-state">
+              <iconify-icon icon="solar:refresh-circle-bold-duotone" class="loading-icon"></iconify-icon>
+              <p>Đang tải phiếu giảm giá...</p>
+            </div>
+            <div v-else-if="availableVouchers.length === 0" class="empty-vouchers">
+              <iconify-icon icon="solar:ticket-sale-bold-duotone" class="empty-icon"></iconify-icon>
+              <p>Không có phiếu giảm giá khả dụng</p>
+            </div>
+            <div v-else class="vouchers-list">
+              <div 
+                v-for="voucher in availableVouchers" 
+                :key="voucher.id"
+                class="voucher-item"
+                :class="{ 
+                  'selected': selectedVoucher?.id === voucher.id,
+                  'disabled': !isVoucherApplicable(voucher)
+                }"
+                @click="selectVoucher(voucher)"
+              >
+                <div class="voucher-left">
+                  <div class="voucher-header">
+                    <span class="voucher-code">{{ voucher.ma }}</span>
+                    <span v-if="voucher.riengTu" class="voucher-badge personal">Cá nhân</span>
+                    <span v-else class="voucher-badge public">Công khai</span>
+                  </div>
+                  <div class="voucher-name">{{ voucher.tenPhieuGiamGia }}</div>
+                  <div class="voucher-details">
+                    <span class="voucher-discount">
+                      {{ voucher.loaiPhieuGiamGia === 'PHAN_TRAM' 
+                        ? `Giảm ${voucher.phanTramGiamGia}%` 
+                        : `Giảm tối đa ${formatCurrency(voucher.soTienGiamToiDa)}` }}
+                    </span>
+                    <span v-if="voucher.hoaDonToiThieu" class="voucher-condition">
+                      Đơn tối thiểu: {{ formatCurrency(voucher.hoaDonToiThieu) }}
+                    </span>
+                  </div>
+                  <div class="voucher-validity">
+                    <iconify-icon icon="solar:calendar-bold"></iconify-icon>
+                    HSD: {{ formatDate(voucher.ngayKetThuc) }}
+                  </div>
+                  <div v-if="voucher.moTa" class="voucher-description">{{ voucher.moTa }}</div>
+                </div>
+                <div class="voucher-right">
+                  <button 
+                    v-if="isVoucherApplicable(voucher)"
+                    class="apply-btn"
+                    :class="{ 'applied': selectedVoucher?.id === voucher.id }"
+                  >
+                    {{ selectedVoucher?.id === voucher.id ? 'Đã chọn' : 'Áp dụng' }}
+                  </button>
+                  <div v-else class="not-applicable">
+                    <iconify-icon icon="solar:info-circle-bold"></iconify-icon>
+                    <span>{{ getVoucherError(voucher) }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
 
     <!-- Modals -->
     <!-- Delete Confirmation Modal -->
@@ -681,12 +774,14 @@
 </template>
 
 <script>
-import { ref, computed, watch, onMounted } from 'vue';
-import { useToast } from 'vue-toastification';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
+import { useToast } from 'vue-toastification';
 import Breadcrumb from '@/components/Breadcrumb.vue';
-import { productService } from '@/services/api/productAPI.js';
-import invoiceAPI from '@/services/api/invoiceAPI.js';
+import productAPI from '@/services/api/productAPI';
+import invoiceAPI from '@/services/api/invoiceAPI';
+import cartAPI from '@/services/api/cartAPI';
+import voucherAPI from '@/services/api/voucherAPI';
 
 export default {
   name: 'BanTaiQuayModern',
@@ -718,19 +813,14 @@ export default {
 
     const pageStats = ref([
       {
-        value: '15',
-        label: 'Đơn hàng hôm nay',
+        value: '0',
+        label: 'Số lượng hóa đơn chờ',
         icon: 'solar:bag-check-bold-duotone'
       },
       {
-        value: '2.85 triệu VND',
-        label: 'Doanh thu hôm nay',
-        icon: 'solar:wallet-money-bold-duotone'
-      },
-      {
-        value: '45',
-        label: 'Khách đã phục vụ',
-        icon: 'solar:users-group-rounded-bold-duotone'
+        value: '0',
+        label: 'Số lượng chi tiết sản phẩm',
+        icon: 'solar:box-bold-duotone'
       }
     ]);
 
@@ -763,6 +853,12 @@ export default {
     const thongBaoGiamGia = ref('');
     const giamGia = ref(0);
     const khachThanhToan = ref(0);
+    
+    // Voucher management
+    const showVoucherModal = ref(false);
+    const selectedVoucher = ref(null);
+    const availableVouchers = ref([]);
+    const isLoadingVouchers = ref(false);
 
     // Delivery
     const isDelivery = ref(false);
@@ -903,14 +999,10 @@ export default {
     // Tab management
     const chonTab = async (id) => {
       tabActive.value = id;
-      // Reset payment info when switching tabs
-      giamGia.value = 0;
-      khachThanhToan.value = 0;
-      maGiamGia.value = '';
-      thongBaoGiamGia.value = '';
-      
-      // Load customer information for the selected invoice
       await loadCustomerForInvoice(id);
+      await loadCartItems(id);
+      await loadVoucherForInvoice(id);
+      khachThanhToan.value = 0;
     };
 
     const themHoaDonMoi = async () => {
@@ -926,13 +1018,22 @@ export default {
         const newInvoice = response.data;
 
         // Add to local state
-        hoaDonTabs.value.push({
+        const newTab = {
           id: newInvoice.id,
           ma: newInvoice.ma,
           items: [],
-          khachHang: { ten: 'Khách lẻ', soDienThoai: '' },
-          trangThai: newInvoice.trangThai
-        });
+          khachHang: {
+            ten: 'Khách lẻ',
+            soDienThoai: ''
+          },
+          trangThai: newInvoice.trangThai,
+          idPhieuGiamGia: null
+        };
+        
+        hoaDonTabs.value.push(newTab);
+        
+        // Update pending invoice count in page stats
+        pageStats.value[0].value = hoaDonTabs.value.length.toString();
         
         tabActive.value = newInvoice.id;
         toast.info(`Đã tạo hóa đơn mới: ${newInvoice.ma} (${hoaDonTabs.value.length}/5)`);
@@ -952,6 +1053,10 @@ export default {
         
         // Remove from local state
         hoaDonTabs.value = hoaDonTabs.value.filter(tab => tab.id !== tabActive.value);
+        
+        // Update pending invoice count in page stats
+        pageStats.value[0].value = hoaDonTabs.value.length.toString();
+        
         toast.success(`Đã xóa hóa đơn ${currentInvoice.ma}`);
 
         if (hoaDonTabs.value.length > 0) {
@@ -975,49 +1080,23 @@ export default {
       if (!currentHoaDon.value) return;
 
       try {
-        const sanPhamTonTai = currentHoaDon.value.items.find(item => item.id === sp.id);
+        // Add product to cart using cart API
+        const cartItemData = {
+          idChiTietSanPham: sp.id,
+          soLuong: 1,
+          gia: sp.giaBan
+        };
         
-        if (sanPhamTonTai) {
-          if (sanPhamTonTai.soLuong < sp.soLuongTonKho) {
-            // Update existing item in invoice
-            const updateData = {
-              soLuong: sanPhamTonTai.soLuong + 1,
-              donGia: sp.giaBan
-            };
-            
-            await invoiceAPI.updateInvoiceDetail(currentHoaDon.value.id, sanPhamTonTai.detailId, updateData);
-            sanPhamTonTai.soLuong += 1;
-            toast.info(`Tăng số lượng sản phẩm "${sp.tenSanPham}" lên ${sanPhamTonTai.soLuong}`);
-          } else {
-            toast.warning(`Sản phẩm "${sp.tenSanPham}" chỉ còn ${sp.soLuongTonKho} trong kho.`);
-          }
-        } else {
-          // Add new item to invoice
-          const newItemData = {
-            idChiTietSanPham: sp.id,
-            soLuong: 1,
-            donGia: sp.giaBan
-          };
-          
-          const response = await invoiceAPI.addProductToInvoice(currentHoaDon.value.id, newItemData);
-          const newDetail = response.data;
-          
-          currentHoaDon.value.items.push({
-            id: sp.id,
-            detailId: newDetail.id,
-            maSanPham: sp.maSanPham,
-            tenSanPham: sp.tenSanPham,
-            giaBan: sp.giaBan,
-            soLuong: 1,
-            soLuongTonKho: sp.soLuongTonKho,
-            image: sp.image
-          });
-          toast.success(`Đã thêm "${sp.tenSanPham}" vào giỏ hàng`);
-        }
+        await cartAPI.addProductToCart(currentHoaDon.value.id, cartItemData);
+        
+        // Reload cart to update UI
+        await loadCartItems(currentHoaDon.value.id);
+        
+        toast.success(`Đã thêm "${sp.tenSanPham}" vào giỏ hàng`);
         showThemSanPhamModal.value = false;
       } catch (error) {
-        console.error('Error adding product to invoice:', error);
-        toast.error('Có lỗi xảy ra khi thêm sản phẩm vào hóa đơn');
+        console.error('Error adding product to cart:', error);
+        toast.error('Có lỗi xảy ra khi thêm sản phẩm vào giỏ hàng');
       }
     };
 
@@ -1028,28 +1107,27 @@ export default {
         const item = currentHoaDon.value.items.find(item => item.id === id);
         if (!item) return;
         
-        // Remove from backend
-        await invoiceAPI.removeProductFromInvoice(currentHoaDon.value.id, item.detailId);
+        // Remove item from cart using cart API
+        await cartAPI.removeCartItem(currentHoaDon.value.id, item.cartItemId);
         
-        // Remove from local state
-        currentHoaDon.value.items = currentHoaDon.value.items.filter(item => item.id !== id);
-        toast.success(`Đã xóa "${item.tenSanPham}" khỏi giỏ hàng`);
+        // Reload cart to update UI
+        await loadCartItems(currentHoaDon.value.id);
+        
+        toast.success(`Đã xóa sản phẩm khỏi giỏ hàng`);
       } catch (error) {
-        console.error('Error removing product from invoice:', error);
-        toast.error('Có lỗi xảy ra khi xóa sản phẩm khỏi hóa đơn');
+        console.error('Error removing product from cart:', error);
+        toast.error('Có lỗi xảy ra khi xóa sản phẩm');
       }
     };
 
     const tangSoLuong = async (item) => {
       if (item.soLuong < item.soLuongTonKho) {
         try {
-          const updateData = {
-            soLuong: item.soLuong + 1,
-            donGia: item.giaBan
-          };
+          // Update cart item quantity using cart API
+          await cartAPI.updateCartItem(currentHoaDon.value.id, item.cartItemId, item.soLuong + 1);
           
-          await invoiceAPI.updateInvoiceDetail(currentHoaDon.value.id, item.detailId, updateData);
-          item.soLuong += 1;
+          // Reload cart to update UI
+          await loadCartItems(currentHoaDon.value.id);
         } catch (error) {
           console.error('Error updating product quantity:', error);
           toast.error('Có lỗi xảy ra khi cập nhật số lượng sản phẩm');
@@ -1062,13 +1140,11 @@ export default {
     const giamSoLuong = async (item) => {
       if (item.soLuong > 1) {
         try {
-          const updateData = {
-            soLuong: item.soLuong - 1,
-            donGia: item.giaBan
-          };
+          // Update cart item quantity using cart API
+          await cartAPI.updateCartItem(currentHoaDon.value.id, item.cartItemId, item.soLuong - 1);
           
-          await invoiceAPI.updateInvoiceDetail(currentHoaDon.value.id, item.detailId, updateData);
-          item.soLuong -= 1;
+          // Reload cart to update UI
+          await loadCartItems(currentHoaDon.value.id);
         } catch (error) {
           console.error('Error updating product quantity:', error);
           toast.error('Có lỗi xảy ra khi cập nhật số lượng sản phẩm');
@@ -1117,7 +1193,7 @@ export default {
     const fetchTatCaKhachHang = async () => {
       try {
         isLoadingKhachHang.value = true;
-        const response = await productService.getActiveCustomersForSales({
+        const response = await productAPI.getActiveCustomersForSales({
           page: khachHangPagination.value.currentPage,
           size: khachHangPagination.value.size,
           sortBy: 'id',
@@ -1158,7 +1234,7 @@ export default {
       
       try {
         isLoadingKhachHang.value = true;
-        const response = await productService.getActiveCustomersForSales({
+        const response = await productAPI.getActiveCustomersForSales({
           page: 0,
           size: 50,
           sortBy: 'id',
@@ -1189,6 +1265,51 @@ export default {
       }
     };
 
+    // Remove customer and reset to default (ID=1)
+    const xoaKhachHang = async () => {
+      if (!currentHoaDon.value) {
+        toast.error('Không tìm thấy hóa đơn để xóa khách hàng');
+        return;
+      }
+
+      try {
+        // Reset customer to default (ID=1) via API
+        const updateData = {
+          khachHangId: 1, // Default customer ID
+          tenKhachHang: 'Khách lẻ',
+          soDienThoaiKhachHang: '',
+          diaChiKhachHang: '',
+          email: ''
+        };
+        
+        await invoiceAPI.updatePendingInvoiceCustomer(currentHoaDon.value.id, updateData);
+        
+        // Update local state
+        khachHangHienTai.value = {
+          id: 1,
+          ten: 'Khách lẻ',
+          soDienThoai: ''
+        };
+        
+        currentHoaDon.value.khachHang = khachHangHienTai.value;
+        
+        // Handle voucher synchronization - remove personal vouchers
+        if (selectedVoucher.value && selectedVoucher.value.riengTu) {
+          // If current voucher is personal, remove it
+          await removeVoucher();
+          toast.info('Đã xóa phiếu giảm giá cá nhân do chuyển về khách lẻ');
+        }
+        
+        // Reload vouchers to show only public vouchers
+        await loadVouchers();
+        
+        toast.success('Đã chuyển về khách lẻ');
+      } catch (error) {
+        console.error('Error removing customer:', error);
+        toast.error('Có lỗi xảy ra khi xóa khách hàng');
+      }
+    };
+
     // Quick create customer methods
     const cancelQuickCreate = () => {
       showQuickCreateForm.value = false;
@@ -1206,7 +1327,7 @@ export default {
 
       try {
         isCreatingCustomer.value = true;
-        const response = await productService.quickCreateCustomer({
+        const response = await productAPI.quickCreateCustomer({
           ten: quickCreateForm.value.ten.trim(),
           soDienThoai: quickCreateForm.value.soDienThoai.trim()
         });
@@ -1239,7 +1360,7 @@ export default {
     const fetchSanPham = async () => {
       try {
         isLoadingSanPham.value = true;
-        const response = await productService.getAllSalesProductDetails({
+        const response = await productAPI.getAllSalesProductDetails({
           page: 0,
           size: 100, // Load more products for sales
           keyword: tuKhoaSanPham.value.trim()
@@ -1255,6 +1376,9 @@ export default {
           image: item.idAnhSanPham?.urlAnh || item.idSanPham?.idAnhSanPham?.urlAnh || '/public/sneakers/sneakers-1-alt1.jpg'
         }));
 
+        // Update product details count in page stats
+        pageStats.value[1].value = danhSachSanPham.value.length.toString();
+
         if (tuKhoaSanPham.value.trim()) {
           toast.success(`Tìm thấy ${danhSachSanPham.value.length} sản phẩm`);
         }
@@ -1262,39 +1386,198 @@ export default {
         console.error('Error loading products:', error);
         toast.error('Không thể tải danh sách sản phẩm');
         danhSachSanPham.value = [];
+        // Set count to 0 on error
+        pageStats.value[1].value = '0';
       } finally {
         isLoadingSanPham.value = false;
       }
     };
 
-    // Discount management
-    const apDungMaGiamGia = () => {
-      if (!currentHoaDon.value || currentHoaDon.value.items.length === 0) {
-        giamGia.value = 0;
-        thongBaoGiamGia.value = 'Giỏ hàng trống! Vui lòng thêm sản phẩm.';
-        toast.warning('Giỏ hàng trống! Vui lòng thêm sản phẩm trước khi áp dụng mã giảm giá.');
-        return;
+    // Voucher management
+    const loadVouchers = async () => {
+      try {
+        isLoadingVouchers.value = true;
+        let response;
+        
+        // If customer is selected, get vouchers for that customer (includes personal vouchers)
+        if (currentHoaDon.value?.khachHang?.id) {
+          response = await voucherAPI.getActiveVouchersForCustomer(currentHoaDon.value.khachHang.id);
+        } else {
+          // Otherwise, only get public vouchers
+          response = await voucherAPI.getActivePublicVouchers();
+        }
+        
+        availableVouchers.value = response.data || [];
+      } catch (error) {
+        console.error('Error loading vouchers:', error);
+        toast.error('Không thể tải danh sách phiếu giảm giá');
+        availableVouchers.value = [];
+      } finally {
+        isLoadingVouchers.value = false;
       }
-
-      const ma = maGiamGia.value.trim().toUpperCase();
-      const giam = maGiamGiaCoSan.find(m => m.ma === ma);
-
-      if (!giam) {
-        giamGia.value = 0;
-        thongBaoGiamGia.value = 'Mã giảm giá không hợp lệ!';
-        toast.error('Mã giảm giá không hợp lệ!');
-        return;
-      }
-
-      if (giam.loai === 'TIEN_MAT') {
-        giamGia.value = giam.giaTri;
-      } else if (giam.loai === 'PHAN_TRAM') {
-        giamGia.value = Math.floor(tongTien.value * giam.phanTram / 100);
-      }
-
-      thongBaoGiamGia.value = `Đã áp dụng mã ${giam.ma} thành công!`;
-      toast.success(`Đã áp dụng mã ${giam.ma} thành công!`);
     };
+    
+    const isVoucherApplicable = (voucher) => {
+      if (!currentHoaDon.value || currentHoaDon.value.items.length === 0) {
+        return false;
+      }
+      
+      // Check minimum order value (nếu có)
+      if (voucher.hoaDonToiThieu && tongTien.value < voucher.hoaDonToiThieu) {
+        return false;
+      }
+      
+      return true;
+    };
+    
+    const getVoucherError = (voucher) => {
+      if (!currentHoaDon.value || currentHoaDon.value.items.length === 0) {
+        return 'Giỏ hàng trống';
+      }
+      
+      if (voucher.hoaDonToiThieu && tongTien.value < voucher.hoaDonToiThieu) {
+        return `Đơn tối thiểu ${formatCurrency(voucher.hoaDonToiThieu)}`;
+      }
+      
+      return '';
+    };
+    
+    const selectVoucher = async (voucher) => {
+      if (!isVoucherApplicable(voucher)) {
+        toast.warning(getVoucherError(voucher));
+        return;
+      }
+      
+      if (!currentHoaDon.value?.id) {
+        toast.error('Không tìm thấy hóa đơn để áp dụng phiếu giảm giá');
+        return;
+      }
+      
+      try {
+        // Apply voucher to invoice via API (automatically handles quantity management)
+        await voucherAPI.applyVoucherToInvoice(voucher.id, currentHoaDon.value.id);
+        
+        selectedVoucher.value = voucher;
+        
+        // Update the invoice tab with voucher ID
+        const currentTab = hoaDonTabs.value.find(tab => tab.id === currentHoaDon.value.id);
+        if (currentTab) {
+          currentTab.idPhieuGiamGia = voucher.id;
+        }
+        
+        // Calculate discount
+        if (voucher.loaiPhieuGiamGia === 'PHAN_TRAM') {
+          const discountAmount = Math.floor(tongTien.value * voucher.phanTramGiamGia / 100);
+          giamGia.value = Math.min(discountAmount, voucher.soTienGiamToiDa || discountAmount);
+        } else {
+          giamGia.value = Math.min(voucher.soTienGiamToiDa || 0, tongTien.value);
+        }
+        
+        thongBaoGiamGia.value = `Đã áp dụng phiếu giảm giá ${voucher.ma} thành công!`;
+        toast.success(`Đã áp dụng phiếu giảm giá ${voucher.ma}`);
+        showVoucherModal.value = false;
+        
+        // Reload vouchers to update quantities
+        await loadVouchers();
+      } catch (error) {
+        console.error('Error applying voucher:', error);
+        toast.error(error.response?.data || 'Không thể áp dụng phiếu giảm giá');
+      }
+    };
+    
+    const removeVoucher = async () => {
+      if (!currentHoaDon.value?.id) {
+        toast.error('Không tìm thấy hóa đơn để xóa phiếu giảm giá');
+        return;
+      }
+      
+      if (!selectedVoucher.value) {
+        toast.warning('Không có phiếu giảm giá nào để xóa');
+        return;
+      }
+      
+      try {
+        // Remove voucher from invoice via API (automatically restores quantity)
+        await voucherAPI.removeVoucherFromInvoice(currentHoaDon.value.id);
+        
+        // Update the invoice tab to remove voucher ID
+        const currentTab = hoaDonTabs.value.find(tab => tab.id === currentHoaDon.value.id);
+        if (currentTab) {
+          currentTab.idPhieuGiamGia = null;
+        }
+        
+        selectedVoucher.value = null;
+        giamGia.value = 0;
+        thongBaoGiamGia.value = '';
+        toast.info('Đã hủy phiếu giảm giá');
+        
+        // Reload vouchers to update quantities
+        await loadVouchers();
+      } catch (error) {
+        console.error('Error removing voucher:', error);
+        toast.error(error.response?.data || 'Không thể xóa phiếu giảm giá');
+      }
+    };
+    
+    const apDungMaGiamGia = () => {
+      // This function is kept for backward compatibility but now opens the voucher modal
+      showVoucherModal.value = true;
+      loadVouchers();
+    };
+    
+    // Watch for voucher modal opening
+    watch(showVoucherModal, (newVal) => {
+      if (newVal) {
+        loadVouchers();
+      }
+    });
+    
+    // Load voucher information for existing invoice
+    const loadVoucherForInvoice = async (invoiceId) => {
+      try {
+        // Reset voucher state first
+        selectedVoucher.value = null;
+        giamGia.value = 0;
+        thongBaoGiamGia.value = '';
+        maGiamGia.value = '';
+        
+        // Find the invoice in our tabs
+        const invoice = hoaDonTabs.value.find(tab => tab.id === invoiceId);
+        if (!invoice || !invoice.idPhieuGiamGia) {
+          return; // No voucher applied to this invoice
+        }
+        
+        // Get voucher details from API
+        const response = await voucherAPI.getVoucherDetail(invoice.idPhieuGiamGia);
+        const voucher = response.data;
+        
+        if (voucher) {
+          selectedVoucher.value = voucher;
+          
+          // Calculate discount based on current cart total
+          const currentTotal = calculateTabTotal(invoice);
+          if (voucher.loaiPhieuGiamGia === 'PHAN_TRAM') {
+            const discountAmount = Math.floor(currentTotal * voucher.phanTramGiamGia / 100);
+            giamGia.value = Math.min(discountAmount, voucher.soTienGiamToiDa || discountAmount);
+          } else {
+            giamGia.value = Math.min(voucher.soTienGiamToiDa || 0, currentTotal);
+          }
+          
+          thongBaoGiamGia.value = `Đã áp dụng phiếu giảm giá ${voucher.ma}`;
+        }
+      } catch (error) {
+        console.error('Error loading voucher for invoice:', error);
+        // Don't show error toast as this is background loading
+      }
+    };
+
+    // Watch for customer changes to reload vouchers
+    watch(() => currentHoaDon.value?.khachHang?.id, () => {
+      // Reset selected voucher when customer changes
+      selectedVoucher.value = null;
+      giamGia.value = 0;
+      thongBaoGiamGia.value = '';
+    });
 
     // Delivery management
     const toggleDelivery = () => {
@@ -1380,6 +1663,34 @@ export default {
       resetPaymentForm();
     };
 
+    // Load cart items for invoice
+    const loadCartItems = async (hoaDonId) => {
+      try {
+        const cartResponse = await cartAPI.getCartByInvoiceId(hoaDonId);
+        
+        // Find the invoice tab and update its items
+        const invoiceTab = hoaDonTabs.value.find(tab => tab.id === hoaDonId);
+        if (invoiceTab && cartResponse.items) {
+          // Map cart items to the format expected by the UI
+          invoiceTab.items = cartResponse.items.map(item => ({
+            id: item.idChiTietSanPham,
+            cartItemId: item.id, // Store cart item ID for updates/deletes
+            maSanPham: item.maSanPham,
+            tenSanPham: item.tenSanPham,
+            giaBan: item.gia,
+            soLuong: item.soLuong,
+            soLuongTonKho: item.soLuongTonKho,
+            image: item.urlAnhSanPham || '/public/sneakers/sneakers-1-alt1.jpg',
+            tenMauSac: item.tenMauSac,
+            tenKichCo: item.tenKichCo
+          }));
+        }
+      } catch (error) {
+        console.error('Error loading cart items:', error);
+        // If cart doesn't exist yet, that's okay - it will be created when items are added
+      }
+    };
+
     // Load pending invoices (status = 0)
     const loadPendingInvoices = async () => {
       try {
@@ -1407,22 +1718,35 @@ export default {
             hoaDonTabs.value.push({
               id: invoice.id,
               ma: invoice.ma,
-              items: [], // Empty items array for pending invoices
+              items: [], // Will be loaded below
               khachHang: customerInfo,
-              trangThai: invoice.trangThai
+              trangThai: invoice.trangThai,
+              idPhieuGiamGia: invoice.idPhieuGiamGia?.id || null
             });
           }
           
-          // Set first invoice as active and load its customer info
+          // Load cart items for all pending invoices
+          for (const tab of hoaDonTabs.value) {
+            await loadCartItems(tab.id);
+          }
+          
+          // Set first invoice as active and load its customer info and voucher
           if (hoaDonTabs.value.length > 0) {
             tabActive.value = hoaDonTabs.value[0].id;
             await loadCustomerForInvoice(hoaDonTabs.value[0].id);
+            await loadVoucherForInvoice(hoaDonTabs.value[0].id);
           }
         }
+        
+        // Update page stats with actual count of pending invoices
+        pageStats.value[0].value = pendingInvoices ? pendingInvoices.length.toString() : '0';
+        
         // Do not auto-create invoice - let user create manually
       } catch (error) {
         console.error('Error loading pending invoices:', error);
         toast.error('Không thể tải danh sách hóa đơn chờ');
+        // Set count to 0 on error
+        pageStats.value[0].value = '0';
       } finally {
         isLoadingInvoices.value = false;
       }
@@ -1524,6 +1848,19 @@ export default {
       giamSoLuong,
       openCustomerModal,
       chonKhachHang,
+      xoaKhachHang,
+      
+      // Voucher methods
+      showVoucherModal,
+      selectedVoucher,
+      availableVouchers,
+      isLoadingVouchers,
+      loadVouchers,
+      loadVoucherForInvoice,
+      isVoucherApplicable,
+      getVoucherError,
+      selectVoucher,
+      removeVoucher,
       
       // Quick create customer
       showQuickCreateForm,
@@ -2040,8 +2377,15 @@ export default {
   box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
 }
 
-.customer-select-btn {
+/* ===== CUSTOMER ACTIONS ===== */
+.customer-actions {
+  display: flex;
+  gap: 8px;
   width: 100%;
+}
+
+.customer-select-btn {
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2056,10 +2400,32 @@ export default {
   transition: all 0.2s ease;
 }
 
-/* ===== CUSTOMER SELECT BUTTON (CONTINUED) ===== */
 .customer-select-btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3);
+}
+
+.customer-remove-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.customer-remove-btn:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
 }
 
 /* ===== PAYMENT CARD ===== */
@@ -2741,6 +3107,252 @@ export default {
 
 .stock.out-of-stock {
   color: #dc2626;
+}
+
+/* ===== VOUCHER STYLES ===== */
+.select-voucher-btn {
+  width: 100%;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 0.95rem;
+}
+
+.select-voucher-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 123, 255, 0.3);
+}
+
+.selected-voucher {
+  background: linear-gradient(135deg, #e6f3ff 0%, #cce7ff 100%);
+  border: 2px solid #007bff;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.voucher-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.voucher-code {
+  font-weight: 700;
+  color: #007bff;
+  font-size: 1.1rem;
+}
+
+.voucher-name {
+  color: #4b5563;
+  font-size: 0.9rem;
+}
+
+.voucher-discount {
+  color: #059669;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.remove-voucher-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #fee2e2;
+  color: #dc2626;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 18px;
+}
+
+.remove-voucher-btn:hover {
+  background: #fecaca;
+  transform: scale(1.1);
+}
+
+/* Voucher Modal */
+.voucher-modal {
+  max-width: 800px;
+  max-height: 80vh;
+}
+
+.voucher-modal .modal-content {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding: 0;
+}
+
+.vouchers-list {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.voucher-item {
+  background: white;
+  border: 2px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.voucher-item:hover:not(.disabled) {
+  border-color: #007bff;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 123, 255, 0.15);
+}
+
+.voucher-item.selected {
+  border-color: #007bff;
+  background: linear-gradient(135deg, #e6f3ff 0%, #f0f9ff 100%);
+}
+
+.voucher-item.disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: #f8fafc;
+}
+
+.voucher-left {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.voucher-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.voucher-badge {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.voucher-badge.personal {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.voucher-badge.public {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.voucher-details {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.voucher-condition {
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.voucher-validity {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #6b7280;
+  font-size: 0.85rem;
+}
+
+.voucher-description {
+  color: #6b7280;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.voucher-right {
+  display: flex;
+  align-items: center;
+}
+
+.apply-btn {
+  padding: 10px 24px;
+  background: #007bff;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.apply-btn:hover {
+  background: #0056b3;
+  transform: translateY(-1px);
+}
+
+.apply-btn.applied {
+  background: #059669;
+}
+
+.not-applicable {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #ef4444;
+  font-size: 0.85rem;
+}
+
+.empty-vouchers {
+  padding: 60px 20px;
+  text-align: center;
+  color: #6b7280;
+}
+
+.empty-vouchers .empty-icon {
+  font-size: 64px;
+  color: #cbd5e1;
+  margin-bottom: 16px;
+}
+
+.loading-state {
+  padding: 60px 20px;
+  text-align: center;
+  color: #6b7280;
+}
+
+.loading-state .loading-icon {
+  font-size: 48px;
+  color: #007bff;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 /* ===== PAYMENT MODAL SPECIFIC ===== */
