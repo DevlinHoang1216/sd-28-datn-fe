@@ -49,75 +49,87 @@ const routes = [
   { path: '/login', name: 'Login', component: Login, meta: { requiresGuest: true } },
   
   // Main routes
-  { path: '/', name: 'Home', redirect: '/thong-ke' },
-  { path: '/thong-ke', name: 'ThongKe', component: ThongKe, meta: { requiresAuth: true } },
+  { path: '/', name: 'Home', redirect: '/ban-tai-quay' }, // Redirect to sales counter for all users
+  { path: '/thong-ke', name: 'ThongKe', component: ThongKe, meta: { requiresAuth: true, adminOnly: true } },
 
-  // Product management routes
+  // Sales counter - accessible by both admin and employees
+  { path: '/ban-tai-quay', name: 'BanTaiQuay', component: BanTaiQuay, meta: { requiresAuth: true, permission: 'ban-tai-quay' } },
+
+  // Invoice management - accessible by both admin and employees
+  { path: '/hoa-don', name: 'HoaDon', component: HoaDon, meta: { requiresAuth: true, permission: 'hoa-don' } },
+  { path: '/hoa-don/chi-tiet/:id', name: 'HoaDonChiTiet', component: HoaDonChiTiet, meta: { requiresAuth: true, permission: 'hoa-don' } },
+
+  // Customer management - accessible by both admin and employees
+  { path: '/khach-hang', name: 'KhachHang', component: KhachHang, meta: { requiresAuth: true, permission: 'khach-hang' } },
+  { path: '/them-khach-hang', name: 'ThemKhachHang', component: ThemKhachHang, meta: { requiresAuth: true, permission: 'khach-hang' } },
+  { path: '/khach-hang/edit/:id', name: 'EditKhachHang', component: EditKhachHang, meta: { requiresAuth: true, permission: 'khach-hang' } },
+
+  // Voucher management - view accessible by both admin and employees, add/edit admin only
+  { path: '/phieu-giam-gia', name: 'PhieuGiamGia', component: PhieuGiamGia, meta: { requiresAuth: true, permission: 'phieu-giam-gia' } },
+  { path: '/them-phieu-giam-gia', name: 'ThemPhieuGiamGia', component: ThemPhieuGiamGia, meta: { requiresAuth: true, adminOnly: true } },
+  { path: '/phieu-giam-gia/edit/:id', name: 'EditPhieuGiamGia', component: EditPhieuGiamGia, meta: { requiresAuth: true, adminOnly: true } },
+
+  // Admin-only routes - Product management
   {
     path: '/san-pham',
     name: 'SanPham',
     component: SanPham,
-    meta: { requiresAuth: true }
+    meta: { requiresAuth: true, adminOnly: true }
   },
   {
     path: '/san-pham/chi-tiet/:id',
     name: 'ChiTietSanPham',
-    component: ChiTietSanPham
+    component: ChiTietSanPham,
+    meta: { requiresAuth: true, adminOnly: true }
   },
   {
     path: '/san-pham/them',
     name: 'ThemSanPham',
-    component: ThemSanPham
+    component: ThemSanPham,
+    meta: { requiresAuth: true, adminOnly: true }
   },
   {
     path: '/san-pham/sua/:id',
     name: 'SuaSanPham',
-    component: SuaSanPham
+    component: SuaSanPham,
+    meta: { requiresAuth: true, adminOnly: true }
   },
   {
     path: '/san-pham/chi-tiet/sua/:id',
     name: 'SuaChiTietSanPham',
-    component: SuaChiTietSanPham
+    component: SuaChiTietSanPham,
+    meta: { requiresAuth: true, adminOnly: true }
   },
 
-  // Invoice and order management
-  { path: '/hoa-don', name: 'HoaDon', component: HoaDon },
-  { path: '/hoa-don/chi-tiet/:id', name: 'HoaDonChiTiet', component: HoaDonChiTiet },
-  { path: '/phieu-giam-gia', name: 'PhieuGiamGia', component: PhieuGiamGia },
-  { path: '/them-phieu-giam-gia', name: 'ThemPhieuGiamGia', component: ThemPhieuGiamGia },
-  { path: '/phieu-giam-gia/edit/:id', name: 'EditPhieuGiamGia', component: EditPhieuGiamGia },
-  { path: '/dot-giam-gia', name: 'DotGiamGia', component: DotGiamGia },
-  { path: '/dot-giam-gia/edit/:id', name: 'EditDotGiamGia', component: EditDotGiamGia },
-  { path: '/them-dot-giam-gia', name: 'ThemDotGiamGia', component: ThemDotGiamGia },
-  { path: '/ban-tai-quay', name: 'BanTaiQuay', component: BanTaiQuay },
+  // Admin-only routes - Discount campaigns
+  { path: '/dot-giam-gia', name: 'DotGiamGia', component: DotGiamGia, meta: { requiresAuth: true, adminOnly: true } },
+  { path: '/dot-giam-gia/edit/:id', name: 'EditDotGiamGia', component: EditDotGiamGia, meta: { requiresAuth: true, adminOnly: true } },
+  { path: '/them-dot-giam-gia', name: 'ThemDotGiamGia', component: ThemDotGiamGia, meta: { requiresAuth: true, adminOnly: true } },
 
-  // User management
-  { path: '/nhan-vien', name: 'NhanVien', component: NhanVien },
-  { path: '/them-nhan-vien', name: 'ThemNhanVien', component: ThemNhanVien },
-  { path: '/nhan-vien/edit/:id', name: 'EditNhanVien', component: EditNhanVien },
-  { path: '/khach-hang', name: 'KhachHang', component: KhachHang },
-  { path: '/them-khach-hang', name: 'ThemKhachHang', component: ThemKhachHang },
-  { path: '/khach-hang/edit/:id', name: 'EditKhachHang', component: EditKhachHang },
+  // Admin-only routes - Employee management
+  { path: '/nhan-vien', name: 'NhanVien', component: NhanVien, meta: { requiresAuth: true, adminOnly: true } },
+  { path: '/them-nhan-vien', name: 'ThemNhanVien', component: ThemNhanVien, meta: { requiresAuth: true, adminOnly: true } },
+  { path: '/nhan-vien/edit/:id', name: 'EditNhanVien', component: EditNhanVien, meta: { requiresAuth: true, adminOnly: true } },
 
-  // Attribute management routes
-  { path: '/thuoc-tinh/thuong-hieu', name: 'ThuongHieu', component: ThuongHieuPage },
-  { path: '/thuoc-tinh/thuong-hieu/them', name: 'ThemThuongHieu', component: ThemSuaThuongHieu },
-  { path: '/thuoc-tinh/thuong-hieu/sua/:id', name: 'EditThuongHieu', component: ThemSuaThuongHieu },
-  { path: '/thuoc-tinh/mau-sac', name: 'MauSac', component: MauSacPage },
-  { path: '/thuoc-tinh/mau-sac/them', name: 'ThemMauSac', component: ThemSuaMauSac },
-  { path: '/thuoc-tinh/mau-sac/sua/:id', name: 'EditMauSac', component: ThemSuaMauSac },
-  { path: '/thuoc-tinh/kich-co', name: 'KichCo', component: KichCoPage },
-  { path: '/thuoc-tinh/kich-co/them', name: 'ThemKichCo', component: ThemSuaKichCo },
-  { path: '/thuoc-tinh/kich-co/sua/:id', name: 'EditKichCo', component: ThemSuaKichCo },
-  { path: '/thuoc-tinh/chat-lieu', name: 'ChatLieu', component: ChatLieuPage },
-  { path: '/thuoc-tinh/chat-lieu/them', name: 'ThemChatLieu', component: ThemSuaChatLieu },
-  { path: '/thuoc-tinh/chat-lieu/sua/:id', name: 'EditChatLieu', component: ThemSuaChatLieu },
-  { path: '/thuoc-tinh/danh-muc', name: 'DanhMuc', component: DanhMucPage },
-  { path: '/thuoc-tinh/danh-muc/them', name: 'ThemDanhMuc', component: ThemSuaDanhMuc },
-  { path: '/thuoc-tinh/danh-muc/sua/:id', name: 'EditDanhMuc', component: ThemSuaDanhMuc },
-  { path: '/thuoc-tinh/de-giay', name: 'DeGiay', component: DeGiayPage },
-  { path: '/thuoc-tinh/de-giay/them', name: 'ThemDeGiay', component: ThemSuaDeGiay },
-  { path: '/thuoc-tinh/de-giay/sua/:id', name: 'EditDeGiay', component: ThemSuaDeGiay }
+  // Admin-only routes - Attribute management
+  { path: '/thuoc-tinh/thuong-hieu', name: 'ThuongHieu', component: ThuongHieuPage, meta: { requiresAuth: true, adminOnly: true } },
+  { path: '/thuoc-tinh/thuong-hieu/them', name: 'ThemThuongHieu', component: ThemSuaThuongHieu, meta: { requiresAuth: true, adminOnly: true } },
+  { path: '/thuoc-tinh/thuong-hieu/sua/:id', name: 'EditThuongHieu', component: ThemSuaThuongHieu, meta: { requiresAuth: true, adminOnly: true } },
+  { path: '/thuoc-tinh/mau-sac', name: 'MauSac', component: MauSacPage, meta: { requiresAuth: true, adminOnly: true } },
+  { path: '/thuoc-tinh/mau-sac/them', name: 'ThemMauSac', component: ThemSuaMauSac, meta: { requiresAuth: true, adminOnly: true } },
+  { path: '/thuoc-tinh/mau-sac/sua/:id', name: 'EditMauSac', component: ThemSuaMauSac, meta: { requiresAuth: true, adminOnly: true } },
+  { path: '/thuoc-tinh/kich-co', name: 'KichCo', component: KichCoPage, meta: { requiresAuth: true, adminOnly: true } },
+  { path: '/thuoc-tinh/kich-co/them', name: 'ThemKichCo', component: ThemSuaKichCo, meta: { requiresAuth: true, adminOnly: true } },
+  { path: '/thuoc-tinh/kich-co/sua/:id', name: 'EditKichCo', component: ThemSuaKichCo, meta: { requiresAuth: true, adminOnly: true } },
+  { path: '/thuoc-tinh/chat-lieu', name: 'ChatLieu', component: ChatLieuPage, meta: { requiresAuth: true, adminOnly: true } },
+  { path: '/thuoc-tinh/chat-lieu/them', name: 'ThemChatLieu', component: ThemSuaChatLieu, meta: { requiresAuth: true, adminOnly: true } },
+  { path: '/thuoc-tinh/chat-lieu/sua/:id', name: 'EditChatLieu', component: ThemSuaChatLieu, meta: { requiresAuth: true, adminOnly: true } },
+  { path: '/thuoc-tinh/danh-muc', name: 'DanhMuc', component: DanhMucPage, meta: { requiresAuth: true, adminOnly: true } },
+  { path: '/thuoc-tinh/danh-muc/them', name: 'ThemDanhMuc', component: ThemSuaDanhMuc, meta: { requiresAuth: true, adminOnly: true } },
+  { path: '/thuoc-tinh/danh-muc/sua/:id', name: 'EditDanhMuc', component: ThemSuaDanhMuc, meta: { requiresAuth: true, adminOnly: true } },
+  { path: '/thuoc-tinh/de-giay', name: 'DeGiay', component: DeGiayPage, meta: { requiresAuth: true, adminOnly: true } },
+  { path: '/thuoc-tinh/de-giay/them', name: 'ThemDeGiay', component: ThemSuaDeGiay, meta: { requiresAuth: true, adminOnly: true } },
+  { path: '/thuoc-tinh/de-giay/sua/:id', name: 'EditDeGiay', component: ThemSuaDeGiay, meta: { requiresAuth: true, adminOnly: true } }
 ]
 
 const router = createRouter({
@@ -139,13 +151,33 @@ router.beforeEach((to, from, next) => {
       })
       return
     }
+    
+    // Check role-based permissions
+    const requiresAdmin = to.matched.some(record => record.meta.adminOnly)
+    const requiredPermission = to.matched.find(record => record.meta.permission)?.meta.permission
+    
+    if (requiresAdmin && !authService.isAdmin()) {
+      // Admin-only route but user is not admin
+      next({ name: 'BanTaiQuay' }) // Redirect to sales counter
+      return
+    }
+    
+    if (requiredPermission && !authService.hasPermission(requiredPermission)) {
+      // User doesn't have required permission
+      next({ name: 'BanTaiQuay' }) // Redirect to sales counter
+      return
+    }
   }
   
   // Check if route requires guest (not authenticated)
   if (to.matched.some(record => record.meta.requiresGuest)) {
     if (isAuthenticated) {
-      // Redirect to dashboard if already authenticated
-      next({ name: 'ThongKe' })
+      // Redirect based on user role
+      if (authService.isAdmin()) {
+        next({ name: 'ThongKe' }) // Admin goes to dashboard
+      } else {
+        next({ name: 'BanTaiQuay' }) // Employee goes to sales counter
+      }
       return
     }
   }

@@ -254,6 +254,7 @@ import axios from 'axios';
 import Breadcrumb from '@/components/Breadcrumb.vue';
 import DataTable from '@/components/DataTable.vue';
 import khachHangAPI from '@/services/api/APIKhachHang/KhachHangAPI.js';
+import authService from '@/services/authService.js';
 
 export default {
   name: 'PhieuGiamGia',
@@ -323,21 +324,29 @@ export default {
       }
     ]);
 
-    // DataTable columns configuration
-    const tableColumns = ref([
-      { key: 'stt', label: 'STT', class: 'text-center' },
-      { key: 'maPhieuGiamGia', label: 'Mã phiếu', class: 'font-weight-bold' },
-      { key: 'tenPhieuGiamGia', label: 'Tên phiếu' },
-      { key: 'loaiApDung', label: 'Loại phiếu', class: 'text-center' },
-      { key: 'loaiGiamGia', label: 'Loại giảm giá', class: 'text-center' },
-      { key: 'giaTriGiam', label: 'Giá trị giảm', class: 'text-right' },
-      { key: 'hoaDonToiThieu', label: 'Hóa đơn tối thiểu', class: 'text-right' },
-      { key: 'soTienGiamToiDa', label: 'Giảm tối đa', class: 'text-right' },
-      { key: 'ngayBatDau', label: 'Ngày bắt đầu', class: 'text-center' },
-      { key: 'ngayKetThuc', label: 'Ngày kết thúc', class: 'text-center' },
-      { key: 'trangThai', label: 'Trạng thái', class: 'text-center' },
-      { key: 'actions', label: 'Hành động', class: 'text-center' }
-    ]);
+    // DataTable columns configuration - conditionally include actions column
+    const tableColumns = computed(() => {
+      const columns = [
+        { key: 'stt', label: 'STT', class: 'text-center' },
+        { key: 'maPhieuGiamGia', label: 'Mã phiếu', class: 'font-weight-bold' },
+        { key: 'tenPhieuGiamGia', label: 'Tên phiếu' },
+        { key: 'loaiApDung', label: 'Loại phiếu', class: 'text-center' },
+        { key: 'loaiGiamGia', label: 'Loại giảm giá', class: 'text-center' },
+        { key: 'giaTriGiam', label: 'Giá trị giảm', class: 'text-right' },
+        { key: 'hoaDonToiThieu', label: 'Hóa đơn tối thiểu', class: 'text-right' },
+        { key: 'soTienGiamToiDa', label: 'Giảm tối đa', class: 'text-right' },
+        { key: 'ngayBatDau', label: 'Ngày bắt đầu', class: 'text-center' },
+        { key: 'ngayKetThuc', label: 'Ngày kết thúc', class: 'text-center' },
+        { key: 'trangThai', label: 'Trạng thái', class: 'text-center' }
+      ];
+      
+      // Only add actions column for admins
+      if (authService.isAdmin()) {
+        columns.push({ key: 'actions', label: 'Hành động', class: 'text-center' });
+      }
+      
+      return columns;
+    });
 
     // Type mappings
     const couponTypes = [
@@ -441,19 +450,23 @@ export default {
   },
 
   mounted() {
-    // Initialize breadcrumb actions
+    // Initialize breadcrumb actions based on user role
     this.breadcrumbActions = [
       {
         label: 'Làm mới',
         type: 'default',
         handler: () => this.loadAllCoupons()
-      },
-      {
+      }
+    ];
+
+    // Only show add button for admins
+    if (this.isAdmin()) {
+      this.breadcrumbActions.push({
         label: 'Thêm phiếu giảm giá',
         type: 'primary',
         handler: () => this.createCoupon()
-      }
-    ];
+      });
+    }
     
     this.loadAllCustomers();
     this.loadAllCoupons();
@@ -465,6 +478,10 @@ export default {
   },
 
   methods: {
+    isAdmin() {
+      return authService.isAdmin();
+    },
+
     async loadAllCoupons() {
       this.loadingTable = true;
       this.errorMessage = '';
