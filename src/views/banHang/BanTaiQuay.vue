@@ -167,18 +167,6 @@
             </h3>
           </div>
           <div class="card-content">
-            <!-- Delivery Toggle -->
-            <div class="delivery-toggle-section">
-              <div class="toggle-container">
-                <label class="toggle-label">
-                  Giao hàng
-                </label>
-                <div class="toggle-switch" @click="toggleDelivery">
-                  <input type="checkbox" v-model="isDelivery" class="toggle-input" />
-                  <span class="toggle-slider" :class="{ active: isDelivery }"></span>
-                </div>
-              </div>
-            </div>
 
             <div class="form-group">
               <label class="form-label">Tên Khách Hàng</label>
@@ -213,116 +201,6 @@
               </button>
             </div>
 
-            <!-- Delivery Information (shown when delivery is enabled) -->
-            <div v-if="isDelivery" class="delivery-info-section">
-              <div class="delivery-header">
-                <h4 class="delivery-title">
-                  <iconify-icon icon="solar:map-point-bold-duotone"></iconify-icon>
-                  Thông Tin Giao Hàng
-                </h4>
-              </div>
-              
-              <div class="address-selection">
-                <div class="address-tabs">
-                  <button 
-                    class="address-tab" 
-                    :class="{ active: addressMode === 'select' }"
-                    @click="addressMode = 'select'"
-                  >
-                    Chọn địa chỉ có sẵn
-                  </button>
-                  <button 
-                    class="address-tab" 
-                    :class="{ active: addressMode === 'input' }"
-                    @click="addressMode = 'input'"
-                  >
-                    Nhập địa chỉ mới
-                  </button>
-                </div>
-
-                <!-- Select existing address -->
-                <div v-if="addressMode === 'select'" class="address-select-section">
-                  <div class="form-group">
-                    <label class="form-label">Địa chỉ khách hàng</label>
-                    <select v-model="selectedAddress" class="form-select">
-                      <option value="">-- Chọn địa chỉ --</option>
-                      <option 
-                        v-for="address in customerAddresses" 
-                        :key="address.id" 
-                        :value="address"
-                      >
-                        {{ address.label }} - {{ address.fullAddress }}
-                      </option>
-                    </select>
-                  </div>
-                </div>
-
-                <!-- Input new address -->
-                <div v-if="addressMode === 'input'" class="address-input-section">
-                  <div class="form-group">
-                    <label class="form-label">Địa chỉ cụ thể</label>
-                    <input 
-                      type="text" 
-                      v-model="deliveryInfo.diaChi" 
-                      class="form-input"
-                      placeholder="Số nhà, tên đường..."
-                    />
-                  </div>
-                  <div class="form-row">
-                    <div class="form-group">
-                      <label class="form-label">Phường/Xã</label>
-                      <input 
-                        type="text" 
-                        v-model="deliveryInfo.phuongXa" 
-                        class="form-input"
-                        placeholder="Phường/Xã"
-                      />
-                    </div>
-                    <div class="form-group">
-                      <label class="form-label">Quận/Huyện</label>
-                      <input 
-                        type="text" 
-                        v-model="deliveryInfo.quanHuyen" 
-                        class="form-input"
-                        placeholder="Quận/Huyện"
-                      />
-                    </div>
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label">Tỉnh/Thành phố</label>
-                    <input 
-                      type="text" 
-                      v-model="deliveryInfo.tinhThanh" 
-                      class="form-input"
-                      placeholder="Tỉnh/Thành phố"
-                    />
-                  </div>
-                </div>
-
-                <!-- Delivery notes -->
-                <div class="form-group">
-                  <label class="form-label">Ghi chú giao hàng</label>
-                  <textarea 
-                    v-model="deliveryInfo.ghiChu" 
-                    class="form-textarea"
-                    placeholder="Ghi chú cho shipper (tầng, cổng, thời gian giao...)"
-                    rows="3"
-                  ></textarea>
-                </div>
-
-                <!-- Delivery fee info -->
-                <div class="delivery-fee-info">
-                  <div class="fee-item">
-                    <span class="fee-label">Phí giao hàng:</span>
-                    <span class="fee-value">{{ formatCurrency(phiGiaoHang) }}</span>
-                  </div>
-                  <div class="fee-item">
-                    <span class="fee-label">Thời gian giao:</span>
-                    <span class="fee-value">30-60 phút</span>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -365,10 +243,6 @@
               <div class="summary-line">
                 <span>Tổng tiền hàng:</span>
                 <strong>{{ formatCurrency(tongTien) }}</strong>
-              </div>
-              <div v-if="isDelivery" class="summary-line delivery-line">
-                <span>Phí giao hàng:</span>
-                <strong class="delivery-amount">+ {{ formatCurrency(phiGiaoHang) }}</strong>
               </div>
               <div class="summary-line discount-line">
                 <span>Giảm giá:</span>
@@ -1087,37 +961,6 @@ export default {
     const availableVouchers = ref([]);
     const isLoadingVouchers = ref(false);
 
-    // Delivery
-    const isDelivery = ref(false);
-    const addressMode = ref('select');
-    const selectedAddress = ref('');
-    const phiGiaoHang = ref(30000); // Default delivery fee
-    const deliveryInfo = ref({
-      diaChi: '',
-      phuongXa: '',
-      quanHuyen: '',
-      tinhThanh: '',
-      ghiChu: ''
-    });
-
-    // Sample customer addresses
-    const customerAddresses = ref([
-      {
-        id: 1,
-        label: 'Nhà riêng',
-        fullAddress: '123 Nguyễn Văn Cừ, Phường 4, Quận 5, TP.HCM'
-      },
-      {
-        id: 2,
-        label: 'Công ty',
-        fullAddress: '456 Lê Văn Sỹ, Phường 12, Quận 3, TP.HCM'
-      },
-      {
-        id: 3,
-        label: 'Nhà bạn bè',
-        fullAddress: '789 Trần Hưng Đạo, Phường 1, Quận 1, TP.HCM'
-      }
-    ]);
 
     // Customer data - loaded from API
     const danhSachKhachHang = ref([]);
@@ -1158,8 +1001,7 @@ export default {
     });
 
     const khachCanTra = computed(() => {
-      const subtotal = tongTien.value + (isDelivery.value ? phiGiaoHang.value : 0);
-      return Math.max(0, subtotal - giamGia.value);
+      return Math.max(0, tongTien.value - giamGia.value);
     });
     const tienThua = computed(() => Math.max(0, khachThanhToan.value - khachCanTra.value));
 
@@ -2003,24 +1845,6 @@ export default {
       thongBaoGiamGia.value = '';
     });
 
-    // Delivery management
-    const toggleDelivery = () => {
-      isDelivery.value = !isDelivery.value;
-      if (isDelivery.value) {
-        toast.info('Đã bật chế độ giao hàng');
-      } else {
-        toast.info('Đã tắt chế độ giao hàng');
-        // Reset delivery info when disabled
-        selectedAddress.value = '';
-        deliveryInfo.value = {
-          diaChi: '',
-          phuongXa: '',
-          quanHuyen: '',
-          tinhThanh: '',
-          ghiChu: ''
-        };
-      }
-    };
 
     // Payment management
     const chonPhuongThuc = (phuongThuc) => {
@@ -2102,35 +1926,19 @@ export default {
         return;
       }
 
-      // Validate delivery information if delivery is enabled
-      if (isDelivery.value) {
-        const hasAddress = selectedAddress.value || 
-          (deliveryInfo.value.diaChi && deliveryInfo.value.phuongXa && 
-           deliveryInfo.value.quanHuyen && deliveryInfo.value.tinhThanh);
-        
-        if (!hasAddress) {
-          toast.error('Vui lòng nhập đầy đủ thông tin địa chỉ giao hàng!');
-          return;
-        }
-      }
 
       const hoaDonInfo = {
         id: tabActive.value,
         khachHang: khachHangHienTai.value,
         tongTienHang: tongTien.value,
-        phiGiaoHang: isDelivery.value ? phiGiaoHang.value : 0,
+        phiGiaoHang: 0,
         giamGia: giamGia.value,
         khachCanTra: khachCanTra.value,
         khachThanhToan: khachThanhToan.value,
         tienThua: tienThua.value,
         phuongThucThanhToan: phuongThucThanhToan.value,
-        isDelivery: isDelivery.value,
-        deliveryInfo: isDelivery.value ? {
-          addressMode: addressMode.value,
-          selectedAddress: selectedAddress.value,
-          customAddress: deliveryInfo.value,
-          ghiChu: deliveryInfo.value.ghiChu
-        } : null,
+        isDelivery: false,
+        deliveryInfo: null,
         items: currentHoaDon.value.items
       };
 
@@ -2312,14 +2120,6 @@ export default {
       tienThua,
       isPaymentValid,
       
-      // Delivery
-      isDelivery,
-      addressMode,
-      selectedAddress,
-      phiGiaoHang,
-      deliveryInfo,
-      customerAddresses,
-      toggleDelivery,
       
       // Stats
       tongSoLuong,
@@ -3072,6 +2872,9 @@ export default {
   border-top: 2px solid #007bff !important;
   padding-top: 12px !important;
   margin-top: 8px;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .total-amount {
