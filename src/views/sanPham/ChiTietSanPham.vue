@@ -1293,9 +1293,8 @@ export default {
 <style scoped>
 /* Container Styles */
 .chi-tiet-san-pham-container {
-  padding: 24px;
-  background: #f8fafc;
   min-height: 100vh;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 /* Loading and Error Styles */

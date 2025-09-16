@@ -886,7 +886,7 @@ export default {
       {
         label: 'Lịch sử bán hàng',
         type: 'default',
-        handler: () => router.push('/lich-su-ban-hang')
+        handler: () => router.push('/hoa-don')
       },
       {
         label: 'Làm mới',
@@ -1944,10 +1944,8 @@ export default {
           return;
         }
       } else if (phuongThucThanhToan.value === 'VnPay') {
-        if (tienVNPay.value < khachCanTra.value) {
-          toast.error('Số tiền VNPay không đủ để thanh toán!');
-          return;
-        }
+        // For VNPay only payment, no validation needed - VNPay will handle the full amount
+        // The amount will be set automatically in the payment request
       } else if (phuongThucThanhToan.value === 'Cả 2') {
         if ((tienMat.value + tienVNPay.value) < khachCanTra.value) {
           toast.error('Tổng số tiền thanh toán không đủ!');
@@ -1968,7 +1966,8 @@ export default {
           tongTien: khachCanTra.value,
           tienMat: phuongThucThanhToan.value === 'VnPay' ? 0 : 
                    (phuongThucThanhToan.value === 'Tiền mặt' ? khachThanhToan.value : tienMat.value),
-          tienChuyenKhoan: phuongThucThanhToan.value === 'Tiền mặt' ? 0 : tienVNPay.value,
+          tienChuyenKhoan: phuongThucThanhToan.value === 'Tiền mặt' ? 0 : 
+                           (phuongThucThanhToan.value === 'VnPay' ? khachCanTra.value : tienVNPay.value),
           phiVanChuyen: 0,
           cartItems: currentHoaDon.value.items.map(item => ({
             idChiTietSanPham: item.id,
@@ -1981,7 +1980,18 @@ export default {
 
         console.log('Processing payment:', paymentRequest);
 
-        // Call backend payment API
+        // Handle different payment methods
+        if (phuongThucThanhToan.value === 'VnPay') {
+          // VNPay only payment - redirect to VNPay
+          await handleVNPayPayment(paymentRequest);
+          return;
+        } else if (phuongThucThanhToan.value === 'Cả 2') {
+          // Combined payment - process cash first, then VNPay
+          await handleCombinedPayment(paymentRequest);
+          return;
+        }
+
+        // Cash only payment - use existing flow
         const response = await invoiceAPI.processPayment(paymentRequest);
         
         if (response.data.success) {
@@ -2034,6 +2044,117 @@ export default {
         }
         
         toast.error(errorMessage);
+      }
+    };
+
+    // VNPay payment handlers
+    const handleVNPayPayment = async (paymentRequest) => {
+      try {
+        const vnpayRequest = {
+          invoiceId: paymentRequest.hoaDonId,
+          amount: paymentRequest.tongTien,
+          paymentMethod: 'VnPay'
+        };
+
+        const response = await invoiceAPI.createVNPayPayment(vnpayRequest);
+        
+        if (response.data.paymentUrl) {
+          // Close payment modal before redirecting
+          showThanhToanModal.value = false;
+          
+          // Show loading message
+          toast.info('Đang chuyển hướng đến VNPay...');
+          
+          // Redirect to VNPay payment page
+          window.location.href = response.data.paymentUrl;
+        } else {
+          toast.error('Không thể tạo liên kết thanh toán VNPay');
+        }
+      } catch (error) {
+        console.error('VNPay payment error:', error);
+        toast.error(error.response?.data || 'Lỗi khi tạo thanh toán VNPay');
+      }
+    };
+
+    const handleCombinedPayment = async (paymentRequest) => {
+      try {
+        const combinedRequest = {
+          invoiceId: paymentRequest.hoaDonId,
+          cashAmount: paymentRequest.tienMat,
+          vnpayAmount: paymentRequest.tienChuyenKhoan,
+          paymentMethod: 'Cả 2'
+        };
+
+        const response = await invoiceAPI.processCombinedPayment(combinedRequest);
+        
+        if (response.data.paymentUrl) {
+          // Close payment modal before redirecting
+          showThanhToanModal.value = false;
+          
+          // Show loading message
+          toast.info('Đã xử lý tiền mặt. Đang chuyển hướng đến VNPay cho phần còn lại...');
+          
+          // Redirect to VNPay for remaining amount
+          window.location.href = response.data.paymentUrl;
+        } else {
+          toast.error('Không thể xử lý thanh toán kết hợp');
+        }
+      } catch (error) {
+        console.error('Combined payment error:', error);
+        toast.error(error.response?.data || 'Lỗi khi xử lý thanh toán kết hợp');
+      }
+    };
+
+    // Handle VNPay return from URL parameters
+    const handleVNPayReturn = async () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const paymentStatus = urlParams.get('payment');
+      const invoiceId = urlParams.get('invoiceId');
+
+      if (paymentStatus === 'success' && invoiceId) {
+        toast.success(`Thanh toán VNPay thành công cho hóa đơn ${invoiceId}!`);
+        
+        // Remove the invoice from pending invoices list
+        hoaDonTabs.value = hoaDonTabs.value.filter(tab => tab.id !== parseInt(invoiceId));
+        
+        // Switch to next available tab if any exist
+        if (hoaDonTabs.value.length > 0) {
+          tabActive.value = hoaDonTabs.value[0].id;
+        } else {
+          // No more pending invoices, clear active tab
+          tabActive.value = null;
+        }
+        
+        // Update page stats
+        pageStats.value[0].value = hoaDonTabs.value.length.toString();
+        
+        // Clear selected voucher
+        selectedVoucher.value = null;
+        
+        // Reload both pending invoices and product list
+        await Promise.all([
+          loadPendingInvoices(),
+          fetchSanPham()
+        ]);
+        
+        // Clear URL parameters
+        window.history.replaceState({}, document.title, window.location.pathname);
+        
+        // Navigate to invoice detail page
+        router.push(`/hoa-don/chi-tiet/${invoiceId}`);
+        
+      } else if (paymentStatus === 'failed') {
+        toast.error('Thanh toán VNPay thất bại!');
+        // Reload pending invoices to refresh the list
+        await loadPendingInvoices();
+        // Clear URL parameters
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } else if (paymentStatus === 'error') {
+        toast.error('Có lỗi xảy ra trong quá trình thanh toán VNPay!');
+        // Reload pending invoices to refresh the list
+        await loadPendingInvoices();
+        // Clear URL parameters
+        window.history.replaceState({}, document.title, window.location.pathname);
       }
     };
 
@@ -2128,6 +2249,9 @@ export default {
 
     // Initialize data on component mount
     onMounted(async () => {
+      // Handle VNPay return first
+      handleVNPayReturn();
+      
       await Promise.all([
         loadPendingInvoices(),
         fetchSanPham()
@@ -2280,8 +2404,6 @@ export default {
 <style scoped>
 /* ===== GENERAL STYLES ===== */
 .ban-tai-quay-container {
-  padding: 24px;
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   min-height: 100vh;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }

@@ -94,9 +94,6 @@
               <div class="user-role">{{ getUserRoleText(currentUser?.tenQuyen) }}</div>
             </div>
             <div class="user-actions">
-              <button class="action-btn" title="Cài đặt">
-                <iconify-icon icon="solar:settings-outline"></iconify-icon>
-              </button>
               <button class="action-btn logout-btn" title="Đăng xuất" @click="handleLogout">
                 <iconify-icon icon="solar:logout-2-outline"></iconify-icon>
               </button>
