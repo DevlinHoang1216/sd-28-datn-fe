@@ -60,10 +60,22 @@
             <div class="form-group">
               <label class="form-label">{{ labelGiaTriGiam }}</label>
               <input
+                v-if="coupon.loaiGiamGia === 'PHAN_TRAM'"
                 v-model.number="coupon.giaTriGiam"
                 type="number"
                 class="form-input"
-                placeholder="Nhập giá trị giảm"
+                placeholder="Nhập giá trị giảm (%)"
+                min="1"
+                max="100"
+              />
+              <input
+                v-else
+                v-model="formattedGiaTriGiam"
+                type="text"
+                class="form-input"
+                placeholder="Nhập giá trị giảm (VND)"
+                @input="onGiaTriGiamInput"
+                @blur="formatGiaTriGiam"
               />
             </div>
 
@@ -71,10 +83,12 @@
             <div class="form-group" v-if="coupon.loaiGiamGia === 'PHAN_TRAM' || coupon.loaiGiamGia === 'SO_TIEN_CO_DINH'">
               <label class="form-label">Số tiền giảm tối đa</label>
               <input
-                v-model.number="coupon.soTienGiamToiDa"
-                type="number"
+                v-model="formattedSoTienGiamToiDa"
+                type="text"
                 class="form-input"
-                placeholder="Nhập số tiền giảm tối đa"
+                placeholder="Nhập số tiền giảm tối đa (VND)"
+                @input="onSoTienGiamToiDaInput"
+                @blur="formatSoTienGiamToiDa"
               />
             </div>
 
@@ -82,10 +96,12 @@
             <div class="form-group">
               <label class="form-label">Hóa đơn tối thiểu</label>
               <input
-                v-model.number="coupon.hoaDonToiThieu"
-                type="number"
+                v-model="formattedHoaDonToiThieu"
+                type="text"
                 class="form-input"
-                placeholder="Nhập giá trị hóa đơn tối thiểu"
+                placeholder="Nhập giá trị hóa đơn tối thiểu (VND)"
+                @input="onHoaDonToiThieuInput"
+                @blur="formatHoaDonToiThieu"
               />
             </div>
 
@@ -265,6 +281,10 @@ export default {
         loaiGiamGia: '',
         isPrivate: false,
       },
+      // Formatted display values
+      formattedGiaTriGiam: '',
+      formattedSoTienGiamToiDa: '',
+      formattedHoaDonToiThieu: '',
       customers: [],
       selectedCustomers: [],
       loading: false,
@@ -311,6 +331,59 @@ export default {
     await this.fetchCustomers();
   },
   methods: {
+    // Currency formatting methods
+    formatCurrency(value) {
+      if (!value) return '';
+      const numValue = typeof value === 'string' ? parseInt(value.replace(/[^0-9]/g, '')) : value;
+      if (isNaN(numValue)) return '';
+      return new Intl.NumberFormat('vi-VN').format(numValue) + ' ₫';
+    },
+
+    parseCurrency(value) {
+      if (!value) return null;
+      const numValue = parseInt(value.replace(/[^0-9]/g, ''));
+      return isNaN(numValue) ? null : numValue;
+    },
+
+    // Discount value formatting
+    onGiaTriGiamInput(event) {
+      const value = event.target.value.replace(/[^0-9]/g, '');
+      this.coupon.giaTriGiam = value ? parseInt(value) : null;
+      this.formattedGiaTriGiam = value ? new Intl.NumberFormat('vi-VN').format(parseInt(value)) + ' ₫' : '';
+    },
+
+    formatGiaTriGiam() {
+      if (this.coupon.giaTriGiam) {
+        this.formattedGiaTriGiam = this.formatCurrency(this.coupon.giaTriGiam);
+      }
+    },
+
+    // Maximum discount formatting
+    onSoTienGiamToiDaInput(event) {
+      const value = event.target.value.replace(/[^0-9]/g, '');
+      this.coupon.soTienGiamToiDa = value ? parseInt(value) : null;
+      this.formattedSoTienGiamToiDa = value ? new Intl.NumberFormat('vi-VN').format(parseInt(value)) + ' ₫' : '';
+    },
+
+    formatSoTienGiamToiDa() {
+      if (this.coupon.soTienGiamToiDa) {
+        this.formattedSoTienGiamToiDa = this.formatCurrency(this.coupon.soTienGiamToiDa);
+      }
+    },
+
+    // Minimum invoice formatting
+    onHoaDonToiThieuInput(event) {
+      const value = event.target.value.replace(/[^0-9]/g, '');
+      this.coupon.hoaDonToiThieu = value ? parseInt(value) : null;
+      this.formattedHoaDonToiThieu = value ? new Intl.NumberFormat('vi-VN').format(parseInt(value)) + ' ₫' : '';
+    },
+
+    formatHoaDonToiThieu() {
+      if (this.coupon.hoaDonToiThieu) {
+        this.formattedHoaDonToiThieu = this.formatCurrency(this.coupon.hoaDonToiThieu);
+      }
+    },
+
     async fetchCouponData() {
       this.loading = true;
       try {
@@ -335,6 +408,9 @@ export default {
           ? data.customers.map(customer => customer.idKhachHang)
           : [];
         
+        // Initialize formatted values
+        this.initializeFormattedValues();
+        
         this.toast.success('Tải thông tin phiếu giảm giá thành công!');
       } catch (err) {
         console.error('Lỗi tải phiếu giảm giá:', err);
@@ -353,9 +429,26 @@ export default {
       return date.toISOString().slice(0, 10);
     },
 
+    initializeFormattedValues() {
+      // Initialize formatted values after loading data
+      if (this.coupon.loaiGiamGia === 'SO_TIEN_CO_DINH' && this.coupon.giaTriGiam) {
+        this.formattedGiaTriGiam = this.formatCurrency(this.coupon.giaTriGiam);
+      }
+      if (this.coupon.soTienGiamToiDa) {
+        this.formattedSoTienGiamToiDa = this.formatCurrency(this.coupon.soTienGiamToiDa);
+      }
+      if (this.coupon.hoaDonToiThieu) {
+        this.formattedHoaDonToiThieu = this.formatCurrency(this.coupon.hoaDonToiThieu);
+      }
+    },
+
     handleLoaiGiamGiaChange() {
-      // Keep soTienGiamToiDa field for both types now
-      // No need to reset it when switching types
+      // Reset formatted values when switching types
+      if (this.coupon.loaiGiamGia === 'PHAN_TRAM') {
+        this.formattedGiaTriGiam = '';
+      } else {
+        this.formattedGiaTriGiam = this.coupon.giaTriGiam ? this.formatCurrency(this.coupon.giaTriGiam) : '';
+      }
     },
 
     handlePrivateCouponChange() {

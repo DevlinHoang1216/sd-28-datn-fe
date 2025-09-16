@@ -204,6 +204,10 @@
               <span class="font-semibold text-right">{{ formatCurrency(item.soTienGiamToiDa, 'SO_TIEN_CO_DINH') }}</span>
             </template>
             
+            <template #soLuongDung="{ item }">
+              <span class="font-semibold text-center">{{ formatUsageQuantity(item.soLuongDung, item.soLuongDaDung) }}</span>
+            </template>
+            
             <template #ngayBatDau="{ item }">
               {{ formatDate(item.ngayBatDau) }}
             </template>
@@ -335,6 +339,7 @@ export default {
         { key: 'giaTriGiam', label: 'Giá trị giảm', class: 'text-right' },
         { key: 'hoaDonToiThieu', label: 'Hóa đơn tối thiểu', class: 'text-right' },
         { key: 'soTienGiamToiDa', label: 'Giảm tối đa', class: 'text-right' },
+        { key: 'soLuongDung', label: 'Số lượng dùng', class: 'text-center' },
         { key: 'ngayBatDau', label: 'Ngày bắt đầu', class: 'text-center' },
         { key: 'ngayKetThuc', label: 'Ngày kết thúc', class: 'text-center' },
         { key: 'trangThai', label: 'Trạng thái', class: 'text-center' }
@@ -513,6 +518,8 @@ export default {
             giaTriGiam: coupon.phanTramGiamGia || coupon.soTienGiamGia,
             hoaDonToiThieu: coupon.hoaDonToiThieu,
             soTienGiamToiDa: coupon.soTienGiamToiDa,
+            soLuongDung: coupon.soLuongDung || 0,
+            soLuongDaDung: coupon.soLuongDaDung || 0,
             ngayBatDau: coupon.ngayBatDau,
             ngayKetThuc: coupon.ngayKetThuc,
             tenTrangThai: coupon.trangThai ? 'DANG_DIEN_RA' : 'DA_KET_THUC',
@@ -682,6 +689,13 @@ export default {
         minimumFractionDigits: 0,
         maximumFractionDigits: 0,
       }).format(value);
+    },
+
+    formatUsageQuantity(total, used) {
+      if (total === null || total === undefined) return '---';
+      const usedCount = used || 0;
+      const remaining = Math.max(0, total - usedCount);
+      return `${remaining}/${total}`;
     }
   }
 }

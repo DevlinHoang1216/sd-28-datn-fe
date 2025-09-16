@@ -80,27 +80,54 @@
             Xu Hướng Doanh Thu
           </h3>
           <div class="chart-actions">
-            <button 
-              class="chart-btn" 
-              :class="{ active: revenuePeriod === 'daily' }"
-              @click="changeRevenuePeriod('daily')"
-            >
-              Ngày
-            </button>
-            <button 
-              class="chart-btn" 
-              :class="{ active: revenuePeriod === 'weekly' }"
-              @click="changeRevenuePeriod('weekly')"
-            >
-              Tuần
-            </button>
-            <button 
-              class="chart-btn" 
-              :class="{ active: revenuePeriod === 'monthly' }"
-              @click="changeRevenuePeriod('monthly')"
-            >
-              Tháng
-            </button>
+            <div class="chart-period-buttons">
+              <button 
+                class="chart-btn" 
+                :class="{ active: revenuePeriod === 'daily' }"
+                @click="changeRevenuePeriod('daily')"
+              >
+                Ngày
+              </button>
+              <button 
+                class="chart-btn" 
+                :class="{ active: revenuePeriod === 'weekly' }"
+                @click="changeRevenuePeriod('weekly')"
+              >
+                Tuần
+              </button>
+              <button 
+                class="chart-btn" 
+                :class="{ active: revenuePeriod === 'monthly' }"
+                @click="changeRevenuePeriod('monthly')"
+              >
+                Tháng
+              </button>
+              <button 
+                class="chart-btn" 
+                :class="{ active: revenuePeriod === 'yearly' }"
+                @click="changeRevenuePeriod('yearly')"
+              >
+                Năm
+              </button>
+            </div>
+            <div class="chart-type-buttons">
+              <button 
+                class="chart-type-btn" 
+                :class="{ active: chartType === 'line' }"
+                @click="changeChartType('line')"
+                title="Biểu đồ đường"
+              >
+                <iconify-icon icon="solar:chart-2-bold-duotone"></iconify-icon>
+              </button>
+              <button 
+                class="chart-type-btn" 
+                :class="{ active: chartType === 'bar' }"
+                @click="changeChartType('bar')"
+                title="Biểu đồ cột"
+              >
+                <iconify-icon icon="solar:chart-square-bold-duotone"></iconify-icon>
+              </button>
+            </div>
           </div>
         </div>
         <div class="chart-container revenue-chart-container">
@@ -233,6 +260,7 @@ export default {
     const router = useRouter()
     const selectedTimeRange = ref('30')
     const revenuePeriod = ref('daily')
+    const chartType = ref('line')
     const revenueChart = ref(null)
     const categoryChart = ref(null)
     let revenueChartInstance = null
@@ -295,7 +323,6 @@ export default {
     })
 
     const topProducts = ref([])
-
     const recentOrders = ref([])
 
     const formatCurrency = (value) => {
@@ -335,6 +362,74 @@ export default {
         'Đã hủy': 'status-cancelled'
       }
       return classes[status] || 'status-default'
+    }
+
+    // Helper function để tính tuần chính xác
+    const getWeekNumber = (date) => {
+      const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+      const dayNum = d.getUTCDay() || 7
+      d.setUTCDate(d.getUTCDate() + 4 - dayNum)
+      const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
+      return Math.ceil((((d - yearStart) / 86400000) + 1) / 7)
+    }
+
+    // Sửa lại hàm formatChartLabel với logic chính xác
+    const formatChartLabel = (dateString, period) => {
+      const date = new Date(dateString)
+      const currentYear = new Date().getFullYear()
+      
+      switch (period) {
+        case 'daily':
+          const day = date.getDate().toString().padStart(2, '0')
+          const month = (date.getMonth() + 1).toString().padStart(2, '0')
+          return `${day}/${month}`
+        
+        case 'weekly':
+          const weekNumber = getWeekNumber(date)
+          const year = date.getFullYear()
+          return year !== currentYear ? `Tuần ${weekNumber}/${year}` : `Tuần ${weekNumber}`
+        
+        case 'monthly':
+          const monthNames = [
+            'T1', 'T2', 'T3', 'T4', 'T5', 'T6',
+            'T7', 'T8', 'T9', 'T10', 'T11', 'T12'
+          ]
+          const yearMonth = date.getFullYear()
+          
+          // Nếu không phải năm hiện tại thì hiển thị cả năm
+          if (yearMonth !== currentYear) {
+            return `${monthNames[date.getMonth()]}/${yearMonth}`
+          }
+          return monthNames[date.getMonth()]
+        
+        case 'yearly':
+          return `${date.getFullYear()}`
+        
+        default:
+          return dateString
+      }
+    }
+
+    // Hàm format ngày cho export
+    const formatDateForExport = (date, period) => {
+      const dateObj = new Date(date)
+      
+      switch (period) {
+        case 'daily':
+          return dateObj.toLocaleDateString('vi-VN')
+        case 'weekly':
+          const weekNumber = getWeekNumber(dateObj)
+          const year = dateObj.getFullYear()
+          return `Tuần ${weekNumber}/${year}`
+        case 'monthly':
+          const month = (dateObj.getMonth() + 1).toString().padStart(2, '0')
+          const yearMonth = dateObj.getFullYear()
+          return `${month}/${yearMonth}`
+        case 'yearly':
+          return dateObj.getFullYear().toString()
+        default:
+          return date
+      }
     }
 
     // Load dashboard data from backend
@@ -383,7 +478,7 @@ export default {
           code: order.orderCode,
           customer: {
             name: order.customerName,
-            avatar: order.customerAvatar
+            avatar: order.customerAvatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&h=100&fit=crop&crop=face'
           },
           productCount: order.productCount,
           total: order.totalAmount,
@@ -413,25 +508,25 @@ export default {
         }
         
         const revenueData = data?.revenueData || []
-        const labels = revenueData.map(item => item.date) || ['1/1', '2/1', '3/1', '4/1', '5/1']
+        const labels = revenueData.map(item => formatChartLabel(item.date, revenuePeriod.value)) || ['1/1', '2/1', '3/1', '4/1', '5/1']
         const revenues = revenueData.map(item => item.revenue / 1000000) || [120, 150, 180, 220, 190] // Convert to millions
         
         revenueChartInstance = new Chart(ctx, {
-          type: 'line',
+          type: chartType.value,
           data: {
             labels: labels,
             datasets: [{
-              label: 'Doanh thu',
+              label: 'Doanh thu (triệu VNĐ)',
               data: revenues,
               borderColor: '#007bff',
-              backgroundColor: 'rgba(0, 123, 255, 0.1)',
-              fill: true,
-              tension: 0.4,
+              backgroundColor: chartType.value === 'bar' ? '#007bff' : 'rgba(0, 123, 255, 0.1)',
+              fill: chartType.value === 'line',
+              tension: chartType.value === 'line' ? 0.4 : 0,
               pointBackgroundColor: '#007bff',
               pointBorderColor: '#ffffff',
               pointBorderWidth: 2,
-              pointRadius: 6,
-              pointHoverRadius: 8
+              pointRadius: chartType.value === 'line' ? 6 : 0,
+              pointHoverRadius: chartType.value === 'line' ? 8 : 0
             }]
           },
           options: {
@@ -439,7 +534,8 @@ export default {
             maintainAspectRatio: false,
             plugins: {
               legend: {
-                display: false
+                display: true,
+                position: 'top'
               }
             },
             scales: {
@@ -522,11 +618,39 @@ export default {
       await updateRevenueChart()
     }
 
+    const changeChartType = async (type) => {
+      chartType.value = type
+      await updateRevenueChart()
+    }
+
+    // Sửa lại hàm updateRevenueChart với logic ngày tháng chính xác
     const updateRevenueChart = async () => {
       try {
         const endDate = new Date()
         const startDate = new Date()
-        startDate.setDate(endDate.getDate() - parseInt(selectedTimeRange.value))
+        
+        // Điều chỉnh khoảng thời gian dựa trên period
+        switch (revenuePeriod.value) {
+          case 'yearly':
+            startDate.setFullYear(endDate.getFullYear() - 4) // 5 năm gần nhất (bao gồm năm hiện tại)
+            startDate.setMonth(0, 1) // Đầu năm
+            break
+          case 'monthly':
+            startDate.setMonth(endDate.getMonth() - 11) // 12 tháng gần nhất
+            startDate.setDate(1) // Đầu tháng
+            break
+          case 'weekly':
+            startDate.setDate(endDate.getDate() - 77) // 11 tuần trước + tuần hiện tại = 12 tuần
+            // Đặt về đầu tuần (Thứ 2)
+            const dayOfWeek = startDate.getDay()
+            const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+            startDate.setDate(startDate.getDate() - daysToMonday)
+            break
+          case 'daily':
+          default:
+            startDate.setDate(endDate.getDate() - parseInt(selectedTimeRange.value))
+            break
+        }
         
         const response = await statisticsAPI.getRevenueByPeriod(
           startDate.toISOString().split('T')[0],
@@ -537,11 +661,64 @@ export default {
         const revenueData = response.data || []
         
         if (revenueChartInstance) {
-          revenueChartInstance.data.labels = revenueData.map(item => item.date)
-          revenueChartInstance.data.datasets[0].data = revenueData.map(item => item.revenue)
-          revenueChartInstance.data.datasets[1].data = revenueData.map(item => item.orderCount)
-          revenueChartInstance.update()
+          revenueChartInstance.destroy()
         }
+        
+        // Tạo chart mới với type đã chọn
+        const ctx = revenueChart.value.getContext('2d')
+        const labels = revenueData.map(item => formatChartLabel(item.date, revenuePeriod.value))
+        const revenues = revenueData.map(item => item.revenue / 1000000) // Chuyển đổi sang triệu
+        
+        const chartConfig = {
+          type: chartType.value,
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Doanh thu (triệu VNĐ)',
+              data: revenues,
+              borderColor: '#007bff',
+              backgroundColor: chartType.value === 'bar' ? '#007bff' : 'rgba(0, 123, 255, 0.1)',
+              fill: chartType.value === 'line',
+              tension: chartType.value === 'line' ? 0.4 : 0,
+              pointBackgroundColor: '#007bff',
+              pointBorderColor: '#ffffff',
+              pointBorderWidth: 2,
+              pointRadius: chartType.value === 'line' ? 6 : 0,
+              pointHoverRadius: chartType.value === 'line' ? 8 : 0
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: true,
+                position: 'top'
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                grid: {
+                  color: 'rgba(0,0,0,0.1)'
+                },
+                ticks: {
+                  callback: function(value) {
+                    return value + 'M'
+                  }
+                }
+              },
+              x: {
+                grid: {
+                  display: false
+                }
+              }
+            }
+          }
+        }
+        
+        revenueChartInstance = new Chart(ctx, chartConfig)
+        
       } catch (error) {
         console.error('Error updating revenue chart:', error)
       }
@@ -604,7 +781,7 @@ export default {
         
         // Sheet 3: Đơn hàng gần đây
         const orderData = [
-          ['ĐỚN HÀNG GẦN ĐÂY'],
+          ['ĐƠN HÀNG GẦN ĐÂY'],
           [''],
           ['Mã đơn', 'Khách hàng', 'Số sản phẩm', 'Tổng tiền', 'Ngày tạo']
         ]
@@ -624,13 +801,31 @@ export default {
         
         // Sheet 4: Dữ liệu doanh thu theo thời gian
         try {
-          const endDate = new Date()
-          const startDate = new Date()
-          startDate.setDate(endDate.getDate() - parseInt(selectedTimeRange.value))
+          const revenueEndDate = new Date()
+          const revenueStartDate = new Date()
+          revenueStartDate.setDate(revenueEndDate.getDate() - parseInt(selectedTimeRange.value))
+          switch (revenuePeriod.value) {
+            case 'yearly':
+              revenueStartDate.setFullYear(revenueEndDate.getFullYear() - 4)
+              revenueStartDate.setMonth(0, 1)
+              break
+            case 'monthly':
+              revenueStartDate.setMonth(revenueEndDate.getMonth() - 11)
+              revenueStartDate.setDate(1)
+              break
+            case 'weekly':
+              revenueStartDate.setDate(revenueEndDate.getDate() - 77)
+              const dayOfWeek = revenueStartDate.getDay()
+              const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
+              revenueStartDate.setDate(revenueStartDate.getDate() - daysToMonday)
+              break
+            default:
+              revenueStartDate.setDate(revenueEndDate.getDate() - parseInt(selectedTimeRange.value))
+          }
           
           const response = await statisticsAPI.getRevenueByPeriod(
-            startDate.toISOString().split('T')[0],
-            endDate.toISOString().split('T')[0],
+            revenueStartDate.toISOString().split('T')[0],
+            revenueEndDate.toISOString().split('T')[0],
             revenuePeriod.value
           )
           
@@ -644,9 +839,9 @@ export default {
           
           revenueData.forEach(item => {
             revenueSheetData.push([
-              item.date,
+              formatDateForExport(item.date, revenuePeriod.value),
               formatCurrency(item.revenue),
-              item.orderCount.toLocaleString()
+              (item.orderCount || 0).toLocaleString()
             ])
           })
           
@@ -676,6 +871,7 @@ export default {
     return {
       selectedTimeRange,
       revenuePeriod,
+      chartType,
       stats,
       topProducts,
       recentOrders,
@@ -692,6 +888,7 @@ export default {
       getStatusClass,
       updateData,
       changeRevenuePeriod,
+      changeChartType,
       navigateToProducts,
       navigateToInvoices,
       exportReport
@@ -843,8 +1040,21 @@ export default {
 
 .chart-actions {
   display: flex;
-  gap: 8px;
+  gap: 16px;
   flex-shrink: 0;
+  align-items: center;
+}
+
+.chart-period-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.chart-type-buttons {
+  display: flex;
+  gap: 4px;
+  border-left: 1px solid #e2e8f0;
+  padding-left: 16px;
 }
 
 .chart-btn {
@@ -867,6 +1077,32 @@ export default {
 }
 
 .chart-btn:hover:not(.active) {
+  background: #f8fafc;
+}
+
+.chart-type-btn {
+  padding: 8px 10px;
+  border: 1px solid #e2e8f0;
+  background: white;
+  color: #64748b;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 36px;
+}
+
+.chart-type-btn.active {
+  background: #007bff;
+  color: white;
+  border-color: #007bff;
+}
+
+.chart-type-btn:hover:not(.active) {
   background: #f8fafc;
 }
 
