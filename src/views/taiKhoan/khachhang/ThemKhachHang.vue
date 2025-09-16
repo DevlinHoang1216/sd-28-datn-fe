@@ -470,8 +470,6 @@ const goBack = () => {
 <style scoped>
 /* ===== GENERAL STYLES ===== */
 .customer-add-container {
-  padding: 24px;
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   min-height: 100vh;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }

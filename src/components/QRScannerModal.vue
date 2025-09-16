@@ -1,7 +1,10 @@
 <template>
-    <div v-if="isVisible"
-        class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 qr-scanner-modal">
-        <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-md mx-4">
+    <Teleport to="body">
+        <div v-if="isVisible"
+            class="fixed inset-0 flex items-center justify-center qr-scanner-modal"
+            style="z-index: 9999; background: rgba(0, 0, 0, 0.5) !important;">
+            <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-md mx-4 shadow-2xl transform transition-all duration-300"
+                :class="{ 'scale-100 opacity-100': isVisible, 'scale-95 opacity-0': !isVisible }">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Quét QR Hóa Đơn</h3>
                 <button @click="closeModal"
@@ -91,8 +94,9 @@
                     Dừng camera
                 </button>
             </div>
+            </div>
         </div>
-    </div>
+    </Teleport>
 </template>
 
 <script setup>

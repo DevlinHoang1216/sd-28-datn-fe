@@ -84,7 +84,7 @@ const {
 
 <template>
   <div
-    class="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900 p-4 md:p-6 font-roboto transition-colors duration-300">
+    class="min-h-screen flex flex-col font-roboto transition-colors duration-300">
     <!-- Breadcrumb -->
     <Breadcrumb :items="breadcrumbItems" :actions="breadcrumbActions" :show-page-info="true"
       page-title="Quản lý Hóa đơn" page-description="Quản lý và theo dõi tất cả hóa đơn bán hàng trong hệ thống"

@@ -29,9 +29,17 @@
               v-model="newCampaign.tenDotGiamGia"
               type="text"
               required
-              class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors"
+              :class="[
+                'w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors',
+                validationErrors.tenDotGiamGia ? 'border-red-500 dark:border-red-400' : 'border-gray-300 dark:border-gray-600'
+              ]"
               placeholder="Nhập tên đợt giảm giá"
+              @blur="validateTenDotGiamGia"
+              @input="clearValidationError('tenDotGiamGia')"
             />
+            <p v-if="validationErrors.tenDotGiamGia" class="mt-1 text-sm text-red-600 dark:text-red-400">
+              {{ validationErrors.tenDotGiamGia }}
+            </p>
           </div>
           
           <div>
@@ -54,8 +62,17 @@
               v-model="newCampaign.thoiGianBatDau"
               type="date"
               required
-              class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors"
+              :class="[
+                'w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors',
+                validationErrors.thoiGianBatDau ? 'border-red-500 dark:border-red-400' : 'border-gray-300 dark:border-gray-600'
+              ]"
+              @blur="validateThoiGianBatDau"
+              @change="validateDateRange"
+              @input="clearValidationError('thoiGianBatDau')"
             />
+            <p v-if="validationErrors.thoiGianBatDau" class="mt-1 text-sm text-red-600 dark:text-red-400">
+              {{ validationErrors.thoiGianBatDau }}
+            </p>
           </div>
           
           <div>
@@ -66,8 +83,20 @@
               v-model="newCampaign.thoiGianKetThuc"
               type="date"
               required
-              class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors"
+              :class="[
+                'w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors',
+                validationErrors.thoiGianKetThuc ? 'border-red-500 dark:border-red-400' : 'border-gray-300 dark:border-gray-600'
+              ]"
+              @blur="validateThoiGianKetThuc"
+              @change="validateDateRange"
+              @input="clearValidationError('thoiGianKetThuc')"
             />
+            <p v-if="validationErrors.thoiGianKetThuc" class="mt-1 text-sm text-red-600 dark:text-red-400">
+              {{ validationErrors.thoiGianKetThuc }}
+            </p>
+            <p v-if="validationErrors.dateRange" class="mt-1 text-sm text-red-600 dark:text-red-400">
+              {{ validationErrors.dateRange }}
+            </p>
           </div>
         </div>
 
@@ -99,23 +128,38 @@
                 :max="discountConfig.type === 'percentage' ? 100 : 10000000"
                 :step="discountConfig.type === 'percentage' ? 1 : 1000"
                 required
-                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors"
+                :class="[
+                  'w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors',
+                  validationErrors.discountValue ? 'border-red-500 dark:border-red-400' : 'border-gray-300 dark:border-gray-600'
+                ]"
                 :placeholder="discountConfig.type === 'percentage' ? 'Nhập % giảm (1-100)' : 'Nhập số tiền giảm'"
+                @blur="validateDiscountValue"
+                @input="clearValidationError('discountValue')"
               />
+              <p v-if="validationErrors.discountValue" class="mt-1 text-sm text-red-600 dark:text-red-400">
+                {{ validationErrors.discountValue }}
+              </p>
             </div>
             
             <div>
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Số Tiền Giảm Tối Đa
+                Số Tiền Giảm Tối Đa *
               </label>
               <input
-                v-model.number="discountConfig.soTienGiamToiDa"
-                type="number"
-                :min="0"
-                :step="1000"
-                class="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors"
+                v-model="formattedSoTienGiamToiDa"
+                type="text"
+                required
+                :class="[
+                  'w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors',
+                  validationErrors.soTienGiamToiDa ? 'border-red-500 dark:border-red-400' : 'border-gray-300 dark:border-gray-600'
+                ]"
                 placeholder="Nhập số tiền giảm tối đa (VNĐ)"
+                @input="handleSoTienGiamToiDaInput"
+                @blur="validateSoTienGiamToiDa"
               />
+              <p v-if="validationErrors.soTienGiamToiDa" class="mt-1 text-sm text-red-600 dark:text-red-400">
+                {{ validationErrors.soTienGiamToiDa }}
+              </p>
             </div>
             
             <div>
@@ -461,6 +505,16 @@ export default {
       thoiGianKetThuc: '',
     });
 
+    // Validation errors
+    const validationErrors = ref({
+      tenDotGiamGia: '',
+      thoiGianBatDau: '',
+      thoiGianKetThuc: '',
+      discountValue: '',
+      soTienGiamToiDa: '',
+      dateRange: '',
+    });
+
     const loadingProducts = ref(false);
     const selectedProducts = ref([]);
     const selectedProductDetails = ref([]);
@@ -477,6 +531,9 @@ export default {
       soTienGiamToiDa: null,
       applyTo: 'selected',
     });
+
+    // Formatted display value for soTienGiamToiDa
+    const formattedSoTienGiamToiDa = ref('');
 
     const pagination = ref({
       page: 0,
@@ -715,27 +772,18 @@ export default {
 
     const addCampaign = async () => {
       try {
+        // Validate all fields before submitting
+        if (!validateAllFields()) {
+          toast.error('Vui lòng kiểm tra và điền đầy đủ thông tin bắt buộc.');
+          return;
+        }
+
         if (
           discountConfig.value.applyTo === 'selected' &&
           selectedProductDetails.value.length === 0
         ) {
           toast.error(
             'Vui lòng chọn ít nhất một chi tiết sản phẩm để áp dụng giảm giá.'
-          );
-          return;
-        }
-
-        if (!discountConfig.value.value || discountConfig.value.value <= 0) {
-          toast.error('Vui lòng nhập giá trị giảm giá hợp lệ.');
-          return;
-        }
-
-        if (
-          discountConfig.value.type === 'percentage' &&
-          discountConfig.value.value > 100
-        ) {
-          toast.error(
-            'Giá trị giảm giá theo phần trăm không được vượt quá 100%.'
           );
           return;
         }
@@ -793,6 +841,175 @@ export default {
       }).format(value);
     };
 
+    // Validation functions
+    const validateTenDotGiamGia = () => {
+      if (!newCampaign.value.tenDotGiamGia || newCampaign.value.tenDotGiamGia.trim() === '') {
+        validationErrors.value.tenDotGiamGia = 'Tên đợt giảm giá không được để trống.';
+        return false;
+      }
+      if (newCampaign.value.tenDotGiamGia.trim().length < 3) {
+        validationErrors.value.tenDotGiamGia = 'Tên đợt giảm giá phải có ít nhất 3 ký tự.';
+        return false;
+      }
+      if (newCampaign.value.tenDotGiamGia.trim().length > 100) {
+        validationErrors.value.tenDotGiamGia = 'Tên đợt giảm giá không được vượt quá 100 ký tự.';
+        return false;
+      }
+      validationErrors.value.tenDotGiamGia = '';
+      return true;
+    };
+
+    const validateThoiGianBatDau = () => {
+      if (!newCampaign.value.thoiGianBatDau) {
+        validationErrors.value.thoiGianBatDau = 'Ngày bắt đầu không được để trống.';
+        return false;
+      }
+      
+      const today = new Date();
+      const startDate = new Date(newCampaign.value.thoiGianBatDau);
+      
+      // Reset time to compare only dates
+      today.setHours(0, 0, 0, 0);
+      startDate.setHours(0, 0, 0, 0);
+      
+      if (startDate < today) {
+        validationErrors.value.thoiGianBatDau = 'Ngày bắt đầu không được nhỏ hơn ngày hiện tại.';
+        return false;
+      }
+      
+      validationErrors.value.thoiGianBatDau = '';
+      return true;
+    };
+
+    const validateThoiGianKetThuc = () => {
+      if (!newCampaign.value.thoiGianKetThuc) {
+        validationErrors.value.thoiGianKetThuc = 'Ngày kết thúc không được để trống.';
+        return false;
+      }
+      validationErrors.value.thoiGianKetThuc = '';
+      return true;
+    };
+
+    const validateDateRange = () => {
+      if (newCampaign.value.thoiGianBatDau && newCampaign.value.thoiGianKetThuc) {
+        const startDate = new Date(newCampaign.value.thoiGianBatDau);
+        const endDate = new Date(newCampaign.value.thoiGianKetThuc);
+        
+        if (endDate <= startDate) {
+          validationErrors.value.dateRange = 'Ngày kết thúc phải sau ngày bắt đầu.';
+          return false;
+        }
+        
+        // Check if the campaign duration is reasonable (not more than 1 year)
+        const oneYear = 365 * 24 * 60 * 60 * 1000; // milliseconds in a year
+        if (endDate - startDate > oneYear) {
+          validationErrors.value.dateRange = 'Thời gian diễn ra đợt giảm giá không được vượt quá 1 năm.';
+          return false;
+        }
+      }
+      validationErrors.value.dateRange = '';
+      return true;
+    };
+
+    const validateDiscountValue = () => {
+      if (!discountConfig.value.value || discountConfig.value.value <= 0) {
+        validationErrors.value.discountValue = 'Giá trị giảm giá phải lớn hơn 0.';
+        return false;
+      }
+      
+      if (discountConfig.value.type === 'percentage') {
+        if (discountConfig.value.value > 100) {
+          validationErrors.value.discountValue = 'Giá trị giảm giá theo phần trăm không được vượt quá 100%.';
+          return false;
+        }
+        if (discountConfig.value.value < 1) {
+          validationErrors.value.discountValue = 'Giá trị giảm giá theo phần trăm phải từ 1% trở lên.';
+          return false;
+        }
+      } else {
+        if (discountConfig.value.value < 1000) {
+          validationErrors.value.discountValue = 'Giá trị giảm giá theo tiền mặt phải từ 1,000 VNĐ trở lên.';
+          return false;
+        }
+        if (discountConfig.value.value > 10000000) {
+          validationErrors.value.discountValue = 'Giá trị giảm giá theo tiền mặt không được vượt quá 10,000,000 VNĐ.';
+          return false;
+        }
+      }
+      
+      validationErrors.value.discountValue = '';
+      return true;
+    };
+
+    const clearValidationError = (field) => {
+      validationErrors.value[field] = '';
+    };
+
+    const validateSoTienGiamToiDa = () => {
+      if (!discountConfig.value.soTienGiamToiDa || discountConfig.value.soTienGiamToiDa <= 0) {
+        validationErrors.value.soTienGiamToiDa = 'Số tiền giảm tối đa không được để trống và phải lớn hơn 0.';
+        return false;
+      }
+      if (discountConfig.value.soTienGiamToiDa < 1000) {
+        validationErrors.value.soTienGiamToiDa = 'Số tiền giảm tối đa phải từ 1,000 VNĐ trở lên.';
+        return false;
+      }
+      if (discountConfig.value.soTienGiamToiDa > 100000000) {
+        validationErrors.value.soTienGiamToiDa = 'Số tiền giảm tối đa không được vượt quá 100,000,000 VNĐ.';
+        return false;
+      }
+      validationErrors.value.soTienGiamToiDa = '';
+      return true;
+    };
+
+    const validateAllFields = () => {
+      const isTenValid = validateTenDotGiamGia();
+      const isStartDateValid = validateThoiGianBatDau();
+      const isEndDateValid = validateThoiGianKetThuc();
+      const isDateRangeValid = validateDateRange();
+      const isDiscountValueValid = validateDiscountValue();
+      const isSoTienGiamToiDaValid = validateSoTienGiamToiDa();
+      
+      return isTenValid && isStartDateValid && isEndDateValid && isDateRangeValid && isDiscountValueValid && isSoTienGiamToiDaValid;
+    };
+
+    // Currency formatting functions for soTienGiamToiDa
+    const formatNumberToVND = (value) => {
+      if (!value || value === 0) return '';
+      return new Intl.NumberFormat('vi-VN').format(value) + ' VNĐ';
+    };
+
+    const parseVNDToNumber = (value) => {
+      if (!value) return null;
+      // Remove all non-digit characters except for the first decimal point
+      const cleanValue = value.replace(/[^\d]/g, '');
+      return cleanValue ? parseInt(cleanValue, 10) : null;
+    };
+
+    const handleSoTienGiamToiDaInput = (event) => {
+      const inputValue = event.target.value;
+      const numericValue = parseVNDToNumber(inputValue);
+      
+      // Clear validation error when user starts typing
+      clearValidationError('soTienGiamToiDa');
+      
+      // Update the actual value
+      discountConfig.value.soTienGiamToiDa = numericValue;
+      
+      // Format the display value
+      if (numericValue && numericValue > 0) {
+        formattedSoTienGiamToiDa.value = formatNumberToVND(numericValue);
+      } else {
+        formattedSoTienGiamToiDa.value = '';
+      }
+    };
+
+    const formatSoTienGiamToiDa = () => {
+      if (discountConfig.value.soTienGiamToiDa && discountConfig.value.soTienGiamToiDa > 0) {
+        formattedSoTienGiamToiDa.value = formatNumberToVND(discountConfig.value.soTienGiamToiDa);
+      }
+    };
+
     onMounted(() => {
       loadProducts();
     });
@@ -831,11 +1048,29 @@ export default {
       isFormValid: computed(() => {
         return (
           newCampaign.value.tenDotGiamGia &&
+          newCampaign.value.tenDotGiamGia.trim() !== '' &&
           newCampaign.value.thoiGianBatDau &&
           newCampaign.value.thoiGianKetThuc &&
-          selectedProductDetails.value.length > 0
+          discountConfig.value.value &&
+          discountConfig.value.value > 0 &&
+          discountConfig.value.soTienGiamToiDa &&
+          discountConfig.value.soTienGiamToiDa > 0 &&
+          Object.values(validationErrors.value).every(error => error === '') &&
+          (discountConfig.value.applyTo === 'all' || selectedProductDetails.value.length > 0)
         );
       }),
+      validationErrors,
+      validateTenDotGiamGia,
+      validateThoiGianBatDau,
+      validateThoiGianKetThuc,
+      validateDateRange,
+      validateDiscountValue,
+      validateSoTienGiamToiDa,
+      clearValidationError,
+      validateAllFields,
+      formattedSoTienGiamToiDa,
+      handleSoTienGiamToiDaInput,
+      formatSoTienGiamToiDa,
     };
   },
 };

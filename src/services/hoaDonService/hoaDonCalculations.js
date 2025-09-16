@@ -5,7 +5,7 @@
 // Calculate total revenue from completed invoices
 export const calculateTotalRevenue = (allInvoices) => {
   return allInvoices
-    .filter((invoice) => invoice.trangThai?.id === 21)
+    .filter((invoice) => invoice.trangThai?.id === 5)
     .reduce((sum, invoice) => sum + (invoice.tongTienThanhToan || 0), 0);
 };
 

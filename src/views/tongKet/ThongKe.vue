@@ -80,9 +80,27 @@
             Xu Hướng Doanh Thu
           </h3>
           <div class="chart-actions">
-            <button class="chart-btn active">Ngày</button>
-            <button class="chart-btn">Tuần</button>
-            <button class="chart-btn">Tháng</button>
+            <button 
+              class="chart-btn" 
+              :class="{ active: revenuePeriod === 'daily' }"
+              @click="changeRevenuePeriod('daily')"
+            >
+              Ngày
+            </button>
+            <button 
+              class="chart-btn" 
+              :class="{ active: revenuePeriod === 'weekly' }"
+              @click="changeRevenuePeriod('weekly')"
+            >
+              Tuần
+            </button>
+            <button 
+              class="chart-btn" 
+              :class="{ active: revenuePeriod === 'monthly' }"
+              @click="changeRevenuePeriod('monthly')"
+            >
+              Tháng
+            </button>
           </div>
         </div>
         <div class="chart-container revenue-chart-container">
@@ -113,7 +131,7 @@
             <iconify-icon icon="solar:fire-bold-duotone"></iconify-icon>
             Sản Phẩm Bán Chạy
           </h3>
-          <button class="view-all-btn">Xem tất cả</button>
+          <button class="view-all-btn" @click="navigateToProducts">Xem tất cả</button>
         </div>
         <DataTable 
           :data="topProducts" 
@@ -159,7 +177,7 @@
             <iconify-icon icon="solar:clipboard-list-bold-duotone"></iconify-icon>
             Đơn Hàng Gần Đây
           </h3>
-          <button class="view-all-btn">Xem tất cả</button>
+          <button class="view-all-btn" @click="navigateToInvoices">Xem tất cả</button>
         </div>
         <DataTable 
           :data="recentOrders" 
@@ -184,11 +202,6 @@
           <template #total="{ item }">
             <span class="order-total">{{ formatCurrency(item.total) }}</span>
           </template>
-          <template #status="{ item }">
-            <span class="status-badge" :class="getStatusClass(item.status)">
-              {{ item.status }}
-            </span>
-          </template>
           <template #createdAt="{ item }">
             <span class="order-date">{{ formatDate(item.createdAt) }}</span>
           </template>
@@ -201,9 +214,14 @@
 
 <script>
 import { ref, onMounted, nextTick } from 'vue'
-import Chart from 'chart.js/auto'
+import { useRouter } from 'vue-router'
+import { Chart, registerables } from 'chart.js'
+import * as XLSX from 'xlsx'
 import Breadcrumb from '@/components/Breadcrumb.vue'
 import DataTable from '@/components/DataTable.vue'
+import statisticsAPI from '@/services/api/statisticsAPI.js'
+
+Chart.register(...registerables)
 
 export default {
   name: 'ShoeDashboard',
@@ -212,7 +230,9 @@ export default {
     DataTable
   },
   setup() {
+    const router = useRouter()
     const selectedTimeRange = ref('30')
+    const revenuePeriod = ref('daily')
     const revenueChart = ref(null)
     const categoryChart = ref(null)
     let revenueChartInstance = null
@@ -238,19 +258,14 @@ export default {
 
     const pageStats = ref([
       {
-        value: '2.85 tỷ VNĐ',
+        value: '0 VNĐ',
         label: 'Doanh thu hôm nay',
         icon: 'solar:wallet-money-bold-duotone'
       },
       {
-        value: '156',
+        value: '0',
         label: 'Đơn hàng mới',
         icon: 'solar:bag-check-bold-duotone'
-      },
-      {
-        value: '1,234',
-        label: 'Khách truy cập',
-        icon: 'solar:users-group-two-rounded-bold-duotone'
       }
     ])
 
@@ -268,133 +283,20 @@ export default {
       { key: 'customer', label: 'Khách Hàng', class: 'customer-col' },
       { key: 'productCount', label: 'Sản Phẩm', class: 'product-count-col' },
       { key: 'total', label: 'Tổng Tiền', class: 'total-col' },
-      { key: 'status', label: 'Trạng Thái', class: 'status-col' },
       { key: 'createdAt', label: 'Ngày Tạo', class: 'date-col' }
     ])
 
-    // Fake data
+    // Real data from backend
     const stats = ref({
-      totalRevenue: 2850000000,
-      totalOrders: 15420,
-      totalCustomers: 8934,
-      totalProducts: 256
+      totalRevenue: 0,
+      totalOrders: 0,
+      totalCustomers: 0,
+      totalProducts: 0
     })
 
-    const topProducts = ref([
-      {
-        id: 1,
-        name: 'Nike Air Max 270',
-        sku: 'NK-AM270-BW',
-        category: 'Sneaker',
-        sold: 1250,
-        revenue: 185000000,
-        growth: 15.2,
-        image: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=100&h=100&fit=crop&crop=center'
-      },
-      {
-        id: 2,
-        name: 'Adidas Ultraboost 22',
-        sku: 'AD-UB22-GR',
-        category: 'Chạy bộ',
-        sold: 980,
-        revenue: 147000000,
-        growth: 12.8,
-        image: 'https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?w=100&h=100&fit=crop&crop=center'
-      },
-      {
-        id: 3,
-        name: 'Converse Chuck Taylor',
-        sku: 'CV-CT70-BK',
-        category: 'Canvas',
-        sold: 850,
-        revenue: 95000000,
-        growth: 8.5,
-        image: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?w=100&h=100&fit=crop&crop=center'
-      },
-      {
-        id: 4,
-        name: 'Vans Old Skool',
-        sku: 'VN-OS-WH',
-        category: 'Skateboard',
-        sold: 720,
-        revenue: 86000000,
-        growth: -2.3,
-        image: 'https://images.unsplash.com/photo-1525966222134-fcfa99b8ae77?w=100&h=100&fit=crop&crop=center'
-      },
-      {
-        id: 5,
-        name: 'New Balance 990v5',
-        sku: 'NB-990V5-GY',
-        category: 'Lifestyle',
-        sold: 645,
-        revenue: 129000000,
-        growth: 25.1,
-        image: 'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=100&h=100&fit=crop&crop=center'
-      }
-    ])
+    const topProducts = ref([])
 
-    const recentOrders = ref([
-      {
-        id: 1,
-        code: 'HD001234',
-        customer: {
-          name: 'Nguyễn Văn An',
-          avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face'
-        },
-        productCount: 2,
-        total: 2850000,
-        status: 'Đã giao',
-        createdAt: new Date('2024-01-15T10:30:00')
-      },
-      {
-        id: 2,
-        code: 'HD001235',
-        customer: {
-          name: 'Trần Thị Bình',
-          avatar: 'https://images.unsplash.com/photo-1494790108755-2616b332c7c8?w=40&h=40&fit=crop&crop=face'
-        },
-        productCount: 1,
-        total: 1590000,
-        status: 'Đang giao',
-        createdAt: new Date('2024-01-15T11:15:00')
-      },
-      {
-        id: 3,
-        code: 'HD001236',
-        customer: {
-          name: 'Lê Hoài Nam',
-          avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop&crop=face'
-        },
-        productCount: 3,
-        total: 4200000,
-        status: 'Chờ xử lý',
-        createdAt: new Date('2024-01-15T12:00:00')
-      },
-      {
-        id: 4,
-        code: 'HD001237',
-        customer: {
-          name: 'Phạm Thu Hương',
-          avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=40&h=40&fit=crop&crop=face'
-        },
-        productCount: 1,
-        total: 2100000,
-        status: 'Đã hủy',
-        createdAt: new Date('2024-01-15T14:20:00')
-      },
-      {
-        id: 5,
-        code: 'HD001238',
-        customer: {
-          name: 'Võ Minh Tuấn',
-          avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=40&h=40&fit=crop&crop=face'
-        },
-        productCount: 2,
-        total: 3150000,
-        status: 'Đã giao',
-        createdAt: new Date('2024-01-15T15:45:00')
-      }
-    ])
+    const recentOrders = ref([])
 
     const formatCurrency = (value) => {
       return new Intl.NumberFormat('vi-VN', {
@@ -435,7 +337,71 @@ export default {
       return classes[status] || 'status-default'
     }
 
-    const initCharts = async () => {
+    // Load dashboard data from backend
+    const loadDashboardData = async () => {
+      try {
+        const response = await statisticsAPI.getDashboardStats()
+        const data = response.data
+        
+        // Update main stats
+        stats.value = {
+          totalRevenue: data.totalRevenue || 0,
+          totalOrders: data.totalOrders || 0,
+          totalCustomers: data.totalCustomers || 0,
+          totalProducts: data.totalProducts || 0
+        }
+        
+        // Update page stats for breadcrumb with real data
+        pageStats.value = [
+          {
+            value: formatCurrency(data.todayRevenue || 0),
+            label: 'Doanh thu hôm nay',
+            icon: 'solar:wallet-money-bold-duotone'
+          },
+          {
+            value: (data.todayOrders || 0).toLocaleString(),
+            label: 'Đơn hàng mới',
+            icon: 'solar:bag-check-bold-duotone'
+          }
+        ]
+        
+        // Update top products
+        topProducts.value = (data.topProducts || []).map(product => ({
+          id: product.productId,
+          name: product.productName,
+          sku: product.productCode,
+          category: product.categoryName,
+          sold: product.totalSold,
+          revenue: product.totalRevenue,
+          growth: product.growthPercentage,
+          image: product.imageUrl || 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=100&h=100&fit=crop&crop=center'
+        }))
+        
+        // Update recent orders
+        recentOrders.value = (data.recentOrders || []).map(order => ({
+          id: order.orderId,
+          code: order.orderCode,
+          customer: {
+            name: order.customerName,
+            avatar: order.customerAvatar
+          },
+          productCount: order.productCount,
+          total: order.totalAmount,
+          status: order.status,
+          createdAt: new Date(order.createdAt)
+        }))
+        
+        // Initialize charts with real data
+        await initCharts(data)
+        
+      } catch (error) {
+        console.error('Error loading dashboard data:', error)
+        // Initialize charts with empty data on error
+        await initCharts()
+      }
+    }
+
+    const initCharts = async (data = null) => {
       await nextTick()
       
       // Revenue Chart
@@ -446,13 +412,17 @@ export default {
           revenueChartInstance.destroy()
         }
         
+        const revenueData = data?.revenueData || []
+        const labels = revenueData.map(item => item.date) || ['1/1', '2/1', '3/1', '4/1', '5/1']
+        const revenues = revenueData.map(item => item.revenue / 1000000) || [120, 150, 180, 220, 190] // Convert to millions
+        
         revenueChartInstance = new Chart(ctx, {
           type: 'line',
           data: {
-            labels: ['1/1', '2/1', '3/1', '4/1', '5/1', '6/1', '7/1', '8/1', '9/1', '10/1', '11/1', '12/1', '13/1', '14/1', '15/1'],
+            labels: labels,
             datasets: [{
               label: 'Doanh thu',
-              data: [120, 150, 180, 220, 190, 240, 280, 260, 300, 320, 290, 350, 380, 360, 420],
+              data: revenues,
               borderColor: '#007bff',
               backgroundColor: 'rgba(0, 123, 255, 0.1)',
               fill: true,
@@ -502,12 +472,16 @@ export default {
           categoryChartInstance.destroy()
         }
         
+        const categoryData = data?.categoryData || []
+        const categoryLabels = categoryData.map(item => item.categoryName) || ['Sneaker', 'Chạy bộ', 'Canvas', 'Skateboard', 'Lifestyle']
+        const categoryPercentages = categoryData.map(item => item.percentage) || [35, 25, 20, 12, 8]
+        
         categoryChartInstance = new Chart(ctx2, {
           type: 'doughnut',
           data: {
-            labels: ['Sneaker', 'Chạy bộ', 'Canvas', 'Skateboard', 'Lifestyle'],
+            labels: categoryLabels,
             datasets: [{
-              data: [35, 25, 20, 12, 8],
+              data: categoryPercentages,
               backgroundColor: [
                 '#007bff',
                 '#28a745',
@@ -540,18 +514,168 @@ export default {
 
     const updateData = () => {
       console.log('Updating data for range:', selectedTimeRange.value)
+      loadDashboardData()
     }
 
-    const exportReport = () => {
-      console.log('Exporting report...')
+    const changeRevenuePeriod = async (period) => {
+      revenuePeriod.value = period
+      await updateRevenueChart()
+    }
+
+    const updateRevenueChart = async () => {
+      try {
+        const endDate = new Date()
+        const startDate = new Date()
+        startDate.setDate(endDate.getDate() - parseInt(selectedTimeRange.value))
+        
+        const response = await statisticsAPI.getRevenueByPeriod(
+          startDate.toISOString().split('T')[0],
+          endDate.toISOString().split('T')[0],
+          revenuePeriod.value
+        )
+        
+        const revenueData = response.data || []
+        
+        if (revenueChartInstance) {
+          revenueChartInstance.data.labels = revenueData.map(item => item.date)
+          revenueChartInstance.data.datasets[0].data = revenueData.map(item => item.revenue)
+          revenueChartInstance.data.datasets[1].data = revenueData.map(item => item.orderCount)
+          revenueChartInstance.update()
+        }
+      } catch (error) {
+        console.error('Error updating revenue chart:', error)
+      }
+    }
+
+    const navigateToProducts = () => {
+      router.push('/san-pham')
+    }
+
+    const navigateToInvoices = () => {
+      router.push('/hoa-don')
+    }
+
+    const exportReport = async () => {
+      try {
+        // Get current date for filename
+        const currentDate = new Date()
+        const dateStr = currentDate.toISOString().split('T')[0]
+        const timeStr = currentDate.toTimeString().split(' ')[0].replace(/:/g, '-')
+        
+        // Create workbook
+        const workbook = XLSX.utils.book_new()
+        
+        // Sheet 1: Tổng quan thống kê
+        const overviewData = [
+          ['BÁO CÁO THỐNG KÊ PHOSTEP'],
+          ['Ngày xuất:', `${currentDate.toLocaleDateString('vi-VN')} ${currentDate.toLocaleTimeString('vi-VN')}`],
+          [''],
+          ['TỔNG QUAN'],
+          ['Chỉ số', 'Giá trị'],
+          ['Tổng doanh thu', formatCurrency(stats.value.totalRevenue)],
+          ['Tổng đơn hàng', stats.value.totalOrders.toLocaleString()],
+          ['Tổng khách hàng', stats.value.totalCustomers.toLocaleString()],
+          ['Tổng sản phẩm', stats.value.totalProducts.toLocaleString()]
+        ]
+        
+        const overviewSheet = XLSX.utils.aoa_to_sheet(overviewData)
+        XLSX.utils.book_append_sheet(workbook, overviewSheet, 'Tổng quan')
+        
+        // Sheet 2: Sản phẩm bán chạy
+        const productData = [
+          ['SẢN PHẨM BÁN CHẠY'],
+          [''],
+          ['Tên sản phẩm', 'Mã sản phẩm', 'Danh mục', 'Đã bán', 'Doanh thu', 'Tăng trưởng (%)']
+        ]
+        
+        topProducts.value.forEach(product => {
+          productData.push([
+            product.name,
+            product.sku,
+            product.category,
+            product.sold.toLocaleString(),
+            formatCurrency(product.revenue),
+            product.growth + '%'
+          ])
+        })
+        
+        const productSheet = XLSX.utils.aoa_to_sheet(productData)
+        XLSX.utils.book_append_sheet(workbook, productSheet, 'Sản phẩm bán chạy')
+        
+        // Sheet 3: Đơn hàng gần đây
+        const orderData = [
+          ['ĐỚN HÀNG GẦN ĐÂY'],
+          [''],
+          ['Mã đơn', 'Khách hàng', 'Số sản phẩm', 'Tổng tiền', 'Ngày tạo']
+        ]
+        
+        recentOrders.value.forEach(order => {
+          orderData.push([
+            order.code,
+            order.customer.name,
+            order.productCount + ' sản phẩm',
+            formatCurrency(order.total),
+            formatDate(order.createdAt)
+          ])
+        })
+        
+        const orderSheet = XLSX.utils.aoa_to_sheet(orderData)
+        XLSX.utils.book_append_sheet(workbook, orderSheet, 'Đơn hàng gần đây')
+        
+        // Sheet 4: Dữ liệu doanh thu theo thời gian
+        try {
+          const endDate = new Date()
+          const startDate = new Date()
+          startDate.setDate(endDate.getDate() - parseInt(selectedTimeRange.value))
+          
+          const response = await statisticsAPI.getRevenueByPeriod(
+            startDate.toISOString().split('T')[0],
+            endDate.toISOString().split('T')[0],
+            revenuePeriod.value
+          )
+          
+          const revenueData = response.data || []
+          
+          const revenueSheetData = [
+            [`DOANH THU THEO ${revenuePeriod.value.toUpperCase()}`],
+            [''],
+            ['Thời gian', 'Doanh thu', 'Số đơn hàng']
+          ]
+          
+          revenueData.forEach(item => {
+            revenueSheetData.push([
+              item.date,
+              formatCurrency(item.revenue),
+              item.orderCount.toLocaleString()
+            ])
+          })
+          
+          const revenueSheet = XLSX.utils.aoa_to_sheet(revenueSheetData)
+          XLSX.utils.book_append_sheet(workbook, revenueSheet, 'Doanh thu theo thời gian')
+        } catch (error) {
+          console.error('Error fetching revenue data for export:', error)
+        }
+        
+        // Export file
+        const fileName = `BaoCao_ThongKe_PhoStep_${dateStr}_${timeStr}.xlsx`
+        XLSX.writeFile(workbook, fileName)
+        
+        // Show success message (you can add toast notification here)
+        console.log('Báo cáo đã được xuất thành công:', fileName)
+        
+      } catch (error) {
+        console.error('Lỗi khi xuất báo cáo:', error)
+        // Show error message (you can add toast notification here)
+      }
     }
 
     onMounted(() => {
-      initCharts()
+      loadDashboardData()
     })
 
     return {
       selectedTimeRange,
+      revenuePeriod,
       stats,
       topProducts,
       recentOrders,
@@ -567,6 +691,9 @@ export default {
       getCategoryClass,
       getStatusClass,
       updateData,
+      changeRevenuePeriod,
+      navigateToProducts,
+      navigateToInvoices,
       exportReport
     }
   }
@@ -576,8 +703,6 @@ export default {
 <style scoped>
 /* ===== GENERAL STYLES ===== */
 .dashboard-container {
-  padding: 24px;
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   min-height: 100vh;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }

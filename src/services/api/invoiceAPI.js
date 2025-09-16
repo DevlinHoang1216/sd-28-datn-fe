@@ -103,5 +103,12 @@ export default {
 
   // Print invoice
   printInvoice: (invoiceId) => 
-    invoiceAPI.get(`/hoa-don/${invoiceId}/print`, { responseType: 'blob' })
+    invoiceAPI.get(`/hoa-don/${invoiceId}/print`, { responseType: 'blob' }),
+
+  // VNPay payment APIs
+  createVNPayPayment: (paymentData) => 
+    invoiceAPI.post('/payment/vnpay/create', paymentData),
+  
+  processCombinedPayment: (paymentData) => 
+    invoiceAPI.post('/payment/vnpay/process-combined', paymentData)
 }

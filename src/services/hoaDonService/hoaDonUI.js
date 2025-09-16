@@ -43,5 +43,5 @@ export const handleInvoiceHighlight = (maHoaDon) => {
 
 // Navigation helper
 export const navigateToSalesCounter = (router) => {
-  router.push({ name: 'BanHangTaiQuay' });
+  router.push({ name: 'BanTaiQuay' });
 };
