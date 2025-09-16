@@ -76,8 +76,8 @@ export default {
     invoiceAPI.get(`/hoa-don/${invoiceId}/chi-tiet`),
 
   // Payment APIs
-  processPayment: (invoiceId, paymentData) => 
-    invoiceAPI.post(`/hoa-don/${invoiceId}/thanh-toan`, paymentData),
+  processPayment: (paymentData) => 
+    invoiceAPI.post('/ban-hang/thanh-toan', paymentData),
 
   // Customer APIs for invoice
   searchCustomers: (keyword) => 

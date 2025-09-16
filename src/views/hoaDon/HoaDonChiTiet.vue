@@ -247,9 +247,9 @@ onMounted(() => {
                     </td>
                     <td class="text-center py-4 px-2 text-gray-700 dark:text-gray-300">{{ product.mauSac }}</td>
                     <td class="text-center py-4 px-2 text-gray-700 dark:text-gray-300">{{ product.kichCo }}</td>
-                    <td class="text-center py-4 px-2 text-gray-700 dark:text-gray-300">{{ product.soLuongTonKho }}</td>
+                    <td class="text-center py-4 px-2 text-gray-700 dark:text-gray-300">{{ product.soLuong }}</td>
                     <td class="text-right py-4 px-2 font-semibold text-blue-600 dark:text-blue-400">{{ formatCurrency(product.giaBan) }}</td>
-                    <td class="text-right py-4 px-2 font-bold text-green-600 dark:text-green-400">{{ formatCurrency(product.giaBan) }}</td>
+                    <td class="text-right py-4 px-2 font-bold text-green-600 dark:text-green-400">{{ formatCurrency(product.giaBan * product.soLuong) }}</td>
                   </tr>
                 </tbody>
               </table>

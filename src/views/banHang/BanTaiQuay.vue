@@ -620,59 +620,59 @@
               <div class="payment-methods-grid">
                 <div 
                   class="payment-method-card"
-                  :class="{ active: phuongThucThanhToan === 'TIEN_MAT' }"
-                  @click="chonPhuongThuc('TIEN_MAT')"
+                  :class="{ active: phuongThucThanhToan === 'Tiền mặt' }"
+                  @click="chonPhuongThuc('Tiền mặt')"
                 >
                   <div class="method-icon">
-                    <iconify-icon icon="solar:wallet-money-bold-duotone"></iconify-icon>
+                    <iconify-icon icon="solar:wallet-money-bold"></iconify-icon>
                   </div>
-                  <div class="method-info">
-                    <h5>Tiền mặt</h5>
+                  <div class="method-content">
+                    <h4>Tiền mặt</h4>
                     <p>Thanh toán trực tiếp</p>
                   </div>
                   <div class="method-check">
-                    <iconify-icon icon="solar:check-circle-bold" v-if="phuongThucThanhToan === 'TIEN_MAT'"></iconify-icon>
+                    <iconify-icon icon="solar:check-circle-bold" v-if="phuongThucThanhToan === 'Tiền mặt'"></iconify-icon>
                   </div>
                 </div>
                 
                 <div 
                   class="payment-method-card"
-                  :class="{ active: phuongThucThanhToan === 'VNPAY' }"
-                  @click="chonPhuongThuc('VNPAY')"
+                  :class="{ active: phuongThucThanhToan === 'VnPay' }"
+                  @click="chonPhuongThuc('VnPay')"
                 >
                   <div class="method-icon vnpay">
-                    <img src="/src/assets/images/Icon-VNPAY-QR.webp" alt="VNPay" class="vnpay-logo" />
+                    <iconify-icon icon="solar:card-bold"></iconify-icon>
                   </div>
-                  <div class="method-info">
-                    <h5>VNPay</h5>
+                  <div class="method-content">
+                    <h4>VNPay</h4>
                     <p>Thanh toán online</p>
                   </div>
                   <div class="method-check">
-                    <iconify-icon icon="solar:check-circle-bold" v-if="phuongThucThanhToan === 'VNPAY'"></iconify-icon>
+                    <iconify-icon icon="solar:check-circle-bold" v-if="phuongThucThanhToan === 'VnPay'"></iconify-icon>
                   </div>
                 </div>
                 
                 <div 
                   class="payment-method-card"
-                  :class="{ active: phuongThucThanhToan === 'KET_HOP' }"
-                  @click="chonPhuongThuc('KET_HOP')"
+                  :class="{ active: phuongThucThanhToan === 'Cả 2' }"
+                  @click="chonPhuongThuc('Cả 2')"
                 >
                   <div class="method-icon combined">
-                    <iconify-icon icon="solar:card-transfer-bold-duotone"></iconify-icon>
+                    <iconify-icon icon="solar:wallet-2-bold"></iconify-icon>
                   </div>
-                  <div class="method-info">
-                    <h5>Kết hợp</h5>
+                  <div class="method-content">
+                    <h4>Kết hợp</h4>
                     <p>Tiền mặt + VNPay</p>
                   </div>
                   <div class="method-check">
-                    <iconify-icon icon="solar:check-circle-bold" v-if="phuongThucThanhToan === 'KET_HOP'"></iconify-icon>
+                    <iconify-icon icon="solar:check-circle-bold" v-if="phuongThucThanhToan === 'Cả 2'"></iconify-icon>
                   </div>
                 </div>
               </div>
             </div>
 
             <!-- Input tiền mặt -->
-            <div v-if="phuongThucThanhToan === 'TIEN_MAT'" class="payment-input-section">
+            <div v-if="phuongThucThanhToan === 'Tiền mặt'" class="payment-input-section">
               <div class="input-card">
                 <div class="input-header">
 
@@ -699,7 +699,7 @@
             </div>
 
             <!-- Input kết hợp -->
-            <div v-if="phuongThucThanhToan === 'KET_HOP'" class="combined-payment-section">
+            <div v-if="phuongThucThanhToan === 'Cả 2'" class="combined-payment-section">
               <div class="combined-inputs">
                 <div class="input-card">
                   <div class="input-header">
@@ -943,7 +943,7 @@ export default {
     const tuKhoaSanPham = ref('');
 
     // Payment
-    const phuongThucThanhToan = ref('TIEN_MAT');
+    const phuongThucThanhToan = ref('Tiền mặt');
     const maGiamGia = ref('');
     const thongBaoGiamGia = ref('');
     const giamGia = ref(0);
@@ -1017,11 +1017,11 @@ export default {
     const isPaymentValid = computed(() => {
       if (!currentHoaDon.value || currentHoaDon.value.items.length === 0) return false;
       
-      if (phuongThucThanhToan.value === 'TIEN_MAT') {
+      if (phuongThucThanhToan.value === 'Tiền mặt') {
         return khachThanhToan.value >= khachCanTra.value;
       }
       
-      if (phuongThucThanhToan.value === 'KET_HOP') {
+      if (phuongThucThanhToan.value === 'Cả 2') {
         const totalPaid = (parseFloat(tienMat.value) || 0) + (parseFloat(tienVNPay.value) || 0);
         return totalPaid >= khachCanTra.value && tienMat.value > 0 && tienVNPay.value > 0;
       }
@@ -1161,7 +1161,10 @@ export default {
         return;
       }
 
-      if (!currentHoaDon.value) return;
+      if (!currentHoaDon.value) {
+        toast.error('Vui lòng chọn hoặc tạo hóa đơn trước khi thêm sản phẩm!');
+        return;
+      }
 
       try {
         // Add product to cart using cart API - use discounted price if available
@@ -1850,13 +1853,13 @@ export default {
     const chonPhuongThuc = (phuongThuc) => {
       phuongThucThanhToan.value = phuongThuc;
       // Reset payment amounts when switching methods
-      if (phuongThuc === 'KET_HOP') {
+      if (phuongThuc === 'Cả 2') {
         tienMat.value = 0;
         tienVNPay.value = khachCanTra.value;
       } else {
         tienMat.value = 0;
         tienVNPay.value = 0;
-        khachThanhToan.value = phuongThuc === 'TIEN_MAT' ? khachCanTra.value : 0;
+        khachThanhToan.value = phuongThuc === 'Tiền mặt' ? khachCanTra.value : 0;
       }
       toast.info(`Đã chọn phương thức thanh toán: ${phuongThuc.replace('_', ' ').toLowerCase()}`);
     };
@@ -1915,47 +1918,123 @@ export default {
       tienMatFormatted.value = formatVNDInput(tienMat.value);
     };
 
+    // Reset payment form to default values
+    const resetPaymentForm = () => {
+      phuongThucThanhToan.value = 'Tiền mặt';
+      maGiamGia.value = '';
+      thongBaoGiamGia.value = '';
+      giamGia.value = 0;
+      khachThanhToan.value = 0;
+      tienMat.value = 0;
+      tienVNPay.value = 0;
+      khachThanhToanFormatted.value = '';
+      tienMatFormatted.value = '';
+    };
+
     const xacNhanThanhToan = async () => {
       if (!currentHoaDon.value || currentHoaDon.value.items.length === 0) {
         toast.warning('Giỏ hàng trống! Không thể thanh toán.');
         return;
       }
 
-      if (khachThanhToan.value < khachCanTra.value) {
-        toast.error('Số tiền khách đưa không đủ!');
-        return;
+      // Validate payment amounts based on payment method
+      if (phuongThucThanhToan.value === 'Tiền mặt') {
+        if (khachThanhToan.value < khachCanTra.value) {
+          toast.error('Số tiền mặt không đủ để thanh toán!');
+          return;
+        }
+      } else if (phuongThucThanhToan.value === 'VnPay') {
+        if (tienVNPay.value < khachCanTra.value) {
+          toast.error('Số tiền VNPay không đủ để thanh toán!');
+          return;
+        }
+      } else if (phuongThucThanhToan.value === 'Cả 2') {
+        if ((tienMat.value + tienVNPay.value) < khachCanTra.value) {
+          toast.error('Tổng số tiền thanh toán không đủ!');
+          return;
+        }
+        if (tienMat.value <= 0 || tienVNPay.value <= 0) {
+          toast.error('Cả tiền mặt và VNPay phải lớn hơn 0 khi thanh toán kết hợp!');
+          return;
+        }
       }
 
+      try {
+        // Prepare payment request data
+        const paymentRequest = {
+          hoaDonId: tabActive.value,
+          nhanVienId: 1, // Default employee ID - should be from auth context
+          phuongThucThanhToan: phuongThucThanhToan.value,
+          tongTien: khachCanTra.value,
+          tienMat: phuongThucThanhToan.value === 'VnPay' ? 0 : 
+                   (phuongThucThanhToan.value === 'Tiền mặt' ? khachThanhToan.value : tienMat.value),
+          tienChuyenKhoan: phuongThucThanhToan.value === 'Tiền mặt' ? 0 : tienVNPay.value,
+          phiVanChuyen: 0,
+          cartItems: currentHoaDon.value.items.map(item => ({
+            idChiTietSanPham: item.id,
+            soLuong: item.soLuong,
+            gia: item.giaBan
+          })),
+          phieuGiamGiaId: selectedVoucher.value?.id || null,
+          ghiChu: `Thanh toán tại quầy - ${phuongThucThanhToan.value}`
+        };
 
-      const hoaDonInfo = {
-        id: tabActive.value,
-        khachHang: khachHangHienTai.value,
-        tongTienHang: tongTien.value,
-        phiGiaoHang: 0,
-        giamGia: giamGia.value,
-        khachCanTra: khachCanTra.value,
-        khachThanhToan: khachThanhToan.value,
-        tienThua: tienThua.value,
-        phuongThucThanhToan: phuongThucThanhToan.value,
-        isDelivery: false,
-        deliveryInfo: null,
-        items: currentHoaDon.value.items
-      };
+        console.log('Processing payment:', paymentRequest);
 
-      // In real app, this would save to database
-      console.log('Saving invoice:', hoaDonInfo);
-      
-      toast.success(`Thanh toán hóa đơn ${tabActive.value} thành công!`);
-      
-      // Remove current tab
-      hoaDonTabs.value = hoaDonTabs.value.filter(tab => tab.id !== tabActive.value);
-      if (hoaDonTabs.value.length > 0) {
-        tabActive.value = hoaDonTabs.value[0].id;
+        // Call backend payment API
+        const response = await invoiceAPI.processPayment(paymentRequest);
+        
+        if (response.data.success) {
+          const paymentResult = response.data;
+          
+          // Show success message with payment details
+          let successMessage = `Thanh toán hóa đơn ${paymentResult.maHoaDon} thành công!`;
+          if (phuongThucThanhToan.value === 'Tiền mặt' && paymentResult.tienThua > 0) {
+            successMessage += ` Tiền thừa: ${formatCurrency(paymentResult.tienThua)}`;
+          }
+          
+          toast.success(successMessage);
+          
+          // Remove current tab from pending invoices
+          hoaDonTabs.value = hoaDonTabs.value.filter(tab => tab.id !== tabActive.value);
+          
+          // Switch to next available tab if any exist
+          if (hoaDonTabs.value.length > 0) {
+            tabActive.value = hoaDonTabs.value[0].id;
+          } else {
+            // No more pending invoices, clear active tab
+            tabActive.value = null;
+          }
+          
+          // Update page stats
+          pageStats.value[0].value = hoaDonTabs.value.length.toString();
+          
+          // Close payment modal and reset form
+          showThanhToanModal.value = false;
+          resetPaymentForm();
+          
+          // Clear selected voucher
+          selectedVoucher.value = null;
+          
+          // Navigate to invoice detail page
+          router.push(`/hoa-don/chi-tiet/${paymentResult.hoaDonId}`);
+          
+        } else {
+          toast.error(response.data.message || 'Có lỗi xảy ra khi thanh toán');
+        }
+        
+      } catch (error) {
+        console.error('Payment error:', error);
+        
+        let errorMessage = 'Có lỗi xảy ra khi xử lý thanh toán';
+        if (error.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        
+        toast.error(errorMessage);
       }
-      // Do not auto-create new invoice - let user create manually
-      
-      showThanhToanModal.value = false;
-      resetPaymentForm();
     };
 
     // Load cart items for invoice

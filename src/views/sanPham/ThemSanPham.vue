@@ -1781,6 +1781,11 @@ export default {
             toast.error('Vui lòng chọn đế giày');
             return;
           }
+          
+          if (!productForm.value.imageUrl || productForm.value.imageUrl.trim() === '') {
+            toast.error('Vui lòng tải lên ảnh đại diện sản phẩm');
+            return;
+          }
         }
         
         if (productVariants.value.length === 0) {
@@ -2106,6 +2111,10 @@ export default {
   font-size: 14px;
   transition: all 0.3s ease;
   background: #f9fafb;
+}
+
+.form-textarea {
+  width: 100%;
 }
 
 .input-with-button .form-input {
