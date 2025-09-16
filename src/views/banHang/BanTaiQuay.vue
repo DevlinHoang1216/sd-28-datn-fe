@@ -250,7 +250,7 @@
               </div>
               <div class="summary-line total-line">
                 <span>Khách cần trả:</span>
-                <strong class="total-amount">{{ formatCurrency(khachCanTra) }}</strong>
+                <strong class="total-amount" style="color: #059669; font-size: 1.3rem;">{{ formatCurrency(khachCanTra) }}</strong>
               </div>
             </div>
 
@@ -641,7 +641,7 @@
                   @click="chonPhuongThuc('VnPay')"
                 >
                   <div class="method-icon vnpay">
-                    <iconify-icon icon="solar:card-bold"></iconify-icon>
+                    <img src="@/assets/images/Icon-VNPAY-QR.webp" alt="VNPay" class="vnpay-logo" />
                   </div>
                   <div class="method-content">
                     <h4>VNPay</h4>
@@ -1893,8 +1893,8 @@ export default {
       const numericValue = parseVNDInput(inputValue);
       khachThanhToan.value = numericValue;
       
-      // Update formatted display while typing (without full formatting to avoid cursor jump)
-      khachThanhToanFormatted.value = inputValue;
+      // Format the display value immediately while typing
+      khachThanhToanFormatted.value = formatVNDInput(numericValue);
     };
 
     const formatKhachThanhToanInput = () => {
@@ -1910,8 +1910,8 @@ export default {
       const remaining = khachCanTra.value - numericValue;
       tienVNPay.value = remaining > 0 ? remaining : 0;
       
-      // Update formatted display while typing
-      tienMatFormatted.value = inputValue;
+      // Format the display value immediately while typing
+      tienMatFormatted.value = formatVNDInput(numericValue);
     };
 
     const formatTienMatInput = () => {
@@ -3079,7 +3079,7 @@ export default {
 }
 
 .total-amount {
-  color: #ffffff !important;
+  color: #ffffff;
   font-size: 1.25rem;
 }
 
@@ -4754,11 +4754,6 @@ export default {
 .method-icon.vnpay {
   background: white;
   border: 2px solid #e5e7eb;
-  color: white;
-}
-
-.method-icon.combined {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   color: white;
 }
 
