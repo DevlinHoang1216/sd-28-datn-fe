@@ -326,6 +326,7 @@ export const productService = {
     })
   },
   getChiTietSanPhamById: (id) => productAPI.get(`/chi-tiet-san-pham/${id}`),
+  getProductDetailById: (id) => productAPI.get(`/chi-tiet-san-pham/${id}`),
   updateChiTietSanPham: (id, data) => productAPI.put(`/chi-tiet-san-pham/${id}`, data),
 
   // Sales Counter (Ban Hang) APIs - Only active products with stock

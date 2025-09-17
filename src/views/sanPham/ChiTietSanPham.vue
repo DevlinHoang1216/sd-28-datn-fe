@@ -784,8 +784,8 @@ export default {
 
     const downloadQRCode = async (variant) => {
       try {
-        // Create QR code content using product code as main identifier
-        const qrContent = variant.ma || variant.productCode || `PRODUCT_${variant.id}`;
+        // Create QR code content using product detail ID as main identifier
+        const qrContent = `${variant.id}`;
         
         // Generate QR code as data URL using the qrcode library
         const qrDataUrl = await QRCode.toDataURL(qrContent, {
@@ -807,7 +807,7 @@ export default {
         const blobUrl = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = blobUrl;
-        link.download = `QR_${qrContent}.png`;
+        link.download = `QR_ChiTietSanPham_${variant.id}.png`;
         link.style.display = 'none';
         
         // Add to DOM, click, and remove
@@ -820,7 +820,12 @@ export default {
           URL.revokeObjectURL(blobUrl);
         }, 100);
         
-        toast.success(`Đã tải mã QR cho sản phẩm: ${qrContent}`);
+        const productName = variant.idSanPham?.tenSanPham || 'Sản phẩm';
+        const sizeName = variant.idKichCo?.tenKichCo || '';
+        const colorName = variant.idMauSac?.tenMauSac || '';
+        const variantInfo = `${productName} - ${sizeName} - ${colorName}`;
+        
+        toast.success(`Đã tải mã QR cho chi tiết sản phẩm ID: ${variant.id} (${variantInfo})`);
       } catch (error) {
         console.error('Error generating QR code:', error);
         toast.error('Không thể tạo mã QR. Vui lòng thử lại.');
