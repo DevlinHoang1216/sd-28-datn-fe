@@ -105,6 +105,18 @@
               />
             </div>
 
+            <!-- Usage Quantity -->
+            <div class="form-group">
+              <label class="form-label">Số lượng sử dụng</label>
+              <input
+                v-model.number="coupon.soLuongDung"
+                type="number"
+                class="form-input"
+                placeholder="Nhập số lượng sử dụng"
+                min="1"
+              />
+            </div>
+
             <!-- Start Date -->
             <div class="form-group">
               <label class="form-label">Ngày bắt đầu</label>
@@ -184,10 +196,10 @@
                 {{ item.ten || 'N/A' }}
               </template>
               <template #email="{ item }">
-                {{ item.taiKhoan?.email || 'N/A' }}
+                {{ item.email || 'N/A' }}
               </template>
               <template #soDienThoai="{ item }">
-                {{ item.taiKhoan?.soDienThoai || 'N/A' }}
+                {{ item.soDienThoai || 'N/A' }}
               </template>
             </DataTable>
 
@@ -208,10 +220,10 @@
                   {{ item.ten || 'N/A' }}
                 </template>
                 <template #email="{ item }">
-                  {{ item.taiKhoan?.email || 'N/A' }}
+                  {{ item.email || 'N/A' }}
                 </template>
                 <template #soDienThoai="{ item }">
-                  {{ item.taiKhoan?.soDienThoai || 'N/A' }}
+                  {{ item.soDienThoai || 'N/A' }}
                 </template>
               </DataTable>
             </div>
@@ -276,6 +288,7 @@ export default {
         giaTriGiam: null,
         hoaDonToiThieu: null,
         soTienGiamToiDa: null,
+        soLuongDung: null,
         ngayBatDau: '',
         ngayKetThuc: '',
         loaiGiamGia: '',
@@ -398,6 +411,7 @@ export default {
           giaTriGiam: data.phanTramGiamGia || data.soTienGiamGia,
           hoaDonToiThieu: data.hoaDonToiThieu,
           soTienGiamToiDa: data.soTienGiamToiDa,
+          soLuongDung: data.soLuongDung,
           ngayBatDau: this.formatDateForInput(data.ngayBatDau),
           ngayKetThuc: this.formatDateForInput(data.ngayKetThuc),
           loaiGiamGia: data.loaiPhieuGiamGia === 'PHANTRAM' ? 'PHAN_TRAM' : data.loaiPhieuGiamGia || 'SO_TIEN_CO_DINH',
@@ -523,6 +537,10 @@ export default {
       }
       if (this.coupon.hoaDonToiThieu !== null && this.coupon.hoaDonToiThieu < 0) {
         this.toast.error('Hóa đơn tối thiểu không được nhỏ hơn 0!');
+        return false;
+      }
+      if (!this.coupon.soLuongDung || this.coupon.soLuongDung <= 0) {
+        this.toast.error('Số lượng sử dụng phải lớn hơn 0!');
         return false;
       }
       if (!this.coupon.ngayBatDau || !this.coupon.ngayKetThuc) {
