@@ -106,8 +106,6 @@ export const applyFilters = (tempFilters, filters, toast, refreshCallback) => {
   if (refreshCallback) {
     refreshCallback()
   }
-  
-  toast.success('Đã áp dụng bộ lọc!', { timeout: 2000 })
 }
 
 export const resetFilters = (filters, tempFilters, toast, refreshCallback) => {

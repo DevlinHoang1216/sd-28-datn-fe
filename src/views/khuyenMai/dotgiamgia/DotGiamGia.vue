@@ -79,7 +79,7 @@
             <label class="filter-label">Ngày bắt đầu</label>
             <input
               v-model="tempFilters.startDate"
-              type="datetime-local"
+              type="date"
               class="filter-input"
               @change="filterCampaigns"
             />
@@ -88,7 +88,7 @@
             <label class="filter-label">Ngày kết thúc</label>
             <input
               v-model="tempFilters.endDate"
-              type="datetime-local"
+              type="date"
               class="filter-input"
               @change="filterCampaigns"
             />
@@ -300,7 +300,6 @@ export default {
           tenTrangThai: campaign.trangThai ? 'DANG_DIEN_RA' : 'DA_KET_THUC',
         }));
 
-        toast.success('Dữ liệu đợt giảm giá đã được tải thành công!', { timeout: 3000 });
       } catch (error) {
         console.error('Lỗi khi tải đợt giảm giá:', error);
         errorMessage.value = `Lỗi khi tải dữ liệu đợt giảm giá: ${error.message}`;
@@ -319,7 +318,6 @@ export default {
       filters.value.sortBy = tempFilters.value.sortBy;
       currentPage.value = 0;
 
-      toast.success('Đã áp dụng bộ lọc!', { timeout: 2000 });
     };
 
     const resetFilters = () => {
@@ -464,15 +462,24 @@ export default {
           result = result.filter(campaign => campaign.tenTrangThai === filters.value.status);
         }
 
-        // Apply date range filters
+        // Apply date range filters (compare by date only, not time)
         if (filters.value.startDate) {
           const start = new Date(filters.value.startDate);
-          result = result.filter(campaign => new Date(campaign.thoiGianBatDau) >= start);
+          start.setHours(0, 0, 0, 0); // Set to start of day
+          result = result.filter(campaign => {
+            const campaignDate = new Date(campaign.thoiGianBatDau);
+            campaignDate.setHours(0, 0, 0, 0); // Set to start of day
+            return campaignDate >= start;
+          });
         }
 
         if (filters.value.endDate) {
           const end = new Date(filters.value.endDate);
-          result = result.filter(campaign => new Date(campaign.thoiGianKetThuc) <= end);
+          end.setHours(23, 59, 59, 999); // Set to end of day
+          result = result.filter(campaign => {
+            const campaignDate = new Date(campaign.thoiGianKetThuc);
+            return campaignDate <= end;
+          });
         }
 
         // Apply sorting

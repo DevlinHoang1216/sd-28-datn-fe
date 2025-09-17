@@ -101,11 +101,7 @@ export const applyFilters = (tempFilters, filters, toast, getStatusText, formatD
     filterApplied = true;
   }
 
-  if (filterApplied) {
-    toast.success(message, { timeout: 4000 });
-  } else {
-    toast.info('Không có bộ lọc nào được áp dụng.', { timeout: 2000 });
-  }
+  // Filters applied silently
 };
 
 // Reset all filters
@@ -124,7 +120,7 @@ export const resetFilters = (filters, tempFilters, toast) => {
   Object.assign(filters, defaultFilters);
   Object.assign(tempFilters, defaultFilters);
   
-  toast.info('Đã đặt lại tất cả bộ lọc!', { timeout: 2000 });
+  // Filters reset silently
 };
 
 // Get count for each tab
@@ -141,9 +137,5 @@ export const switchTab = (tabId, tabs, filters, toast) => {
   const tab = tabs.find((t) => t.id === tabId);
   filters.trangThaiId = tab.statusId ? String(tab.statusId) : '';
   
-  if (tabId === 'all') {
-    toast.info('Đang hiển thị tất cả hóa đơn.', { timeout: 2000 });
-  } else {
-    toast.info(`Đang hiển thị hóa đơn trạng thái: ${tab.label}.`, { timeout: 2000 });
-  }
+  // Tab switched silently
 };

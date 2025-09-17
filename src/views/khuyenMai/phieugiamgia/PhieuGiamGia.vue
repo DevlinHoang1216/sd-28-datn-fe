@@ -217,9 +217,9 @@
             </template>
             
             <template #trangThai="{ item }">
-              <span :class="mapTrangThaiClass(item.tenTrangThai)">
-                <iconify-icon :icon="getTrangThaiIcon(item.tenTrangThai)" class="w-3 h-3 mr-1"></iconify-icon>
-                {{ mapTrangThaiText(item.tenTrangThai) }}
+              <span :class="getActualTrangThaiClass(item)">
+                <iconify-icon :icon="getActualTrangThaiIcon(item)" class="w-3 h-3 mr-1"></iconify-icon>
+                {{ getActualTrangThaiText(item) }}
               </span>
             </template>
             
@@ -232,14 +232,15 @@
                 >
                   <iconify-icon icon="solar:pen-bold"></iconify-icon>
                 </button>
-                <label class="relative inline-flex items-center cursor-pointer">
+                <label class="relative inline-flex items-center" :class="item.soLuongDung > 0 ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'">
                   <input
                     type="checkbox"
-                    :checked="item.tenTrangThai === 'DANG_DIEN_RA'"
+                    :checked="item.tenTrangThai === 'DANG_DIEN_RA' && item.soLuongDung > 0"
                     @change="toggleCouponStatus(item)"
+                    :disabled="item.soLuongDung <= 0"
                     class="sr-only peer"
                   />
-                  <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                  <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600 peer-disabled:opacity-50 peer-disabled:cursor-not-allowed"></div>
                 </label>
               </div>
             </template>
@@ -424,12 +425,21 @@ export default {
       // Apply date range filters
       if (this.filters.startDate) {
         const start = new Date(this.filters.startDate);
-        result = result.filter(coupon => new Date(coupon.ngayBatDau) >= start);
+        start.setHours(0, 0, 0, 0); // Set to start of day
+        result = result.filter(coupon => {
+          const couponDate = new Date(coupon.ngayBatDau);
+          couponDate.setHours(0, 0, 0, 0); // Set to start of day
+          return couponDate >= start;
+        });
       }
 
       if (this.filters.endDate) {
         const end = new Date(this.filters.endDate);
-        result = result.filter(coupon => new Date(coupon.ngayKetThuc) <= end);
+        end.setHours(23, 59, 59, 999); // Set to end of day
+        result = result.filter(coupon => {
+          const couponDate = new Date(coupon.ngayKetThuc);
+          return couponDate <= end;
+        });
       }
 
       // Apply sorting
@@ -442,7 +452,7 @@ export default {
         } else if (this.filters.sortBy === 'name_asc') {
           result.sort((a, b) => a.tenPhieuGiamGia.localeCompare(b.tenPhieuGiamGia));
         } else if (this.filters.sortBy === 'name_desc') {
-          result.sort((a, b) => b.tenPhieuGiamGia.localeCompare(b.tenPhieuGiamGia));
+          result.sort((a, b) => b.tenPhieuGiamGia.localeCompare(a.tenPhieuGiamGia));
         }
       }
 
@@ -529,8 +539,6 @@ export default {
 
         if (this.allCoupons.length === 0) {
           this.toast.info('Không có phiếu giảm giá nào trong hệ thống.', { timeout: 4000 });
-        } else {
-          this.toast.success('Dữ liệu phiếu giảm giá đã được tải thành công!', { timeout: 3000 });
         }
       } catch (error) {
         console.error('Lỗi khi tải phiếu giảm giá:', error);
@@ -550,6 +558,17 @@ export default {
         console.error('Lỗi khi tải danh sách khách hàng:', error);
         this.toast.error('Không thể tải danh sách khách hàng');
       }
+    },
+
+    filterCoupons() {
+      this.filters.search = this.tempFilters.search;
+      this.filters.couponType = this.tempFilters.couponType;
+      this.filters.discountType = this.tempFilters.discountType;
+      this.filters.status = this.tempFilters.status;
+      this.filters.startDate = this.tempFilters.startDate;
+      this.filters.endDate = this.tempFilters.endDate;
+      this.filters.sortBy = this.tempFilters.sortBy;
+      this.currentPage = 0;
     },
 
     applyFilters() {
@@ -660,6 +679,34 @@ export default {
       if (value === 'CHUA_DIEN_RA') return 'solar:clock-circle-bold';
       if (value === 'DA_KET_THUC') return 'solar:close-circle-bold';
       return 'solar:question-circle-bold';
+    },
+
+    // Methods to handle actual status based on quantity
+    getActualTrangThaiText(item) {
+      // Nếu số lượng dùng = 0, luôn hiển thị "Đã kết thúc"
+      if (item.soLuongDung <= 0) {
+        return 'Đã kết thúc';
+      }
+      // Nếu còn số lượng, hiển thị trạng thái gốc
+      return this.mapTrangThaiText(item.tenTrangThai);
+    },
+
+    getActualTrangThaiClass(item) {
+      // Nếu số lượng dùng = 0, luôn hiển thị class "Đã kết thúc"
+      if (item.soLuongDung <= 0) {
+        return 'inline-flex items-center text-red-700 bg-red-100 px-2.5 py-1 rounded-full font-medium text-xs';
+      }
+      // Nếu còn số lượng, hiển thị class gốc
+      return this.mapTrangThaiClass(item.tenTrangThai);
+    },
+
+    getActualTrangThaiIcon(item) {
+      // Nếu số lượng dùng = 0, luôn hiển thị icon "Đã kết thúc"
+      if (item.soLuongDung <= 0) {
+        return 'solar:close-circle-bold';
+      }
+      // Nếu còn số lượng, hiển thị icon gốc
+      return this.getTrangThaiIcon(item.tenTrangThai);
     },
 
     formatDate(dateString) {

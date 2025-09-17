@@ -35,8 +35,6 @@ export const fetchAllEmployees = async (toast, params = {}) => {
     
     if (employees.length === 0) {
       toast.info('Không có nhân viên nào trong hệ thống.', { timeout: 4000 })
-    } else {
-      toast.success(`Đã tải ${employees.length} nhân viên thành công!`, { timeout: 3000 })
     }
     
     return {

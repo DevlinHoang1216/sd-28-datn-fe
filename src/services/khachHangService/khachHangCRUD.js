@@ -62,8 +62,6 @@ export const fetchAllCustomers = async (toast, params = {}) => {
 
     if (customers.length === 0) {
       toast.info('Không có khách hàng nào trong hệ thống.', { timeout: 4000 })
-    } else {
-      toast.success(`Đã tải ${customers.length} khách hàng thành công!`, { timeout: 3000 })
     }
 
     return {

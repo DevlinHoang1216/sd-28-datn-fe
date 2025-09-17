@@ -224,9 +224,7 @@
                   <span class="voucher-code">{{ selectedVoucher.ma }}</span>
                   <span class="voucher-name">{{ selectedVoucher.tenPhieuGiamGia }}</span>
                   <span class="voucher-discount">
-                    {{ selectedVoucher.loaiPhieuGiamGia === 'PHAN_TRAM' 
-                      ? `Giảm ${selectedVoucher.phanTramGiamGia}%` 
-                      : `Giảm ${formatCurrency(selectedVoucher.soTienGiamToiDa)}` }}
+                    {{ getVoucherDiscountText(selectedVoucher) }}
                   </span>
                 </div>
                 <button class="remove-voucher-btn" @click="removeVoucher">
@@ -312,9 +310,7 @@
                   <div class="voucher-name">{{ voucher.tenPhieuGiamGia }}</div>
                   <div class="voucher-details">
                     <span class="voucher-discount">
-                      {{ voucher.loaiPhieuGiamGia === 'PHAN_TRAM' 
-                        ? `Giảm ${voucher.phanTramGiamGia}%` 
-                        : `Giảm tối đa ${formatCurrency(voucher.soTienGiamToiDa)}` }}
+                      {{ getVoucherDiscountText(voucher) }}
                     </span>
                     <span v-if="voucher.hoaDonToiThieu" class="voucher-condition">
                       Đơn tối thiểu: {{ formatCurrency(voucher.hoaDonToiThieu) }}
@@ -548,16 +544,16 @@
                     </div>
                   </td>
                   <td class="size">
-                    <span class="size-badge">{{ sp.idKichCo?.tenKichCo || 'N/A' }}</span>
+                    <span class="size-badge">{{ sp.tenKichCo || 'N/A' }}</span>
                   </td>
                   <td class="color">
                     <div class="color-info">
                       <div 
                         class="color-swatch" 
-                        :style="{ backgroundColor: sp.idMauSac?.hex || '#ccc' }"
-                        :title="sp.idMauSac?.tenMauSac || 'N/A'"
+                        :style="{ backgroundColor: sp.hexMauSac || '#ccc' }"
+                        :title="sp.tenMauSac || 'N/A'"
                       ></div>
-                      <span class="color-name">{{ sp.idMauSac?.tenMauSac || 'N/A' }}</span>
+                      <span class="color-name">{{ sp.tenMauSac || 'N/A' }}</span>
                     </div>
                   </td>
                   <td class="price">
@@ -1173,6 +1169,7 @@ export default {
           ma: newInvoice.ma,
           items: [],
           khachHang: {
+            id: 1, // Default guest customer ID
             ten: 'Khách lẻ',
             soDienThoai: ''
           },
@@ -1692,14 +1689,19 @@ export default {
         danhSachSanPham.value = response.data.map(item => ({
           id: item.id,
           maSanPham: item.ma,
-          tenSanPham: item.idSanPham?.tenSanPham || 'N/A',
+          tenSanPham: item.tenSanPham || 'N/A',
           giaBan: item.giaBan, // Original price
           giaGiamGia: item.giaGiamGia, // Discounted price if available
           tenDotGiamGia: item.tenDotGiamGia, // Discount campaign name
           soLuongTonKho: item.soLuongTonKho,
-          idKichCo: item.idKichCo, // Size information
-          idMauSac: item.idMauSac, // Color information
-          image: item.idAnhSanPham?.urlAnh || item.idSanPham?.idAnhSanPham?.urlAnh || '/public/sneakers/sneakers-1-alt1.jpg'
+          tenKichCo: item.tenKichCo,
+          tenMauSac: item.tenMauSac,
+          hexMauSac: item.hexMauSac,
+          tenThuongHieu: item.tenThuongHieu,
+          tenDanhMuc: item.tenDanhMuc,
+          tenChatLieu: item.tenChatLieu,
+          tenDeGiay: item.tenDeGiay,
+          image: item.urlAnhSanPham || '/public/sneakers/sneakers-1-alt1.jpg'
         }));
 
         // Filter by search keyword if provided
@@ -1974,11 +1976,12 @@ export default {
         isLoadingVouchers.value = true;
         let response;
         
-        // If customer is selected, get vouchers for that customer (includes personal vouchers)
-        if (currentHoaDon.value?.khachHang?.id) {
-          response = await voucherAPI.getActiveVouchersForCustomer(currentHoaDon.value.khachHang.id);
+        // Check if customer is guest customer (ID=1) or specific customer
+        if (khachHangHienTai.value?.id && khachHangHienTai.value.id !== 1) {
+          // Specific customer: get both public and personal vouchers
+          response = await voucherAPI.getActiveVouchersForCustomer(khachHangHienTai.value.id);
         } else {
-          // Otherwise, only get public vouchers
+          // Guest customer (ID=1) or no customer: only get public vouchers
           response = await voucherAPI.getActivePublicVouchers();
         }
         
@@ -2015,6 +2018,28 @@ export default {
       }
       
       return '';
+    };
+
+    const getVoucherDiscountText = (voucher) => {
+      if (!currentHoaDon.value || currentHoaDon.value.items.length === 0) {
+        // Nếu không có giỏ hàng, hiển thị thông tin cơ bản
+        if (voucher.loaiPhieuGiamGia === 'PHAN_TRAM') {
+          return `Giảm ${voucher.phanTramGiamGia}% (tối đa ${formatCurrency(voucher.soTienGiamToiDa)})`;
+        } else {
+          return `Giảm ${formatCurrency(voucher.soTienGiamToiDa)}`;
+        }
+      }
+
+      // Tính toán số tiền thực tế được giảm
+      let actualDiscount = 0;
+      if (voucher.loaiPhieuGiamGia === 'PHAN_TRAM') {
+        const percentDiscount = Math.floor(tongTien.value * voucher.phanTramGiamGia / 100);
+        actualDiscount = Math.min(percentDiscount, voucher.soTienGiamToiDa || percentDiscount);
+        return `Giảm ${voucher.phanTramGiamGia}% = ${formatCurrency(actualDiscount)}`;
+      } else {
+        actualDiscount = Math.min(voucher.soTienGiamToiDa || 0, tongTien.value);
+        return `Giảm ${formatCurrency(actualDiscount)}`;
+      }
     };
     
     const selectVoucher = async (voucher) => {
@@ -2658,6 +2683,7 @@ export default {
       loadVoucherForInvoice,
       isVoucherApplicable,
       getVoucherError,
+      getVoucherDiscountText,
       selectVoucher,
       removeVoucher,
       
