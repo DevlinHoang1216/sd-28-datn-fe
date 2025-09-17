@@ -61,6 +61,9 @@
               <button class="action-btn primary" @click="showThemSanPhamModal = true">
                 Thêm sản phẩm
               </button>
+              <button class="action-btn secondary qr-scanner-btn" @click="openQRScanner">
+                Quét QR
+              </button>
             </div>
           </div>
 
@@ -854,11 +857,65 @@
         </div>
       </div>
     </Teleport>
+
+    <!-- QR Scanner Modal -->
+    <Teleport to="body">
+      <div v-if="showQRScannerModal" class="modal-overlay qr-scanner-overlay" @click="closeQRScanner">
+        <div class="modal-container qr-scanner-modal" @click.stop>
+          <div class="modal-header">
+            <h3 class="modal-title">
+              <iconify-icon icon="solar:qr-code-bold"></iconify-icon>
+              Quét Mã QR Sản Phẩm
+            </h3>
+            <button class="modal-close" @click="closeQRScanner">
+              <iconify-icon icon="solar:close-circle-bold"></iconify-icon>
+            </button>
+          </div>
+          <div class="modal-content">
+            <div class="qr-scanner-container">
+              <div v-if="!cameraStarted" class="scanner-placeholder">
+                <iconify-icon icon="solar:camera-bold-duotone" class="camera-icon"></iconify-icon>
+                <p>Nhấn "Bắt đầu quét" để mở camera</p>
+                <button class="btn primary" @click="startCamera">
+                  <iconify-icon icon="solar:camera-bold"></iconify-icon>
+                  Bắt đầu quét
+                </button>
+              </div>
+              <div v-else class="scanner-active">
+                <video ref="videoElement" class="scanner-video" autoplay playsinline></video>
+                <canvas ref="canvasElement" class="scanner-canvas" style="display: none;"></canvas>
+                <div class="scanner-overlay">
+                  <div class="scan-frame"></div>
+                  <p class="scan-instruction">Đưa mã QR vào khung để quét</p>
+                </div>
+                <div class="scanner-controls">
+                  <button class="btn secondary" @click="stopCamera">
+                    <iconify-icon icon="solar:stop-bold"></iconify-icon>
+                    Dừng quét
+                  </button>
+                  <button class="btn primary" @click="captureQR">
+                    <iconify-icon icon="solar:camera-bold"></iconify-icon>
+                    Chụp QR
+                  </button>
+                </div>
+              </div>
+              <div v-if="scanResult" class="scan-result">
+                <div class="result-success">
+                  <iconify-icon icon="solar:check-circle-bold" class="success-icon"></iconify-icon>
+                  <p>Đã quét thành công!</p>
+                  <p class="result-text">{{ scanResult }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script>
-import { ref, computed, onMounted, watch, nextTick } from 'vue';
+import { ref, computed, onMounted, watch, onUnmounted, nextTick } from 'vue';
 import { useRouter } from 'vue-router';
 import { useToast } from 'vue-toastification';
 import Breadcrumb from '@/components/Breadcrumb.vue';
@@ -866,6 +923,7 @@ import productAPI from '@/services/api/productAPI';
 import invoiceAPI from '@/services/api/invoiceAPI';
 import cartAPI from '@/services/api/cartAPI';
 import voucherAPI from '@/services/api/voucherAPI';
+import jsQR from 'jsqr';
 
 export default {
   name: 'BanTaiQuayModern',
@@ -919,6 +977,14 @@ export default {
     const showThemSanPhamModal = ref(false);
     const showThanhToanModal = ref(false);
     const showQuantityModal = ref(false);
+    const showQRScannerModal = ref(false);
+    
+    // QR Scanner state
+    const cameraStarted = ref(false);
+    const scanResult = ref('');
+    const videoElement = ref(null);
+    const canvasElement = ref(null);
+    const qrScanner = ref(null);
     
     // Quantity modal state
     const selectedQuantityItem = ref(null);
@@ -1662,6 +1728,246 @@ export default {
       }
     };
 
+    // QR Scanner functions
+    const startCamera = async () => {
+      try {
+        console.log('Starting camera...');
+        
+        // Set camera started first to render video element
+        cameraStarted.value = true;
+        scanResult.value = '';
+        
+        // Wait for next tick to ensure DOM is updated
+        await nextTick();
+        
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { 
+            facingMode: 'environment', // Use back camera if available
+            width: { ideal: 640 },
+            height: { ideal: 480 }
+          }
+        });
+        
+        console.log('Camera stream obtained:', stream);
+        
+        if (videoElement.value) {
+          videoElement.value.srcObject = stream;
+          
+          // Wait for video to be ready
+          await new Promise((resolve) => {
+            videoElement.value.onloadedmetadata = () => {
+              videoElement.value.play();
+              resolve();
+            };
+          });
+          
+          console.log('Camera started successfully');
+          
+          // Start continuous scanning after a short delay
+          setTimeout(() => {
+            startContinuousScanning();
+          }, 1000);
+        } else {
+          console.error('Video element still not found after DOM update');
+          cameraStarted.value = false;
+          toast.error('Không thể khởi tạo camera. Vui lòng thử lại.');
+        }
+      } catch (error) {
+        console.error('Error accessing camera:', error);
+        cameraStarted.value = false;
+        if (error.name === 'NotAllowedError') {
+          toast.error('Vui lòng cho phép truy cập camera để sử dụng tính năng quét QR.');
+        } else if (error.name === 'NotFoundError') {
+          toast.error('Không tìm thấy camera trên thiết bị.');
+        } else {
+          toast.error('Không thể truy cập camera. Vui lòng kiểm tra quyền truy cập.');
+        }
+      }
+    };
+
+    const stopCamera = () => {
+      if (videoElement.value && videoElement.value.srcObject) {
+        const tracks = videoElement.value.srcObject.getTracks();
+        tracks.forEach(track => track.stop());
+        videoElement.value.srcObject = null;
+      }
+      cameraStarted.value = false;
+      scanResult.value = '';
+      
+      if (qrScanner.value) {
+        clearInterval(qrScanner.value);
+        qrScanner.value = null;
+      }
+    };
+
+    const startContinuousScanning = () => {
+      qrScanner.value = setInterval(() => {
+        captureQR();
+      }, 500); // Scan every 500ms
+    };
+
+    const captureQR = () => {
+      if (!videoElement.value || !canvasElement.value || !cameraStarted.value) {
+        console.log('captureQR: Missing elements or camera not started');
+        return;
+      }
+
+      const video = videoElement.value;
+      const canvas = canvasElement.value;
+      
+      // Check if video is ready
+      if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+        console.log('Video not ready yet');
+        return;
+      }
+      
+      const context = canvas.getContext('2d');
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+
+      if (canvas.width === 0 || canvas.height === 0) {
+        console.log('Video dimensions not available yet');
+        return;
+      }
+
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+
+      const code = jsQR(imageData.data, imageData.width, imageData.height);
+      
+      if (code) {
+        console.log('QR Code detected:', code.data);
+        scanResult.value = code.data;
+        processQRResult(code.data);
+        stopCamera();
+      }
+    };
+
+    const processQRResult = async (qrData) => {
+      try {
+        // Extract product detail ID from QR code (format: just the ID number)
+        const productDetailId = parseInt(qrData);
+        if (isNaN(productDetailId) || productDetailId <= 0) {
+          toast.error('Mã QR không hợp lệ. Vui lòng quét mã QR sản phẩm từ hệ thống.');
+          return;
+        }
+        
+        // Get product detail information from backend
+        const response = await productAPI.getProductDetailById(productDetailId);
+        const productDetail = response.data;
+
+        if (!productDetail) {
+          toast.error('Không tìm thấy sản phẩm với mã QR này.');
+          return;
+        }
+
+        // Check if product is available
+        if (productDetail.deleted || productDetail.soLuongTonKho <= 0) {
+          toast.error('Sản phẩm này không còn bán hoặc đã hết hàng.');
+          return;
+        }
+
+        // Add product to cart
+        await addScannedProductToCart(productDetail);
+        
+        // Close QR scanner modal
+        showQRScannerModal.value = false;
+        
+      } catch (error) {
+        console.error('Error processing QR result:', error);
+        toast.error('Có lỗi xảy ra khi xử lý mã QR. Vui lòng thử lại.');
+      }
+    };
+
+    const addScannedProductToCart = async (productDetail) => {
+      if (!currentHoaDon.value) {
+        toast.error('Vui lòng tạo hóa đơn trước khi thêm sản phẩm.');
+        return;
+      }
+
+      try {
+        // Check if product already exists in cart
+        const existingItem = currentHoaDon.value.items.find(item => item.id === productDetail.id);
+        
+        if (existingItem) {
+          // If exists, increase quantity by 1
+          const maxAvailable = existingItem.soLuongTonKho + existingItem.soLuong;
+          if (existingItem.soLuong < maxAvailable) {
+            await cartAPI.updateCartItem(currentHoaDon.value.id, existingItem.cartItemId, existingItem.soLuong + 1);
+            existingItem.soLuong += 1;
+            existingItem.soLuongTonKho -= 1;
+            toast.success(`Đã tăng số lượng "${productDetail.idSanPham?.tenSanPham}" lên ${existingItem.soLuong}`);
+          } else {
+            toast.warning(`Sản phẩm "${productDetail.idSanPham?.tenSanPham}" đã đạt số lượng tối đa có thể thêm!`);
+          }
+        } else {
+          // If not exists, add new item to cart
+          const cartItem = {
+            idChiTietSanPham: productDetail.id,
+            soLuong: 1,
+            gia: productDetail.giaBan
+          };
+
+          const response = await cartAPI.addProductToCart(currentHoaDon.value.id, cartItem);
+          
+          console.log('Cart API response:', response);
+          
+          // Add to local cart display
+          const newItem = {
+            id: productDetail.id,
+            cartItemId: response?.id || response?.data?.id || Date.now(), // Fallback to timestamp if ID not available
+            tenSanPham: productDetail.idSanPham?.tenSanPham || 'N/A',
+            maSanPham: productDetail.ma || 'N/A',
+            giaBan: productDetail.giaBan,
+            soLuong: 1,
+            soLuongTonKho: productDetail.soLuongTonKho - 1,
+            image: productDetail.idAnhSanPham?.urlAnh || productDetail.idSanPham?.urlAnhDaiDien || '/default-product.jpg'
+          };
+
+          currentHoaDon.value.items.push(newItem);
+          
+          const productName = productDetail.idSanPham?.tenSanPham || 'Sản phẩm';
+          const sizeName = productDetail.idKichCo?.tenKichCo || '';
+          const colorName = productDetail.idMauSac?.tenMauSac || '';
+          const variantInfo = sizeName && colorName ? ` (${sizeName} - ${colorName})` : '';
+          
+          toast.success(`Đã thêm "${productName}${variantInfo}" vào giỏ hàng`);
+        }
+
+        // Reload cart to ensure data consistency
+        await loadCartItems(currentHoaDon.value.id);
+        
+      } catch (error) {
+        console.error('Error adding scanned product to cart:', error);
+        toast.error('Có lỗi xảy ra khi thêm sản phẩm vào giỏ hàng.');
+      }
+    };
+
+    // QR Scanner modal functions
+    const openQRScanner = () => {
+      // Close other modals first to prevent conflicts
+      showThemSanPhamModal.value = false;
+      showThanhToanModal.value = false;
+      showQuantityModal.value = false;
+      showInlineQuantityModal.value = false;
+      
+      // Open QR scanner modal
+      showQRScannerModal.value = true;
+      scanResult.value = '';
+    };
+
+    const closeQRScanner = () => {
+      stopCamera();
+      showQRScannerModal.value = false;
+      scanResult.value = '';
+    };
+
+    // Cleanup on component unmounts
+    onUnmounted(() => {
+      stopCamera();
+    });
+
     // Voucher management
     const loadVouchers = async () => {
       try {
@@ -2395,7 +2701,22 @@ export default {
       openInlineQuantityModal,
       closeInlineQuantityModal,
       validateInlineQuantity,
-      confirmInlineQuantity
+      confirmInlineQuantity,
+      
+      // QR Scanner methods
+      showQRScannerModal,
+      cameraStarted,
+      scanResult,
+      videoElement,
+      canvasElement,
+      qrScanner,
+      openQRScanner,
+      closeQRScanner,
+      startCamera,
+      stopCamera,
+      captureQR,
+      processQRResult,
+      addScannedProductToCart
     };
   }
 }
@@ -2585,7 +2906,7 @@ export default {
 
 .card-actions {
   display: flex;
-  gap: 12px;
+  gap: 5px;
 }
 
 .action-btn {
@@ -5285,6 +5606,186 @@ export default {
   
   .payment-total-card {
     padding: 20px;
+  }
+}
+
+/* QR Scanner Styles */
+.qr-scanner-btn {
+  background: #007bff;
+  color: white;
+  margin-left: 8px;
+  gap: 6px;
+}
+
+.qr-scanner-modal {
+  max-width: 600px;
+}
+
+.qr-scanner-container {
+  padding: 20px;
+}
+
+.scanner-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  background: #f8fafc;
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.camera-icon {
+  font-size: 48px;
+  color: #64748b;
+  margin-bottom: 16px;
+}
+
+.scanner-placeholder p {
+  color: #64748b;
+  margin-bottom: 20px;
+  font-size: 16px;
+}
+
+.scanner-active {
+  position: relative;
+  background: #000;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.scanner-video {
+  width: 100%;
+  height: 400px;
+  object-fit: cover;
+  display: block;
+}
+
+.scanner-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.scan-frame {
+  width: 200px;
+  height: 200px;
+  border: 3px solid #3b82f6;
+  border-radius: 12px;
+  position: relative;
+  background: transparent;
+}
+
+.scan-frame::before,
+.scan-frame::after {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  border: 3px solid #10b981;
+}
+
+.scan-frame::before {
+  top: -3px;
+  left: -3px;
+  border-right: none;
+  border-bottom: none;
+}
+
+.scan-frame::after {
+  bottom: -3px;
+  right: -3px;
+  border-left: none;
+  border-top: none;
+}
+
+.scan-instruction {
+  color: white;
+  margin-top: 20px;
+  font-size: 16px;
+  font-weight: 500;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.scanner-controls {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 12px;
+  pointer-events: auto;
+}
+
+.scanner-controls .btn {
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.scan-result {
+  margin-top: 20px;
+  padding: 20px;
+  background: #f0fdf4;
+  border: 2px solid #10b981;
+  border-radius: 12px;
+}
+
+.result-success {
+  text-align: center;
+}
+
+.success-icon {
+  font-size: 48px;
+  color: #10b981;
+  margin-bottom: 12px;
+}
+
+.result-success p {
+  margin: 8px 0;
+  color: #065f46;
+}
+
+.result-text {
+  font-family: monospace;
+  background: #dcfce7;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-weight: 600;
+  color: #166534;
+}
+
+@media (max-width: 768px) {
+  .qr-scanner-modal {
+    max-width: 95vw;
+    margin: 20px;
+  }
+  
+  .scanner-video {
+    height: 300px;
+  }
+  
+  .scan-frame {
+    width: 150px;
+    height: 150px;
+  }
+  
+  .scanner-controls {
+    flex-direction: column;
+    width: 200px;
   }
 }
 </style>
