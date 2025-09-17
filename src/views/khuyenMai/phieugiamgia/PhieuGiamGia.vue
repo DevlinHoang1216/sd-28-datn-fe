@@ -205,7 +205,7 @@
             </template>
             
             <template #soLuongDung="{ item }">
-              <span class="font-semibold text-center">{{ formatUsageQuantity(item.soLuongDung, item.soLuongDaDung) }}</span>
+              <span class="font-semibold text-center">{{ item.soLuongDung || 0 }}</span>
             </template>
             
             <template #ngayBatDau="{ item }">
@@ -529,7 +529,6 @@ export default {
             hoaDonToiThieu: coupon.hoaDonToiThieu,
             soTienGiamToiDa: coupon.soTienGiamToiDa,
             soLuongDung: coupon.soLuongDung || 0,
-            soLuongDaDung: coupon.soLuongDaDung || 0,
             ngayBatDau: coupon.ngayBatDau,
             ngayKetThuc: coupon.ngayKetThuc,
             tenTrangThai: coupon.trangThai ? 'DANG_DIEN_RA' : 'DA_KET_THUC',
@@ -738,12 +737,6 @@ export default {
       }).format(value);
     },
 
-    formatUsageQuantity(total, used) {
-      if (total === null || total === undefined) return '---';
-      const usedCount = used || 0;
-      const remaining = Math.max(0, total - usedCount);
-      return `${remaining}/${total}`;
-    }
   }
 }
 </script>

@@ -2294,7 +2294,9 @@ export default {
           hoaDonId: tabActive.value,
           nhanVienId: 1, // Default employee ID - should be from auth context
           phuongThucThanhToan: phuongThucThanhToan.value,
-          tongTien: khachCanTra.value,
+          tongTien: tongTien.value, // Send original total, not discounted amount
+          tongTienSauGiam: khachCanTra.value, // Send discounted amount separately
+          giamGia: giamGia.value, // Send discount amount
           tienMat: phuongThucThanhToan.value === 'VnPay' ? 0 : 
                    (phuongThucThanhToan.value === 'Tiền mặt' ? khachThanhToan.value : tienMat.value),
           tienChuyenKhoan: phuongThucThanhToan.value === 'Tiền mặt' ? 0 : 
@@ -2383,7 +2385,7 @@ export default {
       try {
         const vnpayRequest = {
           invoiceId: paymentRequest.hoaDonId,
-          amount: paymentRequest.tongTien,
+          amount: paymentRequest.tongTienSauGiam, // Use discounted amount for VNPay
           paymentMethod: 'VnPay'
         };
 

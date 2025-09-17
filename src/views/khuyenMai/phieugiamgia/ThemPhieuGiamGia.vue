@@ -190,10 +190,10 @@
                 {{ item.ten || 'N/A' }}
               </template>
               <template #email="{ item }">
-                {{ item.taiKhoan?.email || 'N/A' }}
+                {{ item.email || 'Chưa có email' }}
               </template>
               <template #soDienThoai="{ item }">
-                {{ item.taiKhoan?.soDienThoai || 'N/A' }}
+                {{ item.soDienThoai || 'Chưa có SĐT' }}
               </template>
             </DataTable>
           </div>
@@ -227,10 +227,10 @@
                 {{ item.ten || 'N/A' }}
               </template>
               <template #email="{ item }">
-                {{ item.taiKhoan?.email || 'N/A' }}
+                {{ item.email || 'Chưa có email' }}
               </template>
               <template #soDienThoai="{ item }">
-                {{ item.taiKhoan?.soDienThoai || 'N/A' }}
+                {{ item.soDienThoai || 'Chưa có SĐT' }}
               </template>
             </DataTable>
           </div>
@@ -430,7 +430,16 @@ export default {
       this.loading = true;
       try {
         const res = await axios.get('/api/khach-hang');
-        this.customers = Array.isArray(res.data) ? res.data : res.data.content || [];
+        const rawCustomers = Array.isArray(res.data) ? res.data : res.data.content || [];
+        
+        // Map customer data to ensure consistent field names
+        this.customers = rawCustomers.map(customer => ({
+          id: customer.id,
+          ten: customer.ten || customer.tenKH || customer.name,
+          email: customer.email || 'Chưa có email',
+          soDienThoai: customer.soDienThoai || customer.soDT || customer.phone || 'Chưa có SĐT'
+        }));
+        
         this.toast.success(`Tải danh sách khách hàng thành công! (${this.customers.length} khách hàng)`);
       } catch (err) {
         console.error('Lỗi tải khách hàng:', err);
