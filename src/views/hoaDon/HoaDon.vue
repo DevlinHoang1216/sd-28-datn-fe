@@ -1,4 +1,5 @@
 <script setup>
+import { ref, watch, onMounted, onUnmounted } from 'vue';
 import { Icon } from '@iconify/vue';
 import Breadcrumb from '@/components/Breadcrumb.vue';
 import DataTable from '@/components/DataTable.vue';
@@ -80,6 +81,106 @@ const {
   closeQRScannerModal,
   handleInvoiceFound
 } = useHoaDonLogic();
+
+// Reactive variables for formatted price inputs
+const formattedMinPrice = ref('');
+const formattedMaxPrice = ref('');
+
+// Debounce timeout for price inputs
+const priceDebounceTimeout = ref(null);
+
+// Currency formatting methods
+const formatCurrencyInput = (value) => {
+  if (!value) return '';
+  const numericValue = value.toString().replace(/[^0-9]/g, '');
+  if (!numericValue) return '';
+  return new Intl.NumberFormat('vi-VN').format(parseInt(numericValue)) + ' ₫';
+};
+
+const parseCurrencyInput = (value) => {
+  if (!value) return '';
+  return value.replace(/[^0-9]/g, '');
+};
+
+// Debounced filter function for price inputs
+const debouncedPriceFilter = () => {
+  if (priceDebounceTimeout.value) {
+    clearTimeout(priceDebounceTimeout.value);
+  }
+  
+  priceDebounceTimeout.value = setTimeout(() => {
+    // Only call API if both values are valid or empty
+    const minPrice = tempFilters.value.minPrice;
+    const maxPrice = tempFilters.value.maxPrice;
+    
+    // Skip API call if minPrice > maxPrice (invalid state)
+    if (minPrice && maxPrice && parseInt(minPrice) > parseInt(maxPrice)) {
+      return; // Don't call API with invalid price range
+    }
+    
+    filterInvoicesLocal();
+  }, 800); // 800ms delay to allow user to finish typing
+};
+
+// Input handlers for price fields
+const onMinPriceInput = (event) => {
+  const rawValue = event.target.value;
+  const numericValue = parseCurrencyInput(rawValue);
+  tempFilters.value.minPrice = numericValue;
+  formattedMinPrice.value = formatCurrencyInput(numericValue);
+  debouncedPriceFilter();
+};
+
+const onMaxPriceInput = (event) => {
+  const rawValue = event.target.value;
+  const numericValue = parseCurrencyInput(rawValue);
+  tempFilters.value.maxPrice = numericValue;
+  formattedMaxPrice.value = formatCurrencyInput(numericValue);
+  debouncedPriceFilter();
+};
+
+const onMinPriceBlur = () => {
+  formattedMinPrice.value = formatCurrencyInput(tempFilters.value.minPrice);
+};
+
+const onMaxPriceBlur = () => {
+  formattedMaxPrice.value = formatCurrencyInput(tempFilters.value.maxPrice);
+};
+
+// Initialize formatted values
+const initializeFormattedValues = () => {
+  formattedMinPrice.value = formatCurrencyInput(tempFilters.value.minPrice);
+  formattedMaxPrice.value = formatCurrencyInput(tempFilters.value.maxPrice);
+};
+
+// Watch for changes in tempFilters to update formatted values
+watch(() => tempFilters.value.minPrice, (newValue) => {
+  if (!newValue) formattedMinPrice.value = '';
+});
+
+watch(() => tempFilters.value.maxPrice, (newValue) => {
+  if (!newValue) formattedMaxPrice.value = '';
+});
+
+// Initialize on mount
+onMounted(() => {
+  initializeFormattedValues();
+});
+
+// Watch for reset filters to clear formatted values
+watch(() => [tempFilters.value.minPrice, tempFilters.value.maxPrice], ([newMinPrice, newMaxPrice]) => {
+  if (!newMinPrice && !newMaxPrice) {
+    formattedMinPrice.value = '';
+    formattedMaxPrice.value = '';
+  }
+});
+
+// Cleanup timeout on unmount
+onUnmounted(() => {
+  if (priceDebounceTimeout.value) {
+    clearTimeout(priceDebounceTimeout.value);
+  }
+});
 </script>
 
 <template>
@@ -125,18 +226,18 @@ const {
               Giá từ
               <span v-if="isLoadingPriceRange" class="text-xs text-gray-500 ml-1">(Đang tải...)</span>
             </label>
-            <input v-model="tempFilters.minPrice" type="number"
+            <input v-model="formattedMinPrice" type="text"
               :placeholder="isLoadingPriceRange ? 'Đang tải...' : `Từ ${formatCurrency(priceRange.minPrice || 0)}`"
-              class="filter-input" @input="filterInvoicesLocal" />
+              class="filter-input" @input="onMinPriceInput" @blur="onMinPriceBlur" />
           </div>
           <div class="filter-group">
             <label class="filter-label">
               Giá đến
               <span v-if="isLoadingPriceRange" class="text-xs text-gray-500 ml-1">(Đang tải...)</span>
             </label>
-            <input v-model="tempFilters.maxPrice" type="number"
+            <input v-model="formattedMaxPrice" type="text"
               :placeholder="isLoadingPriceRange ? 'Đang tải...' : `Đến ${formatCurrency(priceRange.maxPrice || 0)}`"
-              class="filter-input" @input="filterInvoicesLocal" />
+              class="filter-input" @input="onMaxPriceInput" @blur="onMaxPriceBlur" />
           </div>
         </div>
 

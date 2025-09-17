@@ -114,11 +114,7 @@ export const fetchAllInvoices = async (route, toast, filters = {}) => {
     // Map backend DTO to frontend format
     const invoices = rawInvoices.map(mapBackendToFrontend);
 
-    if (invoices.length === 0) {
-      toast.info('Không có hóa đơn nào trong hệ thống.', { timeout: 4000 });
-    } else {
-      toast.success(`Đã tải ${invoices.length} hóa đơn thành công!`, { timeout: 3000 });
-    }
+    // Invoices loaded silently
 
     console.log('Kết thúc tải hóa đơn từ API:', { invoices, totalElements, totalPages });
     return {
@@ -156,7 +152,7 @@ export const updateInvoice = async (invoiceData, toast, emitter) => {
       tongTienThanhToan: invoiceData.tongTienThanhToan,
     });
 
-    toast.success('Cập nhật hóa đơn thành công!');
+    // Invoice updated silently
 
     if (updatedStatusId === 21) {
       emitter.emit('invoice-completed', invoiceData);
@@ -176,7 +172,7 @@ export const updateInvoice = async (invoiceData, toast, emitter) => {
 export const deleteInvoice = async (invoiceId, toast) => {
   try {
     await deleteHoaDon(invoiceId);
-    toast.success('Xóa hóa đơn thành công!');
+    // Invoice deleted silently
     return { success: true, error: null };
   } catch (error) {
     console.error('Lỗi khi xóa hóa đơn:', error.response ? error.response.data : error.message);

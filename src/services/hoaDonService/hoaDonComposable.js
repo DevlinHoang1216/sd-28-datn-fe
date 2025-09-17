@@ -345,7 +345,6 @@ export function useHoaDonLogic() {
       const mappedData = mapHoaDonDetailToFrontend(backendData);
       invoiceDetail.value = mappedData;
 
-      toast.success('Tải chi tiết hóa đơn thành công!');
       return mappedData;
     } catch (error) {
       const errorMsg = error.response?.data?.message || 'Không thể tải chi tiết hóa đơn';
@@ -371,7 +370,6 @@ export function useHoaDonLogic() {
       statusCounts.value = counts;
     } catch (error) {
       console.error('Error loading status counts:', error);
-      toast.error('Không thể tải số lượng trạng thái');
     } finally {
       isLoadingStatusCounts.value = false;
     }
@@ -393,7 +391,6 @@ export function useHoaDonLogic() {
       }
     } catch (error) {
       console.error('Error loading price range:', error);
-      toast.error('Không thể tải khoảng giá từ cơ sở dữ liệu');
       // Set default values on error
       priceRange.value = { minPrice: 0, maxPrice: 10000000 };
     } finally {
@@ -414,7 +411,7 @@ export function useHoaDonLogic() {
   emitter.on('invoice-completed', (invoice) => {
     console.log('Nhận được sự kiện invoice-completed:', invoice);
     updateTotalRevenue();
-    toast.info('Tổng doanh thu đã được cập nhật!', { timeout: 3000 });
+    // Revenue updated silently
   });
 
   onMounted(() => {

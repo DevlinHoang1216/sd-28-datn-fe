@@ -39,7 +39,7 @@ export const calculateDisplayedPages = (currentPage, totalPages) => {
 // Change page with validation
 export const changePage = (page, totalPages, toast) => {
   if (page >= 0 && page < totalPages) {
-    toast.info(`Đang hiển thị trang ${page + 1} của danh sách hóa đơn.`, { timeout: 1500 });
+    // Page changed silently
     return page;
   }
   return null;
