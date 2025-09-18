@@ -122,6 +122,13 @@
           :columns="columns"
           :actions="['edit', 'delete']"
           @action="handleAction"
+          :server-side="true"
+          :total-items="totalElements"
+          :current-page="currentPage + 1"
+          :items-per-page="pageSize"
+          @update:current-page="handlePageChange"
+          @update:items-per-page="handlePageSizeChange"
+          item-label="chi tiết sản phẩm"
         >
           <!-- Checkbox Header -->
           <template #header-checkbox>
@@ -223,49 +230,6 @@
             </div>
           </template>
         </DataTable>
-        
-        <!-- Pagination Controls -->
-        <div v-if="totalPages > 1" class="pagination-container">
-          <div class="pagination-info">
-            <span>Hiển thị {{ (currentPage * pageSize) + 1 }} - {{ Math.min((currentPage + 1) * pageSize, totalElements) }} của {{ totalElements }} kết quả</span>
-          </div>
-          <div class="pagination-controls">
-            <button @click="goToFirstPage" :disabled="currentPage === 0" class="pagination-btn">
-              <iconify-icon icon="solar:double-alt-arrow-left-bold"></iconify-icon>
-            </button>
-            <button @click="prevPage" :disabled="currentPage === 0" class="pagination-btn">
-              <iconify-icon icon="solar:alt-arrow-left-bold"></iconify-icon>
-            </button>
-            
-            <div class="page-numbers">
-              <button 
-                v-for="page in getVisiblePages()" 
-                :key="page"
-                @click="changePage(page)"
-                :class="['page-btn', { active: page === currentPage }]"
-              >
-                {{ page + 1 }}
-              </button>
-            </div>
-            
-            <button @click="nextPage" :disabled="currentPage >= totalPages - 1" class="pagination-btn">
-              <iconify-icon icon="solar:alt-arrow-right-bold"></iconify-icon>
-            </button>
-            <button @click="goToLastPage" :disabled="currentPage >= totalPages - 1" class="pagination-btn">
-              <iconify-icon icon="solar:double-alt-arrow-right-bold"></iconify-icon>
-            </button>
-          </div>
-          <div class="page-size-selector">
-            <label>Hiển thị:</label>
-            <select v-model="pageSize" @change="changePageSize(pageSize)" class="page-size-select">
-              <option :value="5">5</option>
-              <option :value="10">10</option>
-              <option :value="20">20</option>
-              <option :value="50">50</option>
-            </select>
-            <span>/ trang</span>
-          </div>
-        </div>
       </div>
     </div>
 
@@ -1126,53 +1090,17 @@ export default {
       ]);
     };
     
-    // Pagination methods
-    const changePage = async (page) => {
-      currentPage.value = page;
-      await loadProductDetails(page, pageSize.value);
+    // Pagination methods for DataTable integration
+    const handlePageChange = async (newPage) => {
+      // DataTable uses 1-based indexing, backend uses 0-based
+      currentPage.value = newPage - 1;
+      await loadProductDetails(currentPage.value, pageSize.value);
     };
 
-    const changePageSize = async (newSize) => {
-      pageSize.value = newSize;
-      currentPage.value = 0; // Reset to first page
-      await loadProductDetails(0, newSize);
-    };
-
-    const nextPage = async () => {
-      if (currentPage.value < totalPages.value - 1) {
-        await changePage(currentPage.value + 1);
-      }
-    };
-
-    const prevPage = async () => {
-      if (currentPage.value > 0) {
-        await changePage(currentPage.value - 1);
-      }
-    };
-
-    const goToFirstPage = async () => {
-      await changePage(0);
-    };
-
-    const goToLastPage = async () => {
-      await changePage(totalPages.value - 1);
-    };
-
-    const getVisiblePages = () => {
-      const totalPagesToShow = 5;
-      const half = Math.floor(totalPagesToShow / 2);
-      let start = Math.max(0, currentPage.value - half);
-      let end = Math.min(totalPages.value - 1, start + totalPagesToShow - 1);
-      
-      if (end - start + 1 < totalPagesToShow) {
-        start = Math.max(0, end - totalPagesToShow + 1);
-      }
-      
-      const pages = [];
-      for (let i = start; i <= end; i++) {
-        pages.push(i);
-      }
-      return pages;
+    const handlePageSizeChange = async (newPageSize) => {
+      pageSize.value = newPageSize;
+      currentPage.value = 0; // Reset to first page when page size changes
+      await loadProductDetails(0, newPageSize);
     };
 
     // Watch for filter changes to reload data
@@ -1277,13 +1205,8 @@ export default {
       loadAllData,
       
       // Pagination methods
-      changePage,
-      changePageSize,
-      nextPage,
-      prevPage,
-      goToFirstPage,
-      goToLastPage,
-      getVisiblePages,
+      handlePageChange,
+      handlePageSizeChange,
       
       // Pagination state
       currentPage,
@@ -1849,98 +1772,7 @@ export default {
   background: #475569;
 }
 
-/* Pagination Styles */
-.pagination-container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 0;
-  margin-top: 20px;
-  border-top: 1px solid #e5e7eb;
-}
-
-.pagination-info {
-  color: #6b7280;
-  font-size: 14px;
-}
-
-.pagination-controls {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.pagination-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: 1px solid #d1d5db;
-  background: white;
-  color: #6b7280;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.pagination-btn:hover:not(:disabled) {
-  background: #f3f4f6;
-  color: #374151;
-}
-
-.pagination-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.page-numbers {
-  display: flex;
-  gap: 4px;
-  margin: 0 8px;
-}
-
-.page-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border: 1px solid #d1d5db;
-  background: white;
-  color: #6b7280;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-weight: 500;
-}
-
-.page-btn:hover {
-  background: #f3f4f6;
-  color: #374151;
-}
-
-.page-btn.active {
-  background: #3b82f6;
-  color: white;
-  border-color: #3b82f6;
-}
-
-.page-size-selector {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #6b7280;
-  font-size: 14px;
-}
-
-.page-size-select {
-  padding: 4px 8px;
-  border: 1px solid #d1d5db;
-  border-radius: 4px;
-  background: white;
-  color: #374151;
-}
+/* Button Styles */
 
 .btn.danger {
   background: #dc2626;

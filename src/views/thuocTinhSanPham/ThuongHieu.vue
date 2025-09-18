@@ -252,41 +252,10 @@ export default {
     const loading = ref(false);
     const pagination = ref({
       page: 0,
-      size: 10,
+      size: 9999,
       totalElements: 0,
       totalPages: 0
     });
-
-    // Sample data - will be replaced
-    const sampleBrands = ref([
-      {
-        id: 1,
-        code: 'H001',
-        name: 'Nike',
-        description: 'Thương hiệu thể thao hàng đầu thế giới',
-        productCount: 45,
-        status: 'active',
-        createdAt: '2024-01-15T10:30:00'
-      },
-      {
-        id: 2,
-        code: 'H002',
-        name: 'Adidas',
-        description: 'Thương hiệu thể thao nổi tiếng từ Đức',
-        productCount: 38,
-        status: 'active',
-        createdAt: '2024-01-14T11:15:00'
-      },
-      {
-        id: 3,
-        code: 'H003',
-        name: 'Puma',
-        description: 'Thương hiệu thể thao và thời trang',
-        productCount: 25,
-        status: 'active',
-        createdAt: '2024-01-13T09:20:00'
-      }
-    ]);
 
     // Breadcrumb data
     const breadcrumbItems = ref([
