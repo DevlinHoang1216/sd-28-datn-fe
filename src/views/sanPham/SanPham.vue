@@ -174,14 +174,15 @@
                 <button @click="editProduct(item)" class="action-btn edit" :disabled="item.status === 'inactive'" :title="item.status === 'inactive' ? 'Không thể sửa sản phẩm ngừng bán' : 'Chỉnh sửa'">
                   <iconify-icon icon="solar:pen-bold"></iconify-icon>
                 </button>
-                <label class="toggle-switch" :title="item.status === 'active' ? 'Tạm ngưng bán' : 'Tiếp tục bán'">
+                <label class="toggle-switch" :title="getToggleTitle(item)">
                   <input
                     type="checkbox"
                     :checked="item.status === 'active'"
+                    :disabled="item.status === 'out_of_stock'"
                     @change="toggleProductStatus(item)"
                     class="sr-only peer"
                   />
-                  <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                  <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600 peer-disabled:opacity-50 peer-disabled:cursor-not-allowed"></div>
                 </label>
               </div>
             </template>
@@ -509,6 +510,11 @@ export default {
         icon: 'solar:danger-bold-duotone'
       },
       {
+        value: products.value.filter(p => p.status === 'out_of_stock').length.toString(),
+        label: 'Hết hàng',
+        icon: 'solar:close-circle-bold-duotone'
+      },
+      {
         value: currentPage.value + 1 + '/' + totalPages.value,
         label: 'Trang hiện tại',
         icon: 'solar:chart-square-bold-duotone'
@@ -580,27 +586,46 @@ export default {
           sortDir
         });
         
-        products.value = response.data.content.map(product => ({
-          id: product.id,
-          code: product.ma,
-          name: product.tenSanPham,
-          categoryId: product.idDanhMuc,
-          brandId: product.idThuongHieu,
-          materialId: product.idChatLieu,
-          soleId: product.idDeGiay,
-          categoryName: product.tenDanhMuc,
-          brandName: product.tenThuongHieu,
-          materialName: product.tenChatLieu,
-          soleName: product.tenDeGiay,
-          country: product.quocGiaSanXuat,
-          status: product.trangThai ? 'active' : 'inactive',
-          image: product.chiTietSanPhams?.[0]?.urlAnhSanPham || 'https://via.placeholder.com/300x300?text=No+Image',
-          description: product.moTa,
-          createdAt: product.ngayTao,
-          createdDate: product.ngayTao,
-          totalVariants: product.totalVariants,
-          activeVariants: product.activeVariants
-        }));
+        products.value = response.data.content.map(product => {
+          // Check if all variants are out of stock
+          const chiTietSanPhams = product.chiTietSanPhams || [];
+          const hasStock = chiTietSanPhams.some(variant => 
+            variant.soLuongTonKho > 0 && (variant.deleted === false || variant.deleted === null)
+          );
+          
+          // Determine product status
+          let status;
+          if (!product.trangThai) {
+            status = 'inactive'; // Product is disabled
+          } else if (!hasStock) {
+            status = 'out_of_stock'; // Product is active but all variants are out of stock
+          } else {
+            status = 'active'; // Product is active and has stock
+          }
+
+          return {
+            id: product.id,
+            code: product.ma,
+            name: product.tenSanPham,
+            categoryId: product.idDanhMuc,
+            brandId: product.idThuongHieu,
+            materialId: product.idChatLieu,
+            soleId: product.idDeGiay,
+            categoryName: product.tenDanhMuc,
+            brandName: product.tenThuongHieu,
+            materialName: product.tenChatLieu,
+            soleName: product.tenDeGiay,
+            country: product.quocGiaSanXuat,
+            status: status,
+            image: product.chiTietSanPhams?.[0]?.urlAnhSanPham || 'https://via.placeholder.com/300x300?text=No+Image',
+            description: product.moTa,
+            createdAt: product.ngayTao,
+            createdDate: product.ngayTao,
+            totalVariants: product.totalVariants,
+            activeVariants: product.activeVariants,
+            hasStock: hasStock
+          };
+        });
         
         totalElements.value = response.data.totalElements;
         totalPages.value = response.data.totalPages;
@@ -719,6 +744,13 @@ export default {
         out_of_stock: 'Hết hàng'
       };
       return statusMap[status] || 'Không xác định';
+    };
+
+    const getToggleTitle = (item) => {
+      if (item.status === 'out_of_stock') {
+        return 'Không thể thay đổi trạng thái - Sản phẩm hết hàng';
+      }
+      return item.status === 'active' ? 'Tạm ngưng bán' : 'Tiếp tục bán';
     };
 
     // Filter functions
@@ -895,10 +927,27 @@ export default {
           // Update the local state with the response from backend
           const index = products.value.findIndex(p => p.id === product.id);
           if (index !== -1) {
-            const newStatus = response.data.deleted ? 'inactive' : 'active';
+            // Re-check stock status after toggle
+            const updatedProduct = response.data;
+            const chiTietSanPhams = updatedProduct.chiTietSanPhams || [];
+            const hasStock = chiTietSanPhams.some(variant => 
+              variant.soLuongTonKho > 0 && (variant.deleted === false || variant.deleted === null)
+            );
+            
+            // Determine new status
+            let newStatus;
+            if (updatedProduct.deleted) {
+              newStatus = 'inactive'; // Product is disabled
+            } else if (!hasStock) {
+              newStatus = 'out_of_stock'; // Product is active but all variants are out of stock
+            } else {
+              newStatus = 'active'; // Product is active and has stock
+            }
+            
             products.value[index] = {
               ...products.value[index],
-              status: newStatus
+              status: newStatus,
+              hasStock: hasStock
             };
             
             const statusText = newStatus === 'active' ? 'tiếp tục bán' : 'tạm ngưng bán';
@@ -1039,6 +1088,7 @@ export default {
       getCategoryName,
       getBrandName,
       getStatusLabel,
+      getToggleTitle,
       getStockClass,
 
       // Filter functions
