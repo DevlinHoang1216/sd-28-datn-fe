@@ -201,7 +201,7 @@ export function useHoaDonLogic() {
     switch (sortBy) {
       case 'newest': return 'ngayTao';
       case 'most_expensive':
-      case 'cheapest': return 'tongTienThanhToan';
+      case 'cheapest': return 'tongTienSauGiam'; // Fixed: use correct field name
       default: return 'id';
     }
   };

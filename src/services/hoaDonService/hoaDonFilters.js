@@ -36,10 +36,10 @@ export const filterInvoices = (allInvoices, filters, activeTab, tabs) => {
   }
 
   if (filters.minPrice) {
-    result = result.filter((invoice) => invoice.tongTienThanhToan >= parseFloat(filters.minPrice));
+    result = result.filter((invoice) => invoice.tongTienSauGiam >= parseFloat(filters.minPrice));
   }
   if (filters.maxPrice) {
-    result = result.filter((invoice) => invoice.tongTienThanhToan <= parseFloat(filters.maxPrice));
+    result = result.filter((invoice) => invoice.tongTienSauGiam <= parseFloat(filters.maxPrice));
   }
 
   if (filters.sortBy) {
@@ -47,9 +47,9 @@ export const filterInvoices = (allInvoices, filters, activeTab, tabs) => {
     if (filters.sortBy === 'newest') {
       result.sort((a, b) => new Date(b.ngayTao) - new Date(a.ngayTao));
     } else if (filters.sortBy === 'most_expensive') {
-      result.sort((a, b) => b.tongTienThanhToan - a.tongTienThanhToan);
+      result.sort((a, b) => b.tongTienSauGiam - a.tongTienSauGiam);
     } else if (filters.sortBy === 'cheapest') {
-      result.sort((a, b) => a.tongTienThanhToan - b.tongTienThanhToan);
+      result.sort((a, b) => a.tongTienSauGiam - b.tongTienSauGiam);
     }
   }
 

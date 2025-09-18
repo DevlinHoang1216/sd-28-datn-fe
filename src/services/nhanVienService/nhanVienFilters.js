@@ -29,11 +29,11 @@ export const buildAPIParams = (filters, activeTab, tabs, currentPage, pageSize) 
   if (filters.sortBy) {
     switch (filters.sortBy) {
       case 'newest':
-        params.sortBy = 'ngayTao'
+        params.sortBy = 'createdAt' // Fixed: use correct field name
         params.sortDir = 'desc'
         break
       case 'oldest':
-        params.sortBy = 'ngayTao'
+        params.sortBy = 'createdAt' // Fixed: use correct field name
         params.sortDir = 'asc'
         break
       case 'name_asc':

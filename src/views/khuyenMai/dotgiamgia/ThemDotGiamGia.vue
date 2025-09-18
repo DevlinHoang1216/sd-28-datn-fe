@@ -476,7 +476,7 @@ export default {
     const toast = useToast();
     const router = useRouter();
 
-    const API_BASE_URL = 'http://localhost:8080/api/san-pham';
+    const API_BASE_URL = 'http://localhost:8080/api/san-pham/available-for-discount';
     const API_CAMPAIGN_URL = 'http://localhost:8080/api/dot-giam-gia/add';
 
     // Cấu hình breadcrumb
@@ -568,31 +568,33 @@ export default {
     ]);
 
     const mapProductData = (apiProduct) => {
+      // Handle the new SanPhamResponse structure
+      const chiTietSanPhams = apiProduct.chiTietSanPhams || [];
+      
+      // Only include variants with stock > 0 (already filtered by backend, but double-check)
+      const availableVariants = chiTietSanPhams
+        .filter((variant) => variant.soLuongTonKho > 0 && variant.trangThai)
+        .map((variant) => ({
+          id: variant.id,
+          tenSanPham: variant.tenSanPham || apiProduct.tenSanPham,
+          anhSanPham: variant.urlAnhSanPham || '/default-product.png',
+          mauSac: variant.tenMauSac || 'N/A',
+          kichThuoc: variant.tenKichCo || 'N/A',
+          giaBan: variant.giaBan,
+          soLuong: variant.soLuongTonKho,
+          trangThai: variant.trangThai,
+        }));
+
       return {
         id: apiProduct.id,
         maSanPham: apiProduct.ma,
         tenSanPham: apiProduct.tenSanPham,
-        anhSanPham: apiProduct.idAnhSanPham?.urlAnh || '/default-product.png',
-        trangThai: !apiProduct.deleted,
-        giaThapNhat: apiProduct.chiTietSanPhams?.length
-          ? Math.min(
-              ...apiProduct.chiTietSanPhams
-                .filter((variant) => !variant.deleted)
-                .map((variant) => variant.giaBan)
-            )
+        anhSanPham: availableVariants[0]?.anhSanPham || '/default-product.png',
+        trangThai: apiProduct.trangThai,
+        giaThapNhat: availableVariants.length
+          ? Math.min(...availableVariants.map((variant) => variant.giaBan))
           : 0,
-        chiTietSanPhams: apiProduct.chiTietSanPhams
-          .filter((variant) => !variant.deleted)
-          .map((variant) => ({
-            id: variant.id,
-            tenSanPham: apiProduct.tenSanPham,
-            anhSanPham: apiProduct.idAnhSanPham?.urlAnh || '/default-product.png',
-            mauSac: variant.idMauSac?.tenMauSac || 'N/A',
-            kichThuoc: variant.idKichCo?.tenKichCo || 'N/A',
-            giaBan: variant.giaBan,
-            soLuong: variant.soLuongTonKho,
-            trangThai: !variant.deleted,
-          })),
+        chiTietSanPhams: availableVariants,
       };
     };
 
@@ -680,9 +682,8 @@ export default {
           },
         });
 
-        allProducts.value = response.data.content
-          .filter(product => !product.deleted)
-          .map(mapProductData);
+        // API already filters out deleted products and products without stock
+        allProducts.value = response.data.content.map(mapProductData);
         pagination.value.totalElements = response.data.totalElements || 0;
         pagination.value.totalPages = response.data.totalPages || 0;
 
