@@ -38,14 +38,14 @@
     </div>
 
     <!-- Pagination -->
-    <div v-if="filteredData.length > 0" class="pagination-container">
+    <div v-if="filteredData.length > 0 && !disablePagination" class="pagination-container">
       <div class="pagination-info-left">
         <span class="pagination-summary">
-          Hiển thị {{ startItem }} - {{ endItem }} của {{ filteredData.length }} {{ itemLabel }}
+          Hiển thị {{ startItem }} - {{ endItem }} của {{ serverSide ? totalItems : filteredData.length }} {{ itemLabel }}
         </span>
         <div class="page-size-selector">
           <label>Hiển thị:</label>
-          <select v-model="itemsPerPage" @change="currentPage = 1" class="page-size-select">
+          <select v-model="itemsPerPage" @change="handlePageSizeChange" class="page-size-select">
             <option :value="10">10</option>
             <option :value="20">20</option>
             <option :value="50">50</option>
@@ -57,7 +57,7 @@
       <div v-if="totalPages > 1" class="pagination">
         <button 
           class="pagination-btn" 
-          @click="currentPage = 1"
+          @click="handlePageClick(1)"
           :disabled="currentPage === 1"
           title="Trang đầu"
         >
@@ -65,7 +65,7 @@
         </button>
         <button 
           class="pagination-btn" 
-          @click="currentPage--"
+          @click="handlePageClick(currentPage - 1)"
           :disabled="currentPage === 1"
           title="Trang trước"
         >
@@ -79,7 +79,7 @@
             :key="page"
             class="page-number-btn"
             :class="{ active: page === currentPage, ellipsis: page === '...' }"
-            @click="page !== '...' && (currentPage = page)"
+            @click="page !== '...' && handlePageClick(page)"
             :disabled="page === '...'"
           >
             {{ page }}
@@ -88,7 +88,7 @@
         
         <button 
           class="pagination-btn" 
-          @click="currentPage++"
+          @click="handlePageClick(currentPage + 1)"
           :disabled="currentPage === totalPages"
           title="Trang sau"
         >
@@ -96,7 +96,7 @@
         </button>
         <button 
           class="pagination-btn" 
-          @click="currentPage = totalPages"
+          @click="handlePageClick(totalPages)"
           :disabled="currentPage === totalPages"
           title="Trang cuối"
         >
@@ -153,25 +153,55 @@ export default {
     keyField: {
       type: String,
       default: 'id'
+    },
+    disablePagination: {
+      type: Boolean,
+      default: false
+    },
+    serverSide: {
+      type: Boolean,
+      default: false
+    },
+    totalItems: {
+      type: Number,
+      default: 0
+    },
+    currentPage: {
+      type: Number,
+      default: 1
+    },
+    itemsPerPage: {
+      type: Number,
+      default: 10
     }
   },
   emits: ['update:currentPage', 'update:itemsPerPage'],
   setup(props, { emit }) {
     // Pagination state
-    const currentPage = ref(1);
-    const itemsPerPage = ref(10);
+    const currentPage = ref(props.currentPage || 1);
+    const itemsPerPage = ref(props.itemsPerPage || 10);
     const gotoPage = ref('');
 
     // Computed properties
     const filteredData = computed(() => props.data);
 
     const paginatedData = computed(() => {
+      if (props.disablePagination || props.serverSide) {
+        // For server-side pagination, data is already paginated
+        return filteredData.value;
+      }
+      // Client-side pagination
       const start = (currentPage.value - 1) * itemsPerPage.value;
       const end = start + itemsPerPage.value;
       return filteredData.value.slice(start, end);
     });
 
     const totalPages = computed(() => {
+      if (props.serverSide) {
+        // For server-side, calculate from totalItems prop
+        return Math.ceil(props.totalItems / itemsPerPage.value);
+      }
+      // Client-side calculation
       return Math.ceil(filteredData.value.length / itemsPerPage.value);
     });
 
@@ -180,6 +210,10 @@ export default {
     });
 
     const endItem = computed(() => {
+      if (props.serverSide) {
+        const end = currentPage.value * itemsPerPage.value;
+        return end > props.totalItems ? props.totalItems : end;
+      }
       const end = currentPage.value * itemsPerPage.value;
       return end > filteredData.value.length ? filteredData.value.length : end;
     });
@@ -224,18 +258,40 @@ export default {
       return gotoPage.value >= 1 && gotoPage.value <= totalPages.value;
     });
 
-    // Watch for data changes and reset to first page
+    // Watch for prop changes (for server-side pagination)
+    watch(() => props.currentPage, (newVal) => {
+      if (props.serverSide && newVal) {
+        currentPage.value = newVal;
+      }
+    }, { immediate: true });
+    
+    watch(() => props.itemsPerPage, (newVal) => {
+      if (props.serverSide && newVal) {
+        itemsPerPage.value = newVal;
+      }
+    }, { immediate: true });
+
+    // Watch for data changes and reset to first page (only for client-side)
     watch(() => props.data, () => {
-      currentPage.value = 1;
+      if (!props.serverSide) {
+        currentPage.value = 1;
+      }
     });
-
-    // Watch for pagination changes and emit to parent
-    watch(currentPage, (newValue) => {
-      emit('update:currentPage', newValue);
+    
+    // Watch internal state changes and emit to parent
+    watch(currentPage, (newVal) => {
+      if (!props.serverSide) {
+        emit('update:currentPage', newVal);
+      }
     });
-
-    watch(itemsPerPage, (newValue) => {
-      emit('update:itemsPerPage', newValue);
+    
+    watch(itemsPerPage, (newVal) => {
+      if (!props.serverSide) {
+        emit('update:itemsPerPage', newVal);
+        if (!props.disablePagination) {
+          currentPage.value = 1; // Reset to first page when items per page changes (client-side only)
+        }
+      }
     });
 
     // Methods
@@ -249,8 +305,29 @@ export default {
 
     const goToPage = () => {
       if (isValidGotoPage.value) {
-        currentPage.value = gotoPage.value;
+        if (props.serverSide) {
+          emit('update:currentPage', gotoPage.value);
+        } else {
+          currentPage.value = gotoPage.value;
+        }
         gotoPage.value = '';
+      }
+    };
+    
+    // Override pagination methods for server-side
+    const handlePageClick = (page) => {
+      if (props.serverSide) {
+        emit('update:currentPage', page);
+      } else {
+        currentPage.value = page;
+      }
+    };
+    
+    const handlePageSizeChange = () => {
+      if (props.serverSide) {
+        emit('update:itemsPerPage', itemsPerPage.value);
+      } else {
+        currentPage.value = 1;
       }
     };
 
@@ -267,7 +344,9 @@ export default {
       isValidGotoPage,
       getItemKey,
       getColumnValue,
-      goToPage
+      goToPage,
+      handlePageClick,
+      handlePageSizeChange
     };
   }
 };

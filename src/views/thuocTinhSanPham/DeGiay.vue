@@ -252,7 +252,7 @@
       const loading = ref(false);
       const pagination = ref({
         page: 0,
-        size: 10,
+        size: 9999,
         totalElements: 0,
         totalPages: 0
       });

@@ -79,7 +79,11 @@ const {
   showQRScannerModal,
   openQRScannerModal,
   closeQRScannerModal,
-  handleInvoiceFound
+  handleInvoiceFound,
+  
+  // API pagination
+  apiTotalPages,
+  apiTotalElements
 } = useHoaDonLogic();
 
 // Reactive variables for formatted price inputs
@@ -181,6 +185,19 @@ onUnmounted(() => {
     clearTimeout(priceDebounceTimeout.value);
   }
 });
+
+// Pagination methods for DataTable integration
+const handlePageChange = (newPage) => {
+  // DataTable uses 1-based indexing, backend uses 0-based
+  currentPage.value = newPage - 1;
+  loadInvoices();
+};
+
+const handlePageSizeChange = (newPageSize) => {
+  pageSize.value = newPageSize;
+  currentPage.value = 0; // Reset to first page when page size changes
+  loadInvoices();
+};
 </script>
 
 <template>
@@ -300,8 +317,18 @@ onUnmounted(() => {
           </div>
 
           <!-- DataTable Component -->
-          <DataTable :data="filteredInvoices" :columns="tableColumns" item-label="hóa đơn"
-            empty-message="Không có dữ liệu hóa đơn nào được tìm thấy." key-field="id">
+          <DataTable 
+            :data="filteredInvoices" 
+            :columns="tableColumns" 
+            item-label="hóa đơn"
+            empty-message="Không có dữ liệu hóa đơn nào được tìm thấy." 
+            key-field="id"
+            :total-items="apiTotalElements"
+            :current-page="currentPage + 1"
+            :items-per-page="pageSize"
+            @update:current-page="handlePageChange"
+            @update:items-per-page="handlePageSizeChange"
+            :server-side="true">
             <!-- Custom column templates -->
             <template #stt="{ rowIndex }">
               {{ rowIndex }}
