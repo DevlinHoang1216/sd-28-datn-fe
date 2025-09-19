@@ -10,8 +10,8 @@ export const printInvoicePDF = async (invoice) => {
     // Import API function dynamically
     const { downloadInvoicePDF } = await import('../api/APIHoaDon/HoaDonAPI.js');
     
-    // Download PDF from backend
-    const pdfBlob = await downloadInvoicePDF(invoice.maHoaDon);
+    // Download PDF from backend using invoice ID
+    const pdfBlob = await downloadInvoicePDF(invoice.id);
     
     // Create download link
     const url = window.URL.createObjectURL(pdfBlob);
@@ -23,7 +23,7 @@ export const printInvoicePDF = async (invoice) => {
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
     
-    console.log(`PDF downloaded for invoice: ${invoice.maHoaDon}`);
+    console.log(`PDF downloaded for invoice: ${invoice.maHoaDon} (ID: ${invoice.id})`);
   } catch (error) {
     console.error('Error downloading PDF:', error);
     

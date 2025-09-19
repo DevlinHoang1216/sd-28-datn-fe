@@ -146,12 +146,12 @@ export const getHoaDonByMa = async (maHoaDon) => {
 
 /**
  * Download invoice PDF
- * @param {string} maHoaDon - Invoice code
+ * @param {number} id - Invoice ID
  * @returns {Promise} PDF blob for download
  */
-export const downloadInvoicePDF = async (maHoaDon) => {
+export const downloadInvoicePDF = async (id) => {
     try {
-        const response = await api.get(`/hoa-don/${maHoaDon}/pdf`, {
+        const response = await api.get(`/hoa-don/${id}/pdf`, {
             responseType: 'blob',
             headers: {
                 'Accept': 'application/pdf'
