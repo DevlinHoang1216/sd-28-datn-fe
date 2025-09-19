@@ -96,6 +96,16 @@ onMounted(() => {
               {{ getStatusText(invoiceDetail.trangThai.id) }}
             </span>
             
+            <!-- Print Invoice Button -->
+            <button 
+              @click="printInvoice"
+              class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium flex items-center gap-2"
+              title="In hóa đơn PDF"
+            >
+              <Icon icon="solar:printer-bold" class="text-lg" />
+              In hóa đơn
+            </button>
+            
             <!-- Status Update Button (only for online orders) -->
             <button 
               v-if="invoiceDetail.loaiDon === 'Online' && availableStatuses.length > 0"

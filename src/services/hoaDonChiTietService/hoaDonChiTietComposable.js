@@ -120,6 +120,15 @@ export function useHoaDonChiTietLogic() {
     router.push({ name: 'HoaDon' });
   };
 
+  // Print invoice wrapper function
+  const handlePrintInvoice = () => {
+    if (invoiceDetail.value) {
+      printInvoice(invoiceDetail.value);
+    } else {
+      console.error('No invoice detail available for printing');
+    }
+  };
+
   // Breadcrumb actions
   const breadcrumbActions = ref([
     {
@@ -130,7 +139,7 @@ export function useHoaDonChiTietLogic() {
     {
       label: 'In hóa đơn',
       type: 'primary',
-      handler: printInvoice
+      handler: handlePrintInvoice
     }
   ]);
 
@@ -171,7 +180,7 @@ export function useHoaDonChiTietLogic() {
     getStatusStepClassForInvoice,
     getStatusDateForInvoice,
     canUpdateToStatusForInvoice,
-    printInvoice,
+    printInvoice: handlePrintInvoice,
     
     // Configuration
     breadcrumbItems,
