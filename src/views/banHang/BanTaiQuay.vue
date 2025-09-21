@@ -1080,12 +1080,14 @@ export default {
       if (!currentHoaDon.value || currentHoaDon.value.items.length === 0) return false;
       
       if (phuongThucThanhToan.value === 'Tiền mặt') {
-        return khachThanhToan.value >= khachCanTra.value;
+        // Phải nhập tiền khách đưa và phải >= số tiền cần trả
+        return khachThanhToan.value > 0 && khachThanhToan.value >= khachCanTra.value;
       }
       
       if (phuongThucThanhToan.value === 'Cả 2') {
+        // Phải nhập cả tiền mặt và VNPay, và tổng phải >= số tiền cần trả
         const totalPaid = (parseFloat(tienMat.value) || 0) + (parseFloat(tienVNPay.value) || 0);
-        return totalPaid >= khachCanTra.value && tienMat.value > 0 && tienVNPay.value > 0;
+        return tienMat.value > 0 && tienVNPay.value > 0 && totalPaid >= khachCanTra.value;
       }
       
       return true; // For VNPAY, validation happens on backend
@@ -2270,20 +2272,28 @@ export default {
 
       // Validate payment amounts based on payment method
       if (phuongThucThanhToan.value === 'Tiền mặt') {
+        if (khachThanhToan.value <= 0) {
+          toast.error('Vui lòng nhập số tiền khách đưa!');
+          return;
+        }
         if (khachThanhToan.value < khachCanTra.value) {
-          toast.error('Số tiền mặt không đủ để thanh toán!');
+          toast.error('Số tiền khách đưa không đủ để thanh toán!');
           return;
         }
       } else if (phuongThucThanhToan.value === 'VnPay') {
         // For VNPay only payment, no validation needed - VNPay will handle the full amount
         // The amount will be set automatically in the payment request
       } else if (phuongThucThanhToan.value === 'Cả 2') {
-        if ((tienMat.value + tienVNPay.value) < khachCanTra.value) {
-          toast.error('Tổng số tiền thanh toán không đủ!');
+        if (tienMat.value <= 0) {
+          toast.error('Vui lòng nhập số tiền mặt!');
           return;
         }
-        if (tienMat.value <= 0 || tienVNPay.value <= 0) {
-          toast.error('Cả tiền mặt và VNPay phải lớn hơn 0 khi thanh toán kết hợp!');
+        if (tienVNPay.value <= 0) {
+          toast.error('Vui lòng nhập số tiền VNPay!');
+          return;
+        }
+        if ((tienMat.value + tienVNPay.value) < khachCanTra.value) {
+          toast.error('Tổng số tiền thanh toán không đủ!');
           return;
         }
       }
