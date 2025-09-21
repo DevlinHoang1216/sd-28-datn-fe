@@ -364,71 +364,202 @@ export default {
       return classes[status] || 'status-default'
     }
 
-    // Helper function để tính tuần chính xác
+    // Helper function để tính tuần chính xác với validation
     const getWeekNumber = (date) => {
-      const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
-      const dayNum = d.getUTCDay() || 7
-      d.setUTCDate(d.getUTCDate() + 4 - dayNum)
-      const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
-      return Math.ceil((((d - yearStart) / 86400000) + 1) / 7)
+      // Kiểm tra input hợp lệ
+      if (!date || isNaN(date.getTime())) {
+        return NaN
+      }
+      
+      try {
+        const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+        
+        // Kiểm tra các giá trị có hợp lệ
+        if (isNaN(d.getTime())) {
+          return NaN
+        }
+        
+        const dayNum = d.getUTCDay() || 7
+        d.setUTCDate(d.getUTCDate() + 4 - dayNum)
+        const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1))
+        
+        const weekNumber = Math.ceil((((d - yearStart) / 86400000) + 1) / 7)
+        
+        // Kiểm tra kết quả hợp lệ
+        if (isNaN(weekNumber) || weekNumber < 1 || weekNumber > 53) {
+          return NaN
+        }
+        
+        return weekNumber
+      } catch (error) {
+        console.warn('Error calculating week number:', error)
+        return NaN
+      }
     }
 
-    // Sửa lại hàm formatChartLabel với logic chính xác
+    // Hàm parse ngày từ backend với nhiều định dạng khác nhau
+    const parseBackendDate = (dateString) => {
+      if (!dateString) return null
+      
+      // Nếu đã là định dạng chuẩn ISO (YYYY-MM-DD)
+      if (/^\d{4}-\d{2}-\d{2}/.test(dateString)) {
+        return new Date(dateString)
+      }
+      
+      // Nếu là định dạng dd/mm/yyyy
+      if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(dateString)) {
+        return new Date(dateString)
+      }
+      
+      // Nếu là định dạng dd/mm (thiếu năm) - thêm năm hiện tại
+      if (/^\d{1,2}\/\d{1,2}$/.test(dateString)) {
+        const currentYear = new Date().getFullYear()
+        const [day, month] = dateString.split('/')
+        return new Date(`${currentYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`)
+      }
+      
+      // Nếu là định dạng mm/dd (American format) - thêm năm hiện tại
+      if (/^\d{1,2}\/\d{1,2}$/.test(dateString)) {
+        const currentYear = new Date().getFullYear()
+        const parts = dateString.split('/')
+        // Thử cả hai cách: dd/mm và mm/dd
+        const date1 = new Date(`${currentYear}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`)
+        const date2 = new Date(`${currentYear}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`)
+        
+        // Chọn ngày hợp lệ
+        if (!isNaN(date1.getTime())) return date1
+        if (!isNaN(date2.getTime())) return date2
+      }
+      
+      // Thử parse trực tiếp
+      const directParse = new Date(dateString)
+      if (!isNaN(directParse.getTime())) {
+        return directParse
+      }
+      
+      return null
+    }
+
+    // Sửa lại hàm formatChartLabel với logic chính xác và validation
     const formatChartLabel = (dateString, period) => {
-      const date = new Date(dateString)
+      // Kiểm tra input hợp lệ
+      if (!dateString) {
+        return 'N/A'
+      }
+      
+      const date = parseBackendDate(dateString)
+      
+      // Kiểm tra ngày hợp lệ
+      if (!date || isNaN(date.getTime())) {
+        console.warn('Invalid date string:', dateString)
+        // Nếu là định dạng dd/mm thì trả về luôn thay vì N/A
+        if (/^\d{1,2}\/\d{1,2}$/.test(dateString)) {
+          return dateString
+        }
+        return 'N/A'
+      }
+      
       const currentYear = new Date().getFullYear()
       
       switch (period) {
         case 'daily':
-          const day = date.getDate().toString().padStart(2, '0')
-          const month = (date.getMonth() + 1).toString().padStart(2, '0')
-          return `${day}/${month}`
+          const day = date.getDate()
+          const month = date.getMonth() + 1
+          
+          // Kiểm tra giá trị hợp lệ
+          if (isNaN(day) || isNaN(month)) {
+            return dateString || 'N/A'
+          }
+          
+          return `${day.toString().padStart(2, '0')}/${month.toString().padStart(2, '0')}`
         
         case 'weekly':
           const weekNumber = getWeekNumber(date)
-          const year = date.getFullYear()
-          return year !== currentYear ? `Tuần ${weekNumber}/${year}` : `Tuần ${weekNumber}`
+          const weekYear = date.getFullYear()
+          
+          if (isNaN(weekNumber) || isNaN(weekYear)) {
+            return dateString || 'N/A'
+          }
+          
+          return weekYear !== currentYear ? `Tuần ${weekNumber}/${weekYear}` : `Tuần ${weekNumber}`
         
         case 'monthly':
           const monthNames = [
             'T1', 'T2', 'T3', 'T4', 'T5', 'T6',
             'T7', 'T8', 'T9', 'T10', 'T11', 'T12'
           ]
+          const monthIndex = date.getMonth()
           const yearMonth = date.getFullYear()
+          
+          if (isNaN(monthIndex) || isNaN(yearMonth) || monthIndex < 0 || monthIndex > 11) {
+            return dateString || 'N/A'
+          }
           
           // Nếu không phải năm hiện tại thì hiển thị cả năm
           if (yearMonth !== currentYear) {
-            return `${monthNames[date.getMonth()]}/${yearMonth}`
+            return `${monthNames[monthIndex]}/${yearMonth}`
           }
-          return monthNames[date.getMonth()]
+          return monthNames[monthIndex]
         
         case 'yearly':
-          return `${date.getFullYear()}`
+          const fullYear = date.getFullYear()
+          
+          if (isNaN(fullYear)) {
+            return dateString || 'N/A'
+          }
+          
+          return `${fullYear}`
         
         default:
-          return dateString
+          return dateString || 'N/A'
       }
     }
 
-    // Hàm format ngày cho export
+    // Hàm format ngày cho export với validation
     const formatDateForExport = (date, period) => {
-      const dateObj = new Date(date)
+      if (!date) {
+        return 'N/A'
+      }
+      
+      const dateObj = parseBackendDate(date)
+      
+      // Kiểm tra ngày hợp lệ
+      if (!dateObj || isNaN(dateObj.getTime())) {
+        console.warn('Invalid date for export:', date)
+        return date || 'N/A'
+      }
       
       switch (period) {
         case 'daily':
           return dateObj.toLocaleDateString('vi-VN')
         case 'weekly':
           const weekNumber = getWeekNumber(dateObj)
-          const year = dateObj.getFullYear()
-          return `Tuần ${weekNumber}/${year}`
+          const exportYear = dateObj.getFullYear()
+          
+          if (isNaN(weekNumber) || isNaN(exportYear)) {
+            return 'N/A'
+          }
+          
+          return `Tuần ${weekNumber}/${exportYear}`
         case 'monthly':
-          const month = (dateObj.getMonth() + 1).toString().padStart(2, '0')
+          const month = dateObj.getMonth() + 1
           const yearMonth = dateObj.getFullYear()
-          return `${month}/${yearMonth}`
+          
+          if (isNaN(month) || isNaN(yearMonth)) {
+            return 'N/A'
+          }
+          
+          return `${month.toString().padStart(2, '0')}/${yearMonth}`
         case 'yearly':
-          return dateObj.getFullYear().toString()
+          const exportFullYear = dateObj.getFullYear()
+          
+          if (isNaN(exportFullYear)) {
+            return 'N/A'
+          }
+          
+          return exportFullYear.toString()
         default:
-          return date
+          return date || 'N/A'
       }
     }
 
