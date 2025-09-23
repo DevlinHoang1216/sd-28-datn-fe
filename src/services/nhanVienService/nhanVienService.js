@@ -150,6 +150,22 @@ const nhanVienService = {
     }
   },
 
+  // Calculate age from birth date
+  calculateAge: (birthDate) => {
+    if (!birthDate) return 0
+    
+    const today = new Date()
+    const birth = new Date(birthDate)
+    let age = today.getFullYear() - birth.getFullYear()
+    const monthDiff = today.getMonth() - birth.getMonth()
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+      age--
+    }
+    
+    return age
+  },
+
   // Validate employee data
   validateEmployeeData: (employeeData, isUpdate = false) => {
     const errors = []
@@ -160,6 +176,24 @@ const nhanVienService = {
 
     if (!employeeData.ngaySinh) {
       errors.push('Ngày sinh là bắt buộc')
+    } else {
+      // Validate age - must be 18 or older
+      const age = nhanVienService.calculateAge(employeeData.ngaySinh)
+      if (age < 18) {
+        errors.push(`Nhân viên phải từ 18 tuổi trở lên (hiện tại: ${age} tuổi)`)
+      }
+      
+      // Validate birth date is not in the future
+      const today = new Date()
+      const birthDate = new Date(employeeData.ngaySinh)
+      if (birthDate > today) {
+        errors.push('Ngày sinh không thể là ngày trong tương lai')
+      }
+      
+      // Validate reasonable age limit (not older than 100 years)
+      if (age > 100) {
+        errors.push('Ngày sinh không hợp lệ (quá 100 tuổi)')
+      }
     }
 
     if (!employeeData.soDienThoai || employeeData.soDienThoai.trim() === '') {

@@ -56,8 +56,18 @@
                         v-model="employee.ngaySinh"
                         type="date"
                         class="form-input"
+                        :class="{ 'error': ageError }"
                         required
+                        @change="validateAge"
                       />
+                      <div v-if="ageError" class="error-message">
+                        <Icon icon="solar:danger-bold-duotone" class="error-icon" />
+                        {{ ageError }}
+                      </div>
+                      <div v-else-if="employee.ngaySinh && calculatedAge >= 18" class="success-message">
+                        <Icon icon="solar:check-circle-bold-duotone" class="success-icon" />
+                        Tuổi hợp lệ: {{ calculatedAge }} tuổi
+                      </div>
                     </div>
 
                     <!-- Giới tính -->
@@ -305,6 +315,7 @@ import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import Breadcrumb from '@/components/Breadcrumb.vue'
 import { useAddressSelection } from '@/services/nhanVienService/addressService.js'
+import nhanVienService from '@/services/nhanVienService/nhanVienService.js'
 
 // Composables
 const toast = useToast()
@@ -328,6 +339,8 @@ const loading = ref(false)
 const showProvinceDropdown = ref(false)
 const showDistrictDropdown = ref(false)
 const showWardDropdown = ref(false)
+const ageError = ref('')
+const calculatedAge = ref(0)
 
 const employee = ref({
   chucVuID: null,
@@ -385,6 +398,50 @@ const pageStats = ref([
     label: 'Thông tin'
   }
 ])
+
+// Age validation function
+const validateAge = () => {
+  ageError.value = ''
+  calculatedAge.value = 0
+  
+  if (!employee.value.ngaySinh) {
+    return
+  }
+  
+  const age = nhanVienService.calculateAge(employee.value.ngaySinh)
+  calculatedAge.value = age
+  
+  if (age < 18) {
+    ageError.value = `Nhân viên phải từ 18 tuổi trở lên (hiện tại: ${age} tuổi)`
+    return false
+  }
+  
+  const today = new Date()
+  const birthDate = new Date(employee.value.ngaySinh)
+  if (birthDate > today) {
+    ageError.value = 'Ngày sinh không thể là ngày trong tương lai'
+    return false
+  }
+  
+  if (age > 100) {
+    ageError.value = 'Ngày sinh không hợp lệ (quá 100 tuổi)'
+    return false
+  }
+  
+  return true
+}
+
+// Client-side validation before backend call
+const validateEmployeeClientSide = () => {
+  const errors = nhanVienService.validateEmployeeData(employee.value, false)
+  
+  if (errors.length > 0) {
+    errors.forEach(error => toast.error(error))
+    return false
+  }
+  
+  return true
+}
 
 // Backend validation function
 const validateEmployee = async (emp) => {
@@ -444,6 +501,13 @@ const validateEmployee = async (emp) => {
 // Form submission
 const submitForm = async () => {
   console.log('submitForm called!')
+  
+  // First, run client-side validation
+  if (!validateEmployeeClientSide()) {
+    return
+  }
+  
+  // Then run backend validation
   if (!(await validateEmployee(employee.value))) return
 
   loading.value = true
@@ -1012,5 +1076,56 @@ const goBack = () => {
   background-color: #f9fafb;
   color: #9ca3af;
   cursor: not-allowed;
+}
+
+/* ===== VALIDATION STYLES ===== */
+.form-input.error {
+  border-color: #ef4444;
+  background-color: #fef2f2;
+}
+
+.form-input.error:focus {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1);
+}
+
+.error-message {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  color: #dc2626;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.error-icon {
+  font-size: 1rem;
+  color: #ef4444;
+  flex-shrink: 0;
+}
+
+.success-message {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background-color: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  color: #16a34a;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.success-icon {
+  font-size: 1rem;
+  color: #22c55e;
+  flex-shrink: 0;
 }
 </style>
