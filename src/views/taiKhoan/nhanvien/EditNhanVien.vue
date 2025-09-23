@@ -56,8 +56,13 @@
                         v-model="employee.ngaySinh"
                         type="date"
                         class="form-input"
+                        :class="{ 'input-error': currentAge > 0 && currentAge < 18 }"
                         required
                       />
+                      <div v-if="currentAge > 0" class="age-indicator" :class="{ 'age-error': currentAge < 18, 'age-valid': currentAge >= 18 }">
+                        <Icon :icon="currentAge >= 18 ? 'solar:check-circle-bold' : 'solar:close-circle-bold'" class="age-icon" />
+                        Tuổi hiện tại: {{ currentAge }} {{ currentAge < 18 ? '(Yêu cầu tối thiểu 18 tuổi)' : '' }}
+                      </div>
                     </div>
 
                     <!-- Giới tính -->
@@ -299,7 +304,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useToast } from 'vue-toastification'
 import { useRouter, useRoute } from 'vue-router'
 import { Icon } from '@iconify/vue'
@@ -394,6 +399,22 @@ const pageStats = ref([
     label: 'Thông tin'
   }
 ])
+
+// Computed property to calculate current age
+const currentAge = computed(() => {
+  if (!employee.value.ngaySinh) return 0
+  
+  const today = new Date()
+  const birthDate = new Date(employee.value.ngaySinh)
+  let age = today.getFullYear() - birthDate.getFullYear()
+  const monthDiff = today.getMonth() - birthDate.getMonth()
+  
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--
+  }
+  
+  return age
+})
 
 // Load employee data
 const loadEmployeeData = async () => {
@@ -539,9 +560,12 @@ const loadEmployeeData = async () => {
   }
 }
 
-// Backend validation function
+// Client-side validation function
 const validateEmployee = async (emp) => {
   try {
+    // Import nhanVienService for validation
+    const { default: nhanVienService } = await import('@/services/nhanVienService/nhanVienService.js')
+    
     // Check address selections first (client-side check)
     if (!selectedProvince.value) {
       toast.error('Vui lòng chọn Tỉnh/Thành phố.')
@@ -556,7 +580,7 @@ const validateEmployee = async (emp) => {
       return false
     }
 
-    // Prepare data for backend validation
+    // Prepare data for validation
     const validationData = {
       id: emp.id,
       tenNhanVien: emp.tenNhanVien,
@@ -574,7 +598,14 @@ const validateEmployee = async (emp) => {
       deleted: emp.trangThai
     }
 
-    // Call backend validation API
+    // Client-side validation using service
+    const clientErrors = nhanVienService.validateEmployeeData(validationData, true) // isUpdate = true
+    if (clientErrors.length > 0) {
+      toast.error(clientErrors[0])
+      return false
+    }
+
+    // Call backend validation API if client validation passes
     const { default: nhanVienValidationAPI } = await import('@/services/api/APINhanVien/NhanVienValidationAPI.js')
     const validationResult = await nhanVienValidationAPI.validateUpdateEmployee(validationData)
     
@@ -1151,5 +1182,53 @@ onMounted(() => {
   background-color: #f9fafb;
   color: #9ca3af;
   cursor: not-allowed;
+}
+
+/* ===== AGE VALIDATION STYLES ===== */
+.input-error {
+  border-color: #ef4444 !important;
+  background-color: #fef2f2 !important;
+}
+
+.input-error:focus {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1) !important;
+}
+
+.age-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.age-valid {
+  background-color: #f0fdf4;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.age-error {
+  background-color: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.age-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.age-valid .age-icon {
+  color: #16a34a;
+}
+
+.age-error .age-icon {
+  color: #dc2626;
 }
 </style>
