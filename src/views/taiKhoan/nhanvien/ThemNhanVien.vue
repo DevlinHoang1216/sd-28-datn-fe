@@ -56,17 +56,12 @@
                         v-model="employee.ngaySinh"
                         type="date"
                         class="form-input"
-                        :class="{ 'error': ageError }"
+                        :class="{ 'input-error': currentAge > 0 && currentAge < 18 }"
                         required
-                        @change="validateAge"
                       />
-                      <div v-if="ageError" class="error-message">
-                        <Icon icon="solar:danger-bold-duotone" class="error-icon" />
-                        {{ ageError }}
-                      </div>
-                      <div v-else-if="employee.ngaySinh && calculatedAge >= 18" class="success-message">
-                        <Icon icon="solar:check-circle-bold-duotone" class="success-icon" />
-                        Tuổi hợp lệ: {{ calculatedAge }} tuổi
+                      <div v-if="currentAge > 0" class="age-indicator" :class="{ 'age-error': currentAge < 18, 'age-valid': currentAge >= 18 }">
+                        <Icon :icon="currentAge >= 18 ? 'solar:check-circle-bold' : 'solar:close-circle-bold'" class="age-icon" />
+                        Tuổi hiện tại: {{ currentAge }} {{ currentAge < 18 ? '(Yêu cầu tối thiểu 18 tuổi)' : '' }}
                       </div>
                     </div>
 
@@ -309,13 +304,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useToast } from 'vue-toastification'
 import { useRouter } from 'vue-router'
 import { Icon } from '@iconify/vue'
 import Breadcrumb from '@/components/Breadcrumb.vue'
 import { useAddressSelection } from '@/services/nhanVienService/addressService.js'
-import nhanVienService from '@/services/nhanVienService/nhanVienService.js'
 
 // Composables
 const toast = useToast()
@@ -339,8 +333,6 @@ const loading = ref(false)
 const showProvinceDropdown = ref(false)
 const showDistrictDropdown = ref(false)
 const showWardDropdown = ref(false)
-const ageError = ref('')
-const calculatedAge = ref(0)
 
 const employee = ref({
   chucVuID: null,
@@ -399,53 +391,28 @@ const pageStats = ref([
   }
 ])
 
-// Age validation function
-const validateAge = () => {
-  ageError.value = ''
-  calculatedAge.value = 0
-  
-  if (!employee.value.ngaySinh) {
-    return
-  }
-  
-  const age = nhanVienService.calculateAge(employee.value.ngaySinh)
-  calculatedAge.value = age
-  
-  if (age < 18) {
-    ageError.value = `Nhân viên phải từ 18 tuổi trở lên (hiện tại: ${age} tuổi)`
-    return false
-  }
+// Computed property to calculate current age
+const currentAge = computed(() => {
+  if (!employee.value.ngaySinh) return 0
   
   const today = new Date()
   const birthDate = new Date(employee.value.ngaySinh)
-  if (birthDate > today) {
-    ageError.value = 'Ngày sinh không thể là ngày trong tương lai'
-    return false
+  let age = today.getFullYear() - birthDate.getFullYear()
+  const monthDiff = today.getMonth() - birthDate.getMonth()
+  
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--
   }
   
-  if (age > 100) {
-    ageError.value = 'Ngày sinh không hợp lệ (quá 100 tuổi)'
-    return false
-  }
-  
-  return true
-}
+  return age
+})
 
-// Client-side validation before backend call
-const validateEmployeeClientSide = () => {
-  const errors = nhanVienService.validateEmployeeData(employee.value, false)
-  
-  if (errors.length > 0) {
-    errors.forEach(error => toast.error(error))
-    return false
-  }
-  
-  return true
-}
-
-// Backend validation function
+// Client-side validation function
 const validateEmployee = async (emp) => {
   try {
+    // Import nhanVienService for validation
+    const { default: nhanVienService } = await import('@/services/nhanVienService/nhanVienService.js')
+    
     // Check address selections first (client-side check)
     if (!selectedProvince.value) {
       toast.error('Vui lòng chọn Tỉnh/Thành phố.')
@@ -460,7 +427,7 @@ const validateEmployee = async (emp) => {
       return false
     }
 
-    // Prepare data for backend validation
+    // Prepare data for validation
     const validationData = {
       tenNhanVien: emp.tenNhanVien,
       ngaySinh: emp.ngaySinh,
@@ -472,11 +439,19 @@ const validateEmployee = async (emp) => {
       phuong: selectedWard.value?.name || emp.diaChiPhuongXa,
       email: emp.email,
       soDienThoai: emp.soDienThoai,
+      tenDangNhap: emp.email, // Use email as username
       matKhau: '123456',
       idQuyenHan: 2
     }
 
-    // Call backend validation API
+    // Client-side validation using service
+    const clientErrors = nhanVienService.validateEmployeeData(validationData, false)
+    if (clientErrors.length > 0) {
+      toast.error(clientErrors[0])
+      return false
+    }
+
+    // Call backend validation API if client validation passes
     const { default: nhanVienValidationAPI } = await import('@/services/api/APINhanVien/NhanVienValidationAPI.js')
     const validationResult = await nhanVienValidationAPI.validateCreateEmployee(validationData)
     
@@ -501,13 +476,6 @@ const validateEmployee = async (emp) => {
 // Form submission
 const submitForm = async () => {
   console.log('submitForm called!')
-  
-  // First, run client-side validation
-  if (!validateEmployeeClientSide()) {
-    return
-  }
-  
-  // Then run backend validation
   if (!(await validateEmployee(employee.value))) return
 
   loading.value = true
@@ -1078,54 +1046,51 @@ const goBack = () => {
   cursor: not-allowed;
 }
 
-/* ===== VALIDATION STYLES ===== */
-.form-input.error {
-  border-color: #ef4444;
-  background-color: #fef2f2;
+/* ===== AGE VALIDATION STYLES ===== */
+.input-error {
+  border-color: #ef4444 !important;
+  background-color: #fef2f2 !important;
 }
 
-.form-input.error:focus {
-  border-color: #ef4444;
-  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1);
+.input-error:focus {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1) !important;
 }
 
-.error-message {
+.age-indicator {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   margin-top: 8px;
   padding: 8px 12px;
-  background-color: #fef2f2;
-  border: 1px solid #fecaca;
   border-radius: 8px;
-  color: #dc2626;
-  font-size: 0.875rem;
+  font-size: 0.85rem;
   font-weight: 500;
+  transition: all 0.3s ease;
 }
 
-.error-icon {
-  font-size: 1rem;
-  color: #ef4444;
-  flex-shrink: 0;
-}
-
-.success-message {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 8px;
-  padding: 8px 12px;
+.age-valid {
   background-color: #f0fdf4;
+  color: #166534;
   border: 1px solid #bbf7d0;
-  border-radius: 8px;
-  color: #16a34a;
-  font-size: 0.875rem;
-  font-weight: 500;
 }
 
-.success-icon {
+.age-error {
+  background-color: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.age-icon {
   font-size: 1rem;
-  color: #22c55e;
   flex-shrink: 0;
+}
+
+.age-valid .age-icon {
+  color: #16a34a;
+}
+
+.age-error .age-icon {
+  color: #dc2626;
 }
 </style>

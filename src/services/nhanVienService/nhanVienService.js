@@ -153,7 +153,6 @@ const nhanVienService = {
   // Calculate age from birth date
   calculateAge: (birthDate) => {
     if (!birthDate) return 0
-    
     const today = new Date()
     const birth = new Date(birthDate)
     let age = today.getFullYear() - birth.getFullYear()
@@ -177,22 +176,17 @@ const nhanVienService = {
     if (!employeeData.ngaySinh) {
       errors.push('Ngày sinh là bắt buộc')
     } else {
-      // Validate age - must be 18 or older
+      // Validate age - employee must be 18 or older
       const age = nhanVienService.calculateAge(employeeData.ngaySinh)
       if (age < 18) {
-        errors.push(`Nhân viên phải từ 18 tuổi trở lên (hiện tại: ${age} tuổi)`)
+        errors.push('Nhân viên phải từ 18 tuổi trở lên')
       }
       
-      // Validate birth date is not in the future
+      // Check if birth date is not in the future
       const today = new Date()
       const birthDate = new Date(employeeData.ngaySinh)
       if (birthDate > today) {
         errors.push('Ngày sinh không thể là ngày trong tương lai')
-      }
-      
-      // Validate reasonable age limit (not older than 100 years)
-      if (age > 100) {
-        errors.push('Ngày sinh không hợp lệ (quá 100 tuổi)')
       }
     }
 
@@ -219,11 +213,8 @@ const nhanVienService = {
         errors.push('Email không hợp lệ')
       }
 
-      if (!employeeData.matKhau || employeeData.matKhau.trim() === '') {
-        errors.push('Mật khẩu là bắt buộc')
-      } else if (employeeData.matKhau.length < 6) {
-        errors.push('Mật khẩu phải có ít nhất 6 ký tự')
-      }
+      // Removed password validation - password will be set/updated separately
+      // No longer require password input during employee creation
     }
 
     return errors
@@ -248,3 +239,4 @@ const nhanVienService = {
 }
 
 export default nhanVienService
+
